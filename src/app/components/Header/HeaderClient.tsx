@@ -33,12 +33,12 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ headerData, huvudpar
         <>
             {/* Partner Header */}
             {huvudpartners && huvudpartners.length > 0 && (
-                <div className="bg-custom_dark_red sticky top-0 z-40">
+                <div className="bg-custom_dark_red sticky top-0 z-40 overflow-hidden">
                     <MaxWidthWrapper>
-                        <ul className="flex justify-between items-center gap-6 py-2 overflow-x-auto">
+                        <ul className="flex justify-between items-center gap-2 sm:gap-4 md:gap-6 py-2 overflow-hidden">
                             {huvudpartners.map((partner) => (
                                 <li key={partner.id} className="flex justify-center items-center flex-shrink-0">
-                                    <div className="relative h-6 w-12 sm:w-14 sm:h-7">
+                                    <div className="relative h-3 w-6 xs:h-4 xs:w-8 sm:w-14 sm:h-7">
                                         {partner.webbplats ? (
                                             <Link
                                                 href={partner.webbplats}

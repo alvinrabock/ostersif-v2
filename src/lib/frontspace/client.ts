@@ -22,8 +22,6 @@ async function frontspaceGraphQLFetch<T>(
   query: string,
   variables?: Record<string, any>
 ): Promise<T> {
-  console.log(`🌐 Fetching from Frontspace GraphQL: ${FRONTSPACE_ENDPOINT}`);
-
   try {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -276,14 +274,7 @@ export async function fetchPosts<T>(
       contentFilter: contentFilter || null,
     };
 
-    if (contentFilter) {
-      console.log(`📊 Fetching ${postType} with contentFilter:`, JSON.stringify(contentFilter));
-      console.log('Variables being sent:', JSON.stringify(variables, null, 2));
-    }
-
     const data = await frontspaceGraphQLFetch<{ posts: T[] }>(query, variables);
-
-    console.log(`📦 Received ${data.posts?.length || 0} ${postType} from API`);
 
     return {
       posts: data.posts || [],

@@ -9,18 +9,29 @@ import { revalidatePath, revalidateTag } from 'next/cache';
 const WEBHOOK_SECRET = process.env.FRONTSPACE_WEBHOOK_SECRET;
 
 /**
- * Verify webhook signature
+ * Verify webhook signature using HMAC
  */
-function verifyWebhookSignature(request: NextRequest): boolean {
+async function verifyWebhookSignature(request: NextRequest, payload: string): Promise<boolean> {
   if (!WEBHOOK_SECRET) {
     console.warn('⚠️  FRONTSPACE_WEBHOOK_SECRET not configured');
     return false;
   }
 
-  const signature = request.headers.get('x-frontspace-signature');
-  const webhookSecret = request.headers.get('x-frontspace-secret');
+  const receivedSignature = request.headers.get('x-webhook-signature') ||
+                           request.headers.get('x-frontspace-signature');
 
-  return webhookSecret === WEBHOOK_SECRET;
+  if (!receivedSignature) {
+    return false;
+  }
+
+  // Generate HMAC signature using the secret and payload
+  const crypto = require('crypto');
+  const expectedSignature = crypto
+    .createHmac('sha256', WEBHOOK_SECRET)
+    .update(payload)
+    .digest('hex');
+
+  return receivedSignature === expectedSignature;
 }
 
 /**
@@ -28,19 +39,23 @@ function verifyWebhookSignature(request: NextRequest): boolean {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Verify webhook signature
-    if (!verifyWebhookSignature(request)) {
-      console.error('❌ Invalid webhook signature');
+    // Get raw body for signature verification
+    const rawBody = await request.text();
+
+    // Verify webhook signature (skip in development if secret not configured)
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const skipVerification = isDevelopment && !WEBHOOK_SECRET;
+
+    if (!skipVerification && !(await verifyWebhookSignature(request, rawBody))) {
       return NextResponse.json(
         { error: 'Invalid signature' },
         { status: 401 }
       );
     }
 
-    const payload = await request.json();
+    // Parse the payload
+    const payload = JSON.parse(rawBody);
     const { event, postType, slug, id } = payload;
-
-    console.log(`🔔 Frontspace webhook received: ${event} - ${postType}/${slug}`);
 
     // Revalidate based on post type
     switch (postType) {

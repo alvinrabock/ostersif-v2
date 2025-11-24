@@ -121,8 +121,8 @@ export default function SenasteNyheter({ maxPosts = 3 }: SenasteNyheterProps) {
     };
 
     return (
-        <div className="bg-custom_dark_dark_red flex flex-col gap-4 p-6 w-full py-8 relative overflow-hidden w-[1500px] max-w-full">
-            <h2 className="text-4xl font-bold mb-8 text-left text-white">
+        <div className="bg-custom_dark_dark_red flex flex-col gap-4 px-4 sm:px-6 w-full py-8 relative overflow-hidden max-w-[1500px] mx-auto">
+            <h2 className="text-2xl sm:text-4xl font-bold mb-4 sm:mb-8 text-left text-white">
                 Senaste nyheter
             </h2>
 

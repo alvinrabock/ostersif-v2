@@ -95,9 +95,6 @@ export async function getMatches(
   const buildAllUrls = async () => {
     const urls: Array<{ url: string; leagueId: string }> = [];
 
-    console.log('🏗️ Building URLs for leagues:', leagueIds);
-    console.log('🔍 Looking up Östers IF team IDs from cache...');
-
     // Get team IDs from cache for all leagues in parallel
     const teamIdPromises = leagueIds.map(leagueId => getOstersTeamIdFromCache(leagueId));
     const teamIds = await Promise.all(teamIdPromises);
@@ -111,7 +108,6 @@ export async function getMatches(
       if (!teamIdForLeague || !teamId) {
         // If we couldn't find team ID or no filtering requested, fetch all matches
         urls.push({ url: baseUrl, leagueId });
-        console.log(`📋 Fetching all matches: ${baseUrl}`);
         continue;
       }
 
@@ -135,7 +131,6 @@ export async function getMatches(
       }
     }
 
-    console.log(`📋 Total URLs to fetch: ${urls.length}`);
     return urls;
   };
 
@@ -159,7 +154,6 @@ export async function getMatches(
           return [];
         }
 
-        console.log(`✅ League ${leagueId}: Fetched ${data.length} matches`);
         return data as RawMatchData[];
       } catch (error) {
         console.error(`❌ Error fetching league ${leagueId}:`, error);
@@ -170,14 +164,12 @@ export async function getMatches(
     const results = await Promise.all(fetchPromises);
     const flattenedMatches = results.flat();
 
-    console.log(`📊 Successfully fetched ${flattenedMatches.length} total matches from ${urlConfigs.length} API calls`);
 
     // Deduplicate by match-id (important when fetching home + away separately)
     const uniqueMatches = Array.from(
       new Map(flattenedMatches.map((m: RawMatchData) => [m["match-id"], m])).values()
     );
 
-    console.log(`✅ Final result: ${uniqueMatches.length} unique matches`);
     return uniqueMatches;
   };
 
@@ -312,7 +304,6 @@ for (const team of selectedMatches) {
     }
   });
 
-  console.log(`📊 Processing ${nonLiveMatches.length} non-live and ${liveMatches.length} live matches...`);
 
   // Optimized match processing with pre-built lookups - UPDATED
   const processMatch = (match: RawMatchData, liveStats?: NonNullable<MatchCardData["liveStats"]>): MatchCardData => {

@@ -137,8 +137,6 @@ export async function fetchPartnersByLevel(levelSlug: string): Promise<Partner[]
  */
 export async function fetchHuvudpartners(): Promise<Partner[]> {
   try {
-    console.log('🔍 Fetching huvudpartners with contentFilter: { partnerniva: "Huvudpartner" }');
-
     const { posts } = await frontspace.partners.getAll({
       contentFilter: {
         partnerniva: 'Huvudpartner',
@@ -147,19 +145,7 @@ export async function fetchHuvudpartners(): Promise<Partner[]> {
       limit: 100,
     });
 
-    console.log(`✅ Fetched ${posts.length} huvudpartners from API using contentFilter`);
-
-    if (posts.length > 0) {
-      console.log('First partner:', {
-        title: posts[0].title,
-        content: posts[0].content,
-      });
-    }
-
-    const transformed = posts.map(transformPartner);
-    console.log('Transformed partners:', transformed.map(p => ({ title: p.title, partnerniva: p.partnerniva, hasLogo: !!p.logotyp })));
-
-    return transformed;
+    return posts.map(transformPartner);
   } catch (error) {
     console.error('Error fetching huvudpartners from Frontspace:', error);
     return [];

@@ -28,16 +28,9 @@ export default async function CustomComponentBlock({
   const componentName = content.componentName;
   const props = content.props || {};
 
-  // Debug logging
-  console.log('🔍 CUSTOM COMPONENT BLOCK DEBUG:');
-  console.log('Block type:', block.type);
-  console.log('Component name:', componentName);
-  console.log('Props:', JSON.stringify(props, null, 2));
-
   // Handle different component types
   switch (componentName) {
     case 'SenastSpeladeMatcher': {
-      console.log('✅ Rendering SenastSpeladeMatcher component');
 
       // Dynamically import the component (client component)
       const { default: SenastSpeladeMatcher } = await import('@/app/components/SenastSpeladeMatcher');
@@ -53,8 +46,6 @@ export default async function CustomComponentBlock({
     }
 
     case 'TabellBlock': {
-      console.log('✅ Rendering TabellBlock component');
-
       // Dynamically import the component (client component)
       const { default: TabellBlock } = await import('@/blocks/TabellBlock');
 
@@ -70,25 +61,14 @@ export default async function CustomComponentBlock({
 
     case 'SenasteNyheter':
     case 'LatestNewsBlock': {
-      console.log('✅ Rendering SenasteNyheter component');
+      // Dynamically import the component (server component)
+      const { default: SenasteNyheterBlock } = await import('@/blocks/SenasteNyheterBlock/Component');
 
-      // Dynamically import the component (client component)
-      const { default: SenasteNyheter } = await import('@/app/components/SenasteNyheter');
-
-      return (
-        <div
-          className={`custom-component-block senaste-nyheter block-${blockId}`}
-          data-block-id={blockId}
-        >
-          <SenasteNyheter maxPosts={props.maxPosts || 3} />
-        </div>
-      );
+      return <SenasteNyheterBlock maxPosts={props.maxPosts || 3} />;
     }
 
     case 'KommandeMatcher':
     case 'UpcomingMatchesBlock': {
-      console.log('✅ Rendering KommandeMatcher component');
-
       // Dynamically import the component (client component)
       const { default: KommandeMatcher } = await import('@/app/components/KommandeMatcher');
 
@@ -103,8 +83,6 @@ export default async function CustomComponentBlock({
     }
 
     case 'HeroSlider': {
-      console.log('✅ Rendering HeroSlider component');
-
       // Dynamically import the component (client component)
       const { default: HeroSlider } = await import('@/app/components/HeroSlider');
 

@@ -173,6 +173,19 @@ h6 {
   text-transform: uppercase;
 }
 
+/* Reset browser default margins/padding on heading and paragraph elements */
+/* This ensures CMS block styles have full control */
+h1, h2, h3, h4, h5, h6, p {
+  margin: 0;
+  padding: 0;
+}
+
+/* Override CMS text block margins if they appear too large */
+/* You can adjust or remove this if you want to keep CMS margins */
+.text-block[class*="block-"] {
+  margin-bottom: 0 !important;
+}
+
 /* Apply Roboto to paragraphs and body text */
 body,
 p,

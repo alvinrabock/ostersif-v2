@@ -141,7 +141,7 @@ export default function SenastSpeladeMatcher({ maxMatches = 5 }: SenastSpeladeMa
                     <Swiper
                         modules={[Navigation]}
                         spaceBetween={16}
-                        slidesPerView={1.2}
+                        slidesPerView={1.5}
                         navigation={{
                             nextEl: nextRef.current,
                             prevEl: prevRef.current,
@@ -160,7 +160,6 @@ export default function SenastSpeladeMatcher({ maxMatches = 5 }: SenastSpeladeMa
                             1224: { slidesPerView: 4 },
                             768: { slidesPerView: 3.5 },
                             500: { slidesPerView: 2.3 },
-                            450: { slidesPerView: 2.3 },
                         }}
                     >
                         {matches.slice(0, 8).map((match) => (
