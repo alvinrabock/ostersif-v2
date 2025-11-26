@@ -146,7 +146,7 @@ export default function NewsPageClient({
             const url = new URL('/api/nyheter/list', window.location.origin);
             url.searchParams.set('limit', '10');
             url.searchParams.set('page', nextPage.toString());
-            if (currentCategory) {
+            if (currentCategory?.slug) {
                 url.searchParams.set('category', currentCategory.slug);
             }
 

@@ -70,7 +70,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
         (category) => typeof category.slug === 'string' && category.slug === finalSlug
     );
 
-    if (!currentCategory) {
+    if (!currentCategory || !currentCategory.slug) {
         throw new Error(`Category with slug ${finalSlug} not found`);
     }
 

@@ -160,9 +160,9 @@ export async function fetchNyheterByCategory(
 ): Promise<Post[]> {
   try {
     // Step 1: Get the category UUID from the slug
-    const category = await frontspace.nyhetskategorier.getBySlug(categorySlug);
+    const category = await frontspace.nyhetskategorier.getBySlug(categorySlug) as any;
 
-    if (!category) {
+    if (!category || !category.id) {
       console.warn(`[fetchNyheterByCategory] Category not found: ${categorySlug}`);
       return [];
     }
