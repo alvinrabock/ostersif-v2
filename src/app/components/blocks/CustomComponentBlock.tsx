@@ -90,9 +90,149 @@ export default async function CustomComponentBlock({
       return <HeroSlider maxPosts={props.maxPosts || 5} />;
     }
 
+    case 'KontaktSection': {
+      // Dynamically import the component (server component)
+      const { default: KontaktSection } = await import('@/app/components/KontaktSection');
+
+      return (
+        <div
+          className={`custom-component-block kontakt-section block-${blockId}`}
+          data-block-id={blockId}
+        >
+          <KontaktSection columns={props.columns || 3} />
+        </div>
+      );
+    }
+
+    case 'StyrelseSection': {
+      // Dynamically import the component (server component)
+      const { default: StyrelseSection } = await import('@/app/components/StyrelseSection');
+
+      return (
+        <div
+          className={`custom-component-block styrelse-section block-${blockId}`}
+          data-block-id={blockId}
+        >
+          <StyrelseSection columns={props.columns || 3} />
+        </div>
+      );
+    }
+
+    case 'PartnerSection': {
+      // Dynamically import the component (server component)
+      const { default: PartnerSection } = await import('@/app/components/PartnerSection');
+
+      return (
+        <div
+          className={`custom-component-block partner-section block-${blockId}`}
+          data-block-id={blockId}
+        >
+          <PartnerSection />
+        </div>
+      );
+    }
+
+    case 'PartnersIAffarsnatverket': {
+      // Dynamically import the component (server component)
+      const { default: PartnersIAffarsnatverket } = await import('@/app/components/PartnersIAffarsnatverket');
+
+      return (
+        <div
+          className={`custom-component-block partners-affarsnatverket block-${blockId}`}
+          data-block-id={blockId}
+        >
+          <PartnersIAffarsnatverket />
+        </div>
+      );
+    }
+
+    case 'Partnerpaket': {
+      // Dynamically import the component (server component)
+      const { default: Partnerpaket } = await import('@/app/components/Partnerpaket');
+
+      return (
+        <div
+          className={`custom-component-block partnerpaket block-${blockId}`}
+          data-block-id={blockId}
+        >
+          <Partnerpaket />
+        </div>
+      );
+    }
+
+    case 'PartnernivaerComponent': {
+      // Dynamically import the component (server component)
+      const { default: PartnernivaerComponent } = await import('@/app/components/PartnernivaerComponent');
+
+      return (
+        <div
+          className={`custom-component-block partnernivaer block-${blockId}`}
+          data-block-id={blockId}
+        >
+          <PartnernivaerComponent />
+        </div>
+      );
+    }
+
+    case 'PartnerpaketAffarsnatverk': {
+      // Dynamically import the component (server component)
+      const { default: PartnerpaketAffarsnatverk } = await import('@/app/components/PartnerpaketAffarsnatverk');
+
+      return (
+        <div
+          className={`custom-component-block partnerpaket-affarsnatverk block-${blockId}`}
+          data-block-id={blockId}
+        >
+          <PartnerpaketAffarsnatverk />
+        </div>
+      );
+    }
+
+    case 'PartnerpaketPrivatloge': {
+      // Dynamically import the component (server component)
+      const { default: PartnerpaketPrivatloge } = await import('@/app/components/PartnerpaketPrivatloge');
+
+      return (
+        <div
+          className={`custom-component-block partnerpaket-privatloge block-${blockId}`}
+          data-block-id={blockId}
+        >
+          <PartnerpaketPrivatloge />
+        </div>
+      );
+    }
+
+    case 'PartnerpaketStigsvensson': {
+      // Dynamically import the component (server component)
+      const { default: PartnerpaketStigsvensson } = await import('@/app/components/PartnerpaketStigsvensson');
+
+      return (
+        <div
+          className={`custom-component-block partnerpaket-stigsvensson block-${blockId}`}
+          data-block-id={blockId}
+        >
+          <PartnerpaketStigsvensson />
+        </div>
+      );
+    }
+
+    case 'PartnerpaketOsterisamhallet': {
+      // Dynamically import the component (server component)
+      const { default: PartnerpaketOsterisamhallet } = await import('@/app/components/PartnerpaketOsterisamhallet');
+
+      return (
+        <div
+          className={`custom-component-block partnerpaket-osterisamhallet block-${blockId}`}
+          data-block-id={blockId}
+        >
+          <PartnerpaketOsterisamhallet />
+        </div>
+      );
+    }
+
     default:
       console.warn(`⚠️ Unknown custom component: ${componentName}`);
-      console.warn('Available components: SenastSpeladeMatcher, TabellBlock, SenasteNyheter, LatestNewsBlock, KommandeMatcher, UpcomingMatchesBlock, HeroSlider');
+      console.warn('Available components: SenastSpeladeMatcher, TabellBlock, SenasteNyheter, LatestNewsBlock, KommandeMatcher, UpcomingMatchesBlock, HeroSlider, KontaktSection, StyrelseSection, PartnerSection, PartnersIAffarsnatverket, Partnerpaket, PartnernivaerComponent, PartnerpaketAffarsnatverk, PartnerpaketPrivatloge, PartnerpaketStigsvensson, PartnerpaketOsterisamhallet');
       return (
         <div
           className={`custom-component-block block-${blockId}`}

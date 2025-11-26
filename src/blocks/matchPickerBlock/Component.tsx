@@ -11,7 +11,7 @@ export const MatchPickerBlock: React.FC<MatchPickerBlockProps> = ({
     selectedSingleMatchId,
 }) => {
     const [matches, setMatches] = useState<MatchCardData[]>([])
-    const [teamsWithSEF, setTeamsWithSEF] = useState<Lag[]>([])
+    const [_teamsWithSEF, setTeamsWithSEF] = useState<Lag[]>([])
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
 
@@ -41,7 +41,7 @@ export const MatchPickerBlock: React.FC<MatchPickerBlockProps> = ({
                 });
 
 
-                const leagueIds = Array.from(leagueIdsSet)
+                const leagueIds = Array.from(leagueIdsSet).map(String)
                 const smcTeamId = fetchedTeams[0]?.smcTeamId
                 if (!smcTeamId) {
                     setError('Ogiltigt smcTeamId.')
@@ -78,7 +78,6 @@ export const MatchPickerBlock: React.FC<MatchPickerBlockProps> = ({
                 <MatchCard
                     match={selectedMatch}
                     colorTheme="red"
-                    teamsWithSEF={teamsWithSEF}
                 />
             )}
         </>

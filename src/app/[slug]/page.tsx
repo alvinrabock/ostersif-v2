@@ -1,53 +1,88 @@
 import { Metadata } from 'next';
-import { draftMode } from 'next/headers';
+import { notFound } from 'next/navigation';
 import { BlockRenderer } from '@/app/components/BlockRenderer';
-
-import { fetchPageData } from '@/lib/apollo/fetchSinglePage/action';
-import { RenderHero } from '@/app/components/Heros/RenderHero';
-import { PayloadRedirects } from '@/app/components/PayloadRedirects/index';
-import { LivePreviewListener } from '@/app/components/LivePreviewListener/index';
-
+import { fetchAllPages } from '@/lib/frontspace/client';
+import { buildPagePaths, findPageByPath } from '@/utils/pageRouting';
 
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
 export default async function Page({ params }: PageProps) {
-  // Wait for params to resolve since it's a Promise
   const resolvedParams = await params;
-
-  const { isEnabled: draft } = await draftMode();
   const slug = resolvedParams.slug || 'home';
-const page = await fetchPageData(slug, draft);
+
+  // Fetch all published pages
+  const pages = await fetchAllPages();
+  const pagesWithPaths = buildPagePaths(pages);
+
+  // Construct full path (single-level page)
+  const fullPath = '/' + slug;
+
+  // Find matching page
+  const page = findPageByPath(pagesWithPaths, fullPath);
 
   if (!page) {
-    return <PayloadRedirects url={`/${slug}`} />;
+    notFound();
   }
 
-  const { hero, layout } = page;
+  // Extract blocks from page content
+  const blocks = page.content?.blocks || [];
 
   return (
-    <article className='min-h-screen pb-20'>
-      <PayloadRedirects disableNotFound url={`/${slug}`} />
-      {draft && <LivePreviewListener />}
-      <RenderHero {...hero} />
-      <BlockRenderer blocks={layout} />
+    <article className="min-h-screen pb-20">
+      <BlockRenderer blocks={blocks} />
     </article>
   );
 }
 
+// Generate static paths at build time
+export async function generateStaticParams() {
+  const pages = await fetchAllPages();
+  const pagesWithPaths = buildPagePaths(pages);
+
+  // Only include single-level pages (no parent)
+  return pagesWithPaths
+    .filter(page => {
+      const segments = page.fullPath.split('/').filter(Boolean);
+      return segments.length === 1;
+    })
+    .map(page => ({
+      slug: page.slug
+    }));
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const resolvedParams = await params;
-
   const slug = resolvedParams.slug || 'home';
-  const page = await fetchPageData(slug);
+
+  // Fetch all published pages
+  const pages = await fetchAllPages();
+  const pagesWithPaths = buildPagePaths(pages);
+
+  // Construct full path
+  const fullPath = '/' + slug;
+
+  // Find matching page
+  const page = findPageByPath(pagesWithPaths, fullPath);
+
+  if (!page) {
+    return {
+      title: 'Sidan hittades inte - Östers IF',
+      description: 'Vi är Östers IF',
+    };
+  }
+
+  const seoTitle = page.content?.pageSettings?.seoTitle || page.title;
+  const seoDescription = page.content?.pageSettings?.seoDescription || '';
 
   return {
-    title: page?.meta?.title || 'Östers IF',
-    description: page?.meta?.description || 'Vi är Östers IF',
+    title: seoTitle + ' - Östers IF',
+    description: seoDescription || 'Vi är Östers IF',
     openGraph: {
-      title: page?.meta?.title || 'Östers IF',
-      description: page?.meta?.description || 'Vi är Östers IF',
+      title: seoTitle,
+      description: seoDescription || 'Vi är Östers IF',
+      url: fullPath,
     },
   };
 }

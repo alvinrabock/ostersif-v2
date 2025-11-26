@@ -53,7 +53,7 @@ export default function SpeladeMatcherBlock() {
                     });
                 });
 
-                const leagueIds = Array.from(leagueIdsSet);
+                const leagueIds = Array.from(leagueIdsSet).map(String);
                 const smcTeamId = fetchedTeams[0]?.smcTeamId;
 
                 if (!smcTeamId) {

@@ -18,7 +18,6 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from '../ui/accordion';
-import { Header } from '@/types';
 import { Media } from '../Media/index';
 import Facebook from '../Icons/Facebook';
 import Instagram from '../Icons/Instagram';
@@ -31,57 +30,46 @@ import { SearchDialog } from './SearchDialog';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 
-interface MobileNavProps {
-  headerData: Header;
-  carBrands?: string[];
-  cities?: string[];
-  availableFacets?: {
-    vehicleTypes?: string[];
-    cities?: string[];
-    makes?: string[];
-  };
+interface FrontspaceMenuItem {
+  id: string;
+  title: string;
+  link_type: string;
+  url?: string;
+  slug?: string;
+  page_id?: string;
+  target?: string;
+  image?: string | number | any;
+  children?: FrontspaceMenuItem[];
 }
 
-export function MobileNav({ headerData }: MobileNavProps) {
+interface SocialMedia {
+  id: string;
+  platform: string;
+  url: string;
+}
+
+interface MobileNavProps {
+  menuItems: FrontspaceMenuItem[];
+  socialMedia: SocialMedia[];
+}
+
+export function MobileNav({ menuItems, socialMedia }: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  // Helper function to get href from link object
-  const getLinkHref = (link: NonNullable<Header['navItems']>[number]['link']) => {
-    if (link.type === 'custom') {
-      return link.url || '#';
+  // Helper function to get href from Frontspace menu item
+  const getLinkHref = (item: FrontspaceMenuItem): string => {
+    // External links
+    if (item.link_type === 'external' && item.url) {
+      return item.url;
     }
-    
-    if (link.type === 'reference' && link.reference) {
-      if (link.reference.relationTo === 'pages') {
-        const page = typeof link.reference.value === 'string' 
-          ? null 
-          : link.reference.value;
-        
-        if (page?.slug) {
-          return `/${page.slug}`;
-        } else if (page?.id) {
-          console.warn('Page reference missing slug, using ID:', page.id);
-          return `/page/${page.id}`;
-        }
-        return '#';
-      }
-      
-      if (link.reference.relationTo === 'posts') {
-        const post = typeof link.reference.value === 'string' 
-          ? null 
-          : link.reference.value;
-        
-        if (post?.slug) {
-          return `/posts/${post.slug}`;
-        } else if (post?.id) {
-          console.warn('Post reference missing slug, using ID:', post.id);
-          return `/posts/${post.id}`;
-        }
-        return '#';
-      }
+
+    // Internal pages - use the url field which contains the full nested path
+    if (item.link_type === 'internal' && item.url) {
+      return item.url; // Already has full path like /partners/vara-partners
     }
-    
+
+    // Fallback
     return '#';
   };
 
@@ -89,16 +77,13 @@ export function MobileNav({ headerData }: MobileNavProps) {
     setOpen(false);
   }, [pathname]);
 
-  const getLinkProps = (link: NavItem['link']) =>
-    link.newTab
+  const getLinkProps = (item: FrontspaceMenuItem) =>
+    item.target === '_blank'
       ? { target: '_blank', rel: 'noopener noreferrer' }
       : {};
 
-  type NavItem = NonNullable<Header['navItems']>[number];
-  type SubMenuItem = NonNullable<NavItem['subMenu']>[number];
-
   const renderSubMenu = (
-    subMenu: NavItem['subMenu'] | SubMenuItem[] | null | undefined,
+    subMenu: FrontspaceMenuItem[] | null | undefined,
     isTopLevel = true
   ): React.ReactNode => {
     if (!subMenu) return null;
@@ -108,13 +93,13 @@ export function MobileNav({ headerData }: MobileNavProps) {
         : 'ml-3 sm:ml-4 pl-2 sm:pl-3 mt-2 space-y-2'}
       >
         {subMenu?.map((item) => {
-          const hasSubMenu = item.subMenu && item.subMenu.length > 0;
-          const href = getLinkHref(item.link);
+          const hasSubMenu = item.children && item.children.length > 0;
+          const href = getLinkHref(item);
 
           return (
-            <li key={item.id || item.link.label} className="relative w-full">
+            <li key={item.id || item.title} className="relative w-full">
               {/* Check if item has image - if so, render as box layout */}
-              {item.image ? (
+              {false ? ( // TODO: Add image support if needed
                 <div className='relative grow rounded-lg overflow-hidden group h-48 sm:h-60 w-full'>
                   <Media
                     resource={item.image as string | number | MediaType}
@@ -125,11 +110,11 @@ export function MobileNav({ headerData }: MobileNavProps) {
                   <SheetClose asChild>
                     <Link
                       href={href}
-                      {...getLinkProps(item.link)}
+                      {...getLinkProps(item)}
                       className='absolute inset-0 flex items-end p-3 sm:p-4 transition bg-gradient-to-t from-custom_dark_red/80 via-custom_dark_red/40 to-transparent'
                     >
                       <div className='flex items-center gap-2 text-white text-lg sm:text-xl md:text-2xl font-semibold'>
-                        {item.link.label}
+                        {item.title}
                         <ArrowRight className='w-5 h-5' />
                       </div>
                     </Link>
@@ -137,12 +122,12 @@ export function MobileNav({ headerData }: MobileNavProps) {
                 </div>
               ) : hasSubMenu ? (
                 <Accordion type="single" collapsible className="space-y-3 text-white p-0">
-                  <AccordionItem value={item.link.label}>
+                  <AccordionItem value={item.title}>
                     <AccordionTrigger className="text-left font-semibold text-sm sm:text-base p-0">
-                      {item.link.label}
+                      {item.title}
                     </AccordionTrigger>
                     <AccordionContent>
-                      {renderSubMenu(item.subMenu, false)}
+                      {renderSubMenu(item.children, false)}
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
@@ -150,10 +135,10 @@ export function MobileNav({ headerData }: MobileNavProps) {
                 <SheetClose asChild>
                   <Link
                     href={href}
-                    {...getLinkProps(item.link)}
+                    {...getLinkProps(item)}
                     className={`block ${isTopLevel ? 'text-sm sm:text-base' : 'font-semibold text-xs sm:text-sm'} text-white`}
                   >
-                    {item.link.label}
+                    {item.title}
                   </Link>
                 </SheetClose>
               )}
@@ -197,46 +182,41 @@ export function MobileNav({ headerData }: MobileNavProps) {
 
         <div className='flex flex-col justify-between items-between min-h-[92svh]'>
           <div>
-                <Accordion type="single" collapsible className="space-y-5 [&_*]:!rounded-none">
-              {headerData.navItems?.map((menuItem) => {
-                // Updated text sizes - made smaller for both layouts
-                const isSmallLayout = menuItem.layout === 'small';
-                const textSizeClass = isSmallLayout ? 'text-sm sm:text-base' : 'text-lg sm:text-xl md:text-2xl';
-                const borderClass = isSmallLayout ? '' : 'border-b border-white/20';
-                const spacingClass = isSmallLayout ? 'mb-1' : 'mb-5';
-                const paddingClass = isSmallLayout ? 'p-1' : 'p-3';
+            <Accordion type="single" collapsible className="space-y-5 [&_*]:!rounded-none">
+              {menuItems?.map((menuItem) => {
+                const textSizeClass = 'text-lg sm:text-xl md:text-2xl';
+                const borderClass = 'border-b border-white/20';
+                const spacingClass = 'mb-5';
+                const paddingClass = 'p-3';
 
-                if (menuItem.subMenu && menuItem.subMenu.length > 0) {
+                if (menuItem.children && menuItem.children.length > 0) {
                   return (
                     <AccordionItem
                       key={menuItem.id}
-                      value={menuItem.link.label}
+                      value={menuItem.title}
                       className={`border-none ${spacingClass}`}
                     >
                       <AccordionTrigger className={`${paddingClass} oswald-font uppercase text-white font-bold ${textSizeClass} ${borderClass} flex justify-between items-center group`}>
-                        {menuItem.link.label}
+                        {menuItem.title}
                       </AccordionTrigger>
                       <AccordionContent>
-                        {renderSubMenu(
-                          menuItem.subMenu as Header['navItems'],
-                          true
-                        )}
+                        {renderSubMenu(menuItem.children, true)}
                       </AccordionContent>
                     </AccordionItem>
                   );
                 }
 
-                const href = getLinkHref(menuItem.link);
+                const href = getLinkHref(menuItem);
 
                 return (
                   <div key={menuItem.id} className={spacingClass}>
                     <SheetClose asChild>
                       <Link
                         href={href}
-                        {...getLinkProps(menuItem.link)}
+                        {...getLinkProps(menuItem)}
                         className={`block w-full text-left ${textSizeClass} text-white ${borderClass} ${paddingClass} oswald-font font-bold uppercase`}
                       >
-                        {menuItem.link.label}
+                        {menuItem.title}
                       </Link>
                     </SheetClose>
                   </div>
@@ -246,7 +226,7 @@ export function MobileNav({ headerData }: MobileNavProps) {
           </div>
 
           <div className='flex flex-row flex-wrap w-full max-w-full gap-3 sm:gap-4 mt-8 sm:mt-10 pb-4 sm:pb-6'>
-            {headerData.socialMedia
+            {socialMedia
               ?.filter((social) => typeof social.url === 'string')
               .map((social) => (
                 <Link

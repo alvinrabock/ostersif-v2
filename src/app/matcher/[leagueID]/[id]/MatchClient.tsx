@@ -22,13 +22,6 @@ import { LineupIcon } from '@/app/components/Icons/LineupIcon';
 import { FootballIcon } from '@/app/components/Icons/FootballIcon';
 import StatisticIcon from '@/app/components/Icons/StatisticIcon';
 
-// Define the props interface for StandingsTable to ensure proper typing
-interface StandingsTableProps {
-    leagueId: number;
-    homeTeamId: number | undefined;
-    awayTeamId: number | undefined;
-}
-
 // Valid tab values
 const VALID_TABS = ['lineups', 'live', 'statistics', 'standings', 'videos'] as const;
 type ValidTab = typeof VALID_TABS[number];
@@ -42,7 +35,7 @@ const isValidTab = (tab: string): tab is ValidTab => {
 const MemoizedLineup = React.memo(Lineup);
 const MemoizedLiveData = React.memo(LiveData);
 const MemoizedLiveStats = React.memo(LiveStats);
-const MemoizedStandingsTable = React.memo<StandingsTableProps>(StandingsTable);
+const MemoizedStandingsTable = React.memo(StandingsTable);
 
 // Memoized skeleton components
 const MemoizedLineupSkeleton = React.memo(LineupSkeleton);
@@ -86,8 +79,8 @@ function MatchClient() {
     const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
 
     // Support both string IDs (SMC API 2.0 ULIDs) and numeric IDs (Fogis)
-    const leagueId = leagueID;
-    const matchId = id;
+    const leagueId = (leagueID as string) || '';
+    const matchId = (id as string) || '';
     const validParams = !!leagueId && !!matchId;
 
     // Sync activeTab with URL on mount and when URL changes
@@ -139,7 +132,7 @@ function MatchClient() {
     const {
         data: sportomediaData,
         loading: sportomediaLoading,
-        error: sportomediaError
+        error: _sportomediaError
     } = useSportomediaMatch(
         matchDetails?.leagueName,
         matchDetails?.season,
@@ -235,6 +228,8 @@ function MatchClient() {
     }, [
         sportomediaData,
         sportomediaLoading,
+        matchDetails?.homeLineup,
+        matchDetails?.awayLineup,
         errors.events,
         tabLoadingStates.live,
         leagueId,
@@ -400,28 +395,54 @@ function MatchClient() {
         return getEventsWithVideos(sportomediaData.matchEvents).length > 0;
     }, [sportomediaData]);
 
+    // Check if we have data for each tab
+    const hasLineupData = useMemo(() => {
+        return !loading && lineupData !== null && lineupData !== undefined;
+    }, [loading, lineupData]);
+
+    const hasLiveData = useMemo(() => {
+        // Check if we have Sportomedia data or regular events
+        return (!sportomediaLoading && sportomediaData !== null) ||
+               (!loading && events !== null && events !== undefined && events.length > 0);
+    }, [loading, events, sportomediaLoading, sportomediaData]);
+
+    const hasStatisticsData = useMemo(() => {
+        return !loading && liveStats !== null && liveStats !== undefined;
+    }, [loading, liveStats]);
+
     // Memoized tab configuration with proper loading states
     const tabConfig = useMemo(() => {
-        const tabs = [
-            {
+        const tabs = [];
+
+        // Only add lineups tab if we have lineup data
+        if (hasLineupData) {
+            tabs.push({
                 value: "lineups" as ValidTab,
                 label: "Laguppställning",
                 icon: "lineup",
                 content: lineupContent
-            },
-            {
+            });
+        }
+
+        // Only add live tab if we have event data
+        if (hasLiveData) {
+            tabs.push({
                 value: "live" as ValidTab,
                 label: "Liverapportering",
                 icon: "football",
                 content: liveContent
-            },
-            {
+            });
+        }
+
+        // Only add statistics tab if we have stats data
+        if (hasStatisticsData) {
+            tabs.push({
                 value: "statistics" as ValidTab,
                 label: "Statistik",
                 icon: "statistics",
                 content: statisticsContent
-            }
-        ];
+            });
+        }
 
         // Only add standings tab if league is supported
         if (hasStandings) {
@@ -444,7 +465,20 @@ function MatchClient() {
         }
 
         return tabs;
-    }, [lineupContent, liveContent, statisticsContent, standingsContent, videosContent, hasVideos, hasStandings]);
+    }, [lineupContent, liveContent, statisticsContent, standingsContent, videosContent, hasVideos, hasStandings, hasLineupData, hasLiveData, hasStatisticsData]);
+
+    // Auto-select first available tab if current tab is not available
+    useEffect(() => {
+        if (tabConfig.length > 0) {
+            const currentTabExists = tabConfig.some(tab => tab.value === activeTab);
+            if (!currentTabExists) {
+                // Set to first available tab
+                const firstTab = tabConfig[0].value;
+                setActiveTab(firstTab);
+                updateUrlTab(firstTab);
+            }
+        }
+    }, [tabConfig, activeTab, updateUrlTab]);
 
     // Early returns with proper conditions
     if (!validParams) {
@@ -476,6 +510,9 @@ function MatchClient() {
         return notFound();
     }
 
+    // Check if there's any data available in any tab
+    const hasAnyData = tabConfig.length > 0;
+
     return (
         <div className="w-full overflow-hidden min-h-screen bg-custom_dark_dark_red">
             <MatchHero
@@ -487,6 +524,12 @@ function MatchClient() {
 
             <MaxWidthWrapper>
                 <div className="pt-6 pb-20">
+                    {!hasAnyData ? (
+                        <div className="text-center py-12 text-white">
+                            <h2 className="text-2xl font-semibold mb-4">Kommer snart</h2>
+                            <p className="text-gray-300">Information om matchen kommer snart att finnas tillgänglig.</p>
+                        </div>
+                    ) : (
                     <Tabs
                         value={activeTab}
                         onValueChange={handleTabChange}
@@ -527,6 +570,7 @@ function MatchClient() {
                             </TabsContent>
                         ))}
                     </Tabs>
+                    )}
                 </div>
             </MaxWidthWrapper>
 

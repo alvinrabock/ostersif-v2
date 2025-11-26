@@ -107,8 +107,8 @@ export default function HeroSliderClient({ posts }: HeroSliderClientProps) {
                 {/* Hero content with better mobile spacing */}
                 <div className="absolute inset-0 z-60 flex items-end justify-center min-h-[700px] pb-60">
                   <div className="w-full max-w-[1500px] mx-auto px-4">
-                    <div className="flex flex-col text-center w-full relative z-50 justify-center items-center">
-                      <h1 className="text-white text-2xl sm:text-4xl lg:text-5xl font-bold mb-4 leading-tight sm:leading-tight lg:leading-[1.2] drop-shadow-md">
+                    <div className="flex flex-col text-center w-full relative z-50 justify-center items-center gap-6 sm:gap-8">
+                      <h1 className="text-white text-2xl sm:text-4xl lg:text-5xl font-bold leading-tight sm:leading-tight lg:leading-[1.2] drop-shadow-md">
                         {post.title}
                       </h1>
 

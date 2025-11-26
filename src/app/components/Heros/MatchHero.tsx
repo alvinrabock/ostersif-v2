@@ -79,17 +79,34 @@ export default function MatchHero({
         return false;
     };
 
+    // Helper function to get shortened team name
+    const getShortenedTeamName = (teamName: string): string => {
+        // Extract first 3 letters of each word and join them
+        const words = teamName.split(' ');
+        if (words.length === 1) {
+            // For single word team names, take first 3-4 letters
+            return teamName.substring(0, Math.min(4, teamName.length)).toUpperCase();
+        }
+        // For multi-word names, take first letter of each word (max 3 letters)
+        return words
+            .slice(0, 3)
+            .map(word => word.charAt(0))
+            .join('')
+            .toUpperCase();
+    };
+
     // Component for team logo with fallback
     const TeamLogo = ({ teamName, isHome, className }: { teamName: string; isHome: boolean; className?: string }) => {
         const logoError = isHome ? homeLogoError : awayLogoError;
         const setLogoError = isHome ? setHomeLogoError : setAwayLogoError;
 
         if (logoError) {
-            // Show team name as fallback
+            // Show shortened team name as fallback - use same size as logo container
+            const shortName = getShortenedTeamName(teamName);
             return (
-                <div className={`flex items-center justify-center text-center ${className || "w-12 sm:w-20 h-20"}`}>
-                    <span className="bg-gray-50/10 rounded-xl p-5 text-xs sm:text-sm font-bold text-white leading-tight">
-                        {teamName}
+                <div className={`bg-gray-50/10 rounded-xl flex items-center justify-center text-center ${className || "w-12 sm:w-20 h-20"}`}>
+                    <span className="text-xs sm:text-sm font-bold text-white leading-tight">
+                        {shortName}
                     </span>
                 </div>
             );
@@ -305,17 +322,35 @@ export default function MatchHero({
                         <div className="flex flex-row items-center justify-center gap-2">
                             {/* Home Team */}
                             <div className="flex flex-col-reverse gap-1 md:flex-row items-center justify-center text-center md:text-right md:justify-end flex-1">
-                                <div>
-                                    <h2 className="text-sm sm:text-lg md:text-xl lg:text-3xl font-bold mb-1">
-                                        {matchDetails.homeTeam}
-                                    </h2>
-                                    <p className="text-xs sm:text-sm text-gray-300">Hemma</p>
-                                </div>
-                                <TeamLogo 
-                                    teamName={matchDetails.homeTeam} 
-                                    isHome={true}
-                                    className="w-12 sm:w-20 h-20 mx-4"
-                                />
+                                {matchDetails.homeTeam ? (
+                                    <>
+                                        <div>
+                                            <h2 className="text-sm sm:text-lg md:text-xl lg:text-3xl font-bold mb-1">
+                                                {matchDetails.homeTeam}
+                                            </h2>
+                                            <p className="text-xs sm:text-sm text-gray-300">Hemma</p>
+                                        </div>
+                                        <TeamLogo
+                                            teamName={matchDetails.homeTeam}
+                                            isHome={true}
+                                            className="w-12 sm:w-20 h-20 mx-4"
+                                        />
+                                    </>
+                                ) : (
+                                    <>
+                                        <div>
+                                            <h2 className="text-sm sm:text-lg md:text-xl lg:text-2xl font-semibold mb-1 text-gray-300">
+                                                Kommer snart
+                                            </h2>
+                                            <p className="text-xs sm:text-sm text-gray-400">Hemma</p>
+                                        </div>
+                                        <div className="bg-gray-50/10 rounded-xl flex items-center justify-center text-center w-12 sm:w-20 h-20 mx-4">
+                                            <span className="text-xs sm:text-sm font-bold text-white leading-tight">
+                                                ?
+                                            </span>
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
                             {/* Score and Status - Now with proper loading states */}
@@ -325,17 +360,35 @@ export default function MatchHero({
 
                             {/* Away Team */}
                             <div className="flex flex-col gap-2 md:flex-row items-center justify-center text-center md:text-left md:justify-start flex-1">
-                                <TeamLogo 
-                                    teamName={matchDetails.awayTeam} 
-                                    isHome={false}
-                                    className="w-12 sm:w-20 h-20 mx-4"
-                                />
-                                <div>
-                                    <h2 className="text-sm sm:text-lg md:text-xl lg:text-3xl font-bold mb-1">
-                                        {matchDetails.awayTeam}
-                                    </h2>
-                                    <p className="text-xs sm:text-sm text-gray-300">Borta</p>
-                                </div>
+                                {matchDetails.awayTeam ? (
+                                    <>
+                                        <TeamLogo
+                                            teamName={matchDetails.awayTeam}
+                                            isHome={false}
+                                            className="w-12 sm:w-20 h-20 mx-4"
+                                        />
+                                        <div>
+                                            <h2 className="text-sm sm:text-lg md:text-xl lg:text-3xl font-bold mb-1">
+                                                {matchDetails.awayTeam}
+                                            </h2>
+                                            <p className="text-xs sm:text-sm text-gray-300">Borta</p>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="bg-gray-50/10 rounded-xl flex items-center justify-center text-center w-12 sm:w-20 h-20 mx-4">
+                                            <span className="text-xs sm:text-sm font-bold text-white leading-tight">
+                                                ?
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <h2 className="text-sm sm:text-lg md:text-xl lg:text-2xl font-semibold mb-1 text-gray-300">
+                                                Kommer snart
+                                            </h2>
+                                            <p className="text-xs sm:text-sm text-gray-400">Borta</p>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
 

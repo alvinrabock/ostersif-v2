@@ -25,9 +25,8 @@ async function verifyWebhookSignature(request: NextRequest, payload: string): Pr
   }
 
   // Generate HMAC signature using the secret and payload
-  const crypto = require('crypto');
-  const expectedSignature = crypto
-    .createHmac('sha256', WEBHOOK_SECRET)
+  const { createHmac } = await import('crypto');
+  const expectedSignature = createHmac('sha256', WEBHOOK_SECRET)
     .update(payload)
     .digest('hex');
 
@@ -55,7 +54,7 @@ export async function POST(request: NextRequest) {
 
     // Parse the payload
     const payload = JSON.parse(rawBody);
-    const { event, postType, slug, id } = payload;
+    const { postType, slug } = payload;
 
     // Revalidate based on post type
     switch (postType) {

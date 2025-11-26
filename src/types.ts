@@ -202,15 +202,24 @@ export interface Partnernivaer {
 export interface Partner {
     id: string;
     title: string;
+    namn?: string;
     /**
      * Rekommenderade fil WeBP, storlek på fil runt 200mb
      */
     logotype?: (string | null) | Media;
+    logotyp?: (string | null) | Media;
     /**
      * Länk till partnerns hemsida. Länken läggs på logotypen där den syns.
      */
     link?: string | null;
-    partnernivaer: string | Partnernivaer;
+    webbplats?: string | null;
+    beskrivning?: string | null;
+    partnerniva?: string | null;
+    partnernivaer?: string | Partnernivaer;
+    paket?: any[];
+    visaPaHemsida?: boolean;
+    ordning?: number;
+    sortOrder?: number;
     slug?: string | null;
     slugLock?: boolean | null;
     updatedAt: string;
@@ -1846,11 +1855,19 @@ export interface Foretagspaketkategorier {
 export interface Personal {
     id: string;
     title: string;
-    email: string;
-    jobTitle: string;
+    namn?: string;
+    email?: string;
+    epost?: string;
+    jobTitle?: string;
+    befattning?: string;
     phoneNumber?: string | null;
+    telefon?: string | null;
     photo?: (string | null) | Media;
-    avdelning: string | Personalavdelningar;
+    bild?: (string | null) | Media;
+    avdelning?: string | Personalavdelningar;
+    beskrivning?: string | null;
+    visaPaHemsida?: boolean;
+    sortOrder?: number;
     slug?: string | null;
     slugLock?: boolean | null;
     updatedAt: string;

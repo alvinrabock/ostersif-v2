@@ -54,7 +54,7 @@ export async function fetchPageBySlug(slug: string): Promise<Page | null> {
 /**
  * Fetch all pages
  */
-export async function fetchAllPages(limit = 100): Promise<Page[]> {
+export async function fetchAllPages(_limit = 100): Promise<Page[]> {
   // TODO: Implement fetchAllPages GraphQL query
   console.warn('fetchAllPages not yet implemented');
   return [];

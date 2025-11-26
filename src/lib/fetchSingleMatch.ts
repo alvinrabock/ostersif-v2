@@ -75,6 +75,12 @@ export async function getSingleMatch(leagueId: string, matchId: string): Promise
     }
     
     // Build match object with all ticket data
+    // Use engaging teams as fallback if main team names are empty
+    const homeTeamValue = String(matchDetails["home-team"]);
+    const awayTeamValue = String(matchDetails["away-team"]);
+    const homeEngagingTeamValue = String(matchDetails["home-engaging-team"]);
+    const awayEngagingTeamValue = String(matchDetails["away-engaging-team"]);
+
     const match: Match = {
         matchId: formatNumber(matchDetails["match-id"]),
         extMatchId: String(matchDetails["ext-match-id"]),
@@ -89,15 +95,15 @@ export async function getSingleMatch(leagueId: string, matchId: string): Promise
         arenaName: String(matchDetails["arena-name"]),
         leagueId: formatNumber(matchDetails["league-id"]),
         leagueName: String(matchDetails["league-name"]),
-        homeTeam: String(matchDetails["home-team"]),
+        homeTeam: homeTeamValue || homeEngagingTeamValue,
         homeTeamId: String(matchDetails["home-team-id"]),
         extHomeTeamId: String(matchDetails["ext-home-team-id"]),
-        awayTeam: String(matchDetails["away-team"]),
+        awayTeam: awayTeamValue || awayEngagingTeamValue,
         awayTeamId: String(matchDetails["away-team-id"]),
         extAwayTeamId: String(matchDetails["ext-away-team-id"]),
         roundNumber: formatNumber(matchDetails["round-number"]),
-        homeEngagingTeam: String(matchDetails["home-engaging-team"]),
-        awayEngagingTeam: String(matchDetails["away-engaging-team"]),
+        homeEngagingTeam: homeEngagingTeamValue,
+        awayEngagingTeam: awayEngagingTeamValue,
         attendees: matchDetails["attendees"] ? Number(matchDetails["attendees"]) : null,
         goalsHome: formatNumber(matchDetails["goals-home"]),
         goalsAway: formatNumber(matchDetails["goals-away"]),
@@ -125,7 +131,7 @@ export async function getSingleMatch(leagueId: string, matchId: string): Promise
 }
 
 // Updated function to get all ticket data when needed
-export async function getMatchTicketData(matchId: number): Promise<{
+export async function getMatchTicketData(matchId: number | string): Promise<{
     ticketURL: string;
     soldTickets?: number;
     customButtonText?: string;
@@ -147,7 +153,7 @@ export async function getMatchTicketData(matchId: number): Promise<{
             customButtonLink?: string;
             maxTickets?: number;
         }>();
-        
+
         for (const team of selectedMatches) {
             if (Array.isArray(team.selectedMatches)) {
                 for (const match of team.selectedMatches as SelectedMatchData[]) {
@@ -164,14 +170,16 @@ export async function getMatchTicketData(matchId: number): Promise<{
             }
         }
 
-        const ticketData = ticketDataMap.get(matchId) ?? {
+        // Convert matchId to number for lookup if it's a string
+        const numericMatchId = typeof matchId === 'string' ? parseInt(matchId, 10) : matchId;
+        const ticketData = ticketDataMap.get(numericMatchId) ?? {
             ticketURL: '',
             soldTickets: undefined,
             customButtonText: undefined,
             customButtonLink: undefined,
             maxTickets: undefined
         };
-        
+
         serverCache.set(cacheKey, { data: ticketData, timestamp: Date.now() });
         return ticketData;
     } catch (error) {
@@ -187,7 +195,7 @@ export async function getMatchTicketData(matchId: number): Promise<{
 }
 
 // Keep the original getMatchTicketURL for backward compatibility
-export async function getMatchTicketURL(matchId: number): Promise<string> {
+export async function getMatchTicketURL(matchId: number | string): Promise<string> {
     const ticketData = await getMatchTicketData(matchId);
     return ticketData.ticketURL;
 }

@@ -13,8 +13,8 @@ import WhistleIcon from '../Icons/WhistleIcon';
 import YellowCard from '../Icons/YellowCard';
 
 export interface OptimizedLiveDataProps {
-  leagueId: number;
-  matchId: number;
+  leagueId: number | string;
+  matchId: number | string;
   homeLineup: { formation?: string; players: Player[] };
   awayLineup: { formation?: string; players: Player[] };
   events: Event[] | null;

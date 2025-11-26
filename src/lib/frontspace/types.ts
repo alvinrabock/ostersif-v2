@@ -139,8 +139,8 @@ export interface Nyhet extends FrontspacePost {
   huvudbild?: FrontspaceMedia;
   galleri?: FrontspaceMedia[];
   kategorier?: Nyhetskategori[];
-  forfatta re?: Personal;
-  publi ceringsdatum?: string;
+  forfattare?: Personal;
+  publiceringsdatum?: string;
   fastPost?: boolean; // Pinned post
   visaPaHemsida?: boolean;
 }
@@ -162,7 +162,7 @@ export interface Jobb extends FrontspacePost {
   titel: string;
   beskrivning?: RichTextContent[];
   ansokningslank?: string;
-  sista AnsokningsDatum?: string;
+  sistaAnsokningsDatum?: string;
   anstallningsTyp?: 'heltid' | 'deltid' | 'projekt' | 'praktik';
   plats?: string;
   avdelning?: Personalavdelningar;

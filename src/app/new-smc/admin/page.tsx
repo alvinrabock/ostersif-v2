@@ -35,7 +35,7 @@ export default function LeagueCacheAdminPage() {
       } else {
         setMessage({ type: 'error', text: data.error || 'Failed to load cache' })
       }
-    } catch (error) {
+    } catch {
       setMessage({ type: 'error', text: 'Error loading cache data' })
     } finally {
       setLoading(false)
@@ -58,7 +58,7 @@ export default function LeagueCacheAdminPage() {
       } else {
         setMessage({ type: 'error', text: data.error || 'Failed to refresh cache' })
       }
-    } catch (error) {
+    } catch {
       setMessage({ type: 'error', text: 'Error refreshing cache' })
     } finally {
       setRefreshing(false)
@@ -163,7 +163,7 @@ export default function LeagueCacheAdminPage() {
               <h3 className="font-semibold text-yellow-900 mb-2">How It Works</h3>
               <ul className="text-sm text-yellow-800 space-y-1 list-disc list-inside">
                 <li>This system automatically discovers which leagues Östers IF participates in</li>
-                <li>Click "Refresh Cache" to fetch the latest data from the SMC API</li>
+                <li>Click &ldquo;Refresh Cache&rdquo; to fetch the latest data from the SMC API</li>
                 <li>The cache is stored in <code className="bg-yellow-100 px-1 rounded">src/data/league-cache.json</code></li>
                 <li>Use the utility functions in <code className="bg-yellow-100 px-1 rounded">src/lib/leagueCache.ts</code> to access this data</li>
                 <li>Recommended: Refresh weekly during season, monthly during off-season</li>
@@ -172,7 +172,7 @@ export default function LeagueCacheAdminPage() {
           </>
         ) : (
           <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-gray-500">No cache data available. Click "Refresh Cache" to fetch data.</p>
+            <p className="text-gray-500">No cache data available. Click &ldquo;Refresh Cache&rdquo; to fetch data.</p>
           </div>
         )}
       </div>

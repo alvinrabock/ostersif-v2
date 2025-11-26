@@ -18,6 +18,14 @@ export function MenuItemClient({ item, textColor }: MenuItemProps) {
   const [isOpen, setIsOpen] = useState(false)
   const hasChildren = item.children && item.children.length > 0
 
+  // Debug logging
+  console.log('MenuItemClient:', {
+    label: item.label,
+    type: item.type,
+    url: item.url,
+    pageSlug: item.pageSlug
+  })
+
   // Memoize handlers to prevent memory leaks
   const handleMouseEnter = useCallback(() => {
     if (hasChildren) {
@@ -32,12 +40,13 @@ export function MenuItemClient({ item, textColor }: MenuItemProps) {
   }, [hasChildren])
 
   // Determine the URL based on link_type:
-  // - 'internal': Use slug (e.g., /foretag)
+  // - 'internal': Use full nested path from url field (e.g., /partners/vara-partners)
   // - 'external': Use full URL (e.g., https://test.se)
   // - 'none': Use '#' (just a dropdown trigger)
   let href = '#'
-  if (item.type === 'internal' && item.pageSlug) {
-    href = `/${item.pageSlug}`
+  if (item.type === 'internal' && item.url) {
+    // Use the full nested path built by the resolver
+    href = item.url
   } else if (item.type === 'external' && item.url) {
     href = item.url
   } else if (item.url) {
@@ -113,8 +122,9 @@ export function MenuItemClient({ item, textColor }: MenuItemProps) {
               {(() => {
                 // Determine child URL based on link_type
                 let childHref = '#'
-                if (child.type === 'internal' && child.pageSlug) {
-                  childHref = `/${child.pageSlug}`
+                if (child.type === 'internal' && child.url) {
+                  // Use the full nested path built by the resolver
+                  childHref = child.url
                 } else if (child.type === 'external' && child.url) {
                   childHref = child.url
                 } else if (child.url) {

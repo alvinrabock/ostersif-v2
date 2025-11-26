@@ -92,6 +92,7 @@ export async function fetchMenuBySlug(slug: string): Promise<any> {
             id
             slug
             title
+            parent_id
           }
           children {
             id
@@ -105,6 +106,7 @@ export async function fetchMenuBySlug(slug: string): Promise<any> {
               id
               slug
               title
+              parent_id
             }
             children {
               id
@@ -118,6 +120,7 @@ export async function fetchMenuBySlug(slug: string): Promise<any> {
                 id
                 slug
                 title
+                parent_id
               }
             }
           }
@@ -195,6 +198,7 @@ export async function fetchPageBySlug(slug: string): Promise<any> {
         id
         title
         slug
+        parent_id
         status
         created_at
         updated_at
@@ -230,6 +234,108 @@ export async function fetchPageBySlug(slug: string): Promise<any> {
 }
 
 /**
+ * Fetch all pages (for routing)
+ */
+export async function fetchAllPages(options?: {
+  limit?: number;
+}): Promise<any[]> {
+  const { limit = 1000 } = options || {};
+
+  const query = `
+    query GetAllPages($storeId: String!, $limit: Int) {
+      pages(storeId: $storeId, limit: $limit) {
+        id
+        title
+        slug
+        parent_id
+        status
+        created_at
+        updated_at
+        published_at
+        content {
+          blocks {
+            id
+            type
+            content
+            styles
+            responsiveStyles
+          }
+          pageSettings {
+            seoTitle
+            seoDescription
+            ogImage
+          }
+        }
+      }
+    }
+  `;
+
+  try {
+    const data = await frontspaceGraphQLFetch<{ pages: any[] }>(query, {
+      storeId: FRONTSPACE_STORE_ID,
+      limit,
+    });
+    // Filter to only published pages on the client side
+    const publishedPages = (data.pages || []).filter((page: any) => page.status === 'published');
+    return publishedPages;
+  } catch (error) {
+    console.error('Error fetching all pages:', error);
+    return [];
+  }
+}
+
+/**
+ * Build full path for a page by traversing parent chain
+ */
+function buildPagePath(pageId: string, pagesMap: Map<string, any>): string {
+  const segments: string[] = [];
+  let currentPage = pagesMap.get(pageId);
+  const visitedIds = new Set<string>();
+
+  while (currentPage) {
+    // Detect circular references
+    if (visitedIds.has(currentPage.id)) {
+      console.error(`Circular parent reference detected for page: ${currentPage.slug}`);
+      break;
+    }
+    visitedIds.add(currentPage.id);
+
+    segments.unshift(currentPage.slug);
+
+    if (currentPage.parent_id) {
+      currentPage = pagesMap.get(currentPage.parent_id);
+    } else {
+      break;
+    }
+  }
+
+  return '/' + segments.join('/');
+}
+
+/**
+ * Enrich menu items with full nested paths
+ */
+function enrichMenuItemsWithPaths(menuItems: any[], pagesMap: Map<string, any>): any[] {
+  return menuItems.map(item => {
+    const enrichedItem = { ...item };
+
+    // Build full path for internal pages
+    if (item.link_type === 'internal' && item.page_id) {
+      const fullPath = buildPagePath(item.page_id, pagesMap);
+      console.log(`[Menu] Enriching "${item.title}": ${item.url || item.slug} -> ${fullPath}`);
+      enrichedItem.url = fullPath;
+    }
+
+    // Recursively enrich children
+    if (item.children && item.children.length > 0) {
+      enrichedItem.children = enrichMenuItemsWithPaths(item.children, pagesMap);
+    }
+
+    return enrichedItem;
+  });
+}
+
+/**
  * Fetch all posts of a specific type
  */
 export async function fetchPosts<T>(
@@ -242,7 +348,10 @@ export async function fetchPosts<T>(
     sort?: string;
   }
 ): Promise<{ posts: T[]; total: number }> {
-  const { limit = 10, offset = 0, contentFilter } = options || {};
+  const { limit = 10, offset = 0, filters, contentFilter } = options || {};
+
+  // Use filters as contentFilter if provided (filters is the public API, contentFilter is the internal GraphQL param)
+  const actualContentFilter = contentFilter || filters || null;
 
   // Construct GraphQL query for fetching posts from Frontspace
   const query = `
@@ -253,6 +362,7 @@ export async function fetchPosts<T>(
         slug
         content
         status
+        sort_order
         created_at
         updated_at
         published_at
@@ -271,7 +381,7 @@ export async function fetchPosts<T>(
       postTypeSlug: postType,
       limit,
       offset,
-      contentFilter: contentFilter || null,
+      contentFilter: actualContentFilter,
     };
 
     const data = await frontspaceGraphQLFetch<{ posts: T[] }>(query, variables);
@@ -288,31 +398,46 @@ export async function fetchPosts<T>(
 
 /**
  * Fetch a single post by slug
+ * Uses the generic 'post' query with postTypeSlug parameter
  */
 export async function fetchPostBySlug<T>(
   postType: string,
   slug: string
 ): Promise<T | null> {
-  const singularType = postType.replace(/s$/, ''); // Remove trailing 's' for singular
-
   const query = `
-    query GetPost($slug: String!) {
-      ${singularType}(slug: $slug) {
+    query GetPost($storeId: String!, $postTypeSlug: String!, $slug: String!) {
+      post(storeId: $storeId, postTypeSlug: $postTypeSlug, slug: $slug) {
         id
         title
         slug
+        content
         status
         created_at
         updated_at
         published_at
+        postType {
+          id
+          name
+          slug
+        }
+        kategori {
+          id
+          title
+          slug
+          content
+        }
       }
     }
   `;
 
   try {
-    const data = await frontspaceGraphQLFetch<any>(query, { slug });
-    return data[singularType] || null;
-  } catch (error) {
+    const data = await frontspaceGraphQLFetch<any>(query, {
+      storeId: FRONTSPACE_STORE_ID,
+      postTypeSlug: postType,
+      slug
+    });
+    return data.post || null;
+  } catch (_error) {
     console.error(`Post not found: ${postType}/${slug}`);
     return null;
   }
@@ -322,12 +447,24 @@ export async function fetchPostBySlug<T>(
  * Fetch huvudmeny (main menu)
  */
 export async function fetchHuvudmeny() {
-  return await fetchMenuBySlug('huvudmeny');
+  const menu = await fetchMenuBySlug('huvudmeny');
+
+  if (!menu || !menu.items) return menu;
+
+  // Fetch all pages to build the path map
+  const allPages = await fetchAllPages();
+  const pagesMap = new Map(allPages.map(page => [page.id, page]));
+
+  // Enrich menu items with full nested paths
+  menu.items = enrichMenuItemsWithPaths(menu.items, pagesMap);
+
+  return menu;
 }
 
 // Export specific post type fetchers
 export const frontspace = {
   pages: {
+    getAll: (options?: Parameters<typeof fetchAllPages>[0]) => fetchAllPages(options),
     getBySlug: (slug: string) => fetchPageBySlug(slug),
   },
   menus: {

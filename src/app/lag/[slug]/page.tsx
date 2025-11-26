@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     const { slug } = resolvedParams;
 
     try {
-        const teamData: Lag = await fetchTeamBySlug(slug);
+        const teamData: Lag | null = await fetchTeamBySlug(slug);
 
         if (!teamData) {
             return {
@@ -140,7 +140,7 @@ export default async function Page({ params, searchParams }: PageProps) {
     const REVALIDATE_TAG = 'posts-data';
 
     // Fetch team data
-    const teamData: Lag = await fetchTeamBySlug(slug);
+    const teamData: Lag | null = await fetchTeamBySlug(slug);
     if (!teamData) {
         notFound();
     }

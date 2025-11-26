@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic'
 
 // Dynamically import Map component (client-side only)
-const Map = dynamic(() => import('@/components/Map'), { ssr: false })
+const Map = dynamic(() => import('@/app/components/Map'), { ssr: false })
 
 interface Marker {
   lat: number

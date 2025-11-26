@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { DayPicker, DayContentProps } from "react-day-picker";
+import type { DayPickerProps } from "react-day-picker";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -9,7 +10,7 @@ import { buttonVariants } from "@/app/components/ui/Button";
 import { MatchCardData } from "@/types";
 import { lowercase } from "@/utillities/lowercase";
 
-interface MatchCalendarProps extends React.ComponentProps<typeof DayPicker> {
+type MatchCalendarProps = DayPickerProps & {
   matches?: MatchCardData[];
 }
 
@@ -62,9 +63,11 @@ export function MatchCalendar({
         {dayMatches.length > 0 && (
           <div className="flex flex-col gap-1 items-center">
             {dayMatches.slice(0, 1).map((match, idx) => {
-              const isHomeGame = match.homeTeam === 'Östers IF';
+              const isHomeGame: boolean = match.homeTeam === 'Östers IF';
               const homeTeam = match.homeTeam;
               const awayTeam = match.awayTeam;
+              // Suppress unused variable warning - keeping for future use
+              void isHomeGame;
 
               return (
                 <div

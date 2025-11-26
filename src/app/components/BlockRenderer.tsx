@@ -119,6 +119,11 @@ async function renderBlock(block: Block, blockId: string) {
       return <PostListBlock block={block} blockId={blockId} />
     }
 
+    case 'video': {
+      const { default: VideoBlock } = await import('@/app/components/blocks/VideoBlock')
+      return <VideoBlock block={block} blockId={blockId} />
+    }
+
     default:
       console.warn(`Unknown block type: ${block.type}`)
       return null

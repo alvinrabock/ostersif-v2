@@ -58,6 +58,12 @@ const nextConfig = {
         hostname: "ostersif.frontspace.se",
         pathname: "/api/media/**",
       },
+      // Add Frontspace Supabase storage domain
+      {
+        protocol: "https",
+        hostname: "supabasekong-mkssw0ooo80kowwskgggscw4.coolify.frontspace.se",
+        pathname: "/storage/**",
+      },
     ],
   },
 };

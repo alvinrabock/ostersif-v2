@@ -24,7 +24,7 @@ interface MapProps {
   tileProvider?: string
 }
 
-export default function Map({ markers = [], zoom = 10, id, className, width, height }: MapProps) {
+export default function Map({ markers = [], id, className, width, height }: MapProps) {
   const mapWidth = typeof width === 'number' ? `${width}px` : width || '100%'
   const mapHeight = typeof height === 'number' ? `${height}px` : height || '400px'
 

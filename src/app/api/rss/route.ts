@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { fetchAppPosts } from '@/lib/apollo/fetchNyheter/fetchAppPosts';
+import { fetchAppPosts } from '@/lib/frontspace/adapters/nyheter';
 import { escapeXml } from '@/utillities/rssHelpers';
 import { Post } from '@/types';
 
@@ -75,7 +75,7 @@ function encodeSpacesInUrl(url: string): string {
 
 function generateRSSFeed(posts: Post[]): string {
   const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3001';
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
+  const frontspaceUrl = process.env.FRONTSPACE_ENDPOINT?.replace('/api/graphql', '') || 'http://localhost:3000';
   const currentDate = new Date().toUTCString();
 
   const rssItems = posts.map(post => {
@@ -90,11 +90,11 @@ function generateRSSFeed(posts: Post[]): string {
     const youtubeThumbnail = youtubeId ? `https://i.ytimg.com/vi/${youtubeId}/hq720.jpg` : null;
 
     const fallbackImage = `/oster-placeholder-image.jpg`;
-    const imageUrl = imageResource?.sizes?.thumbnail?.url || imageResource?.url || youtubeThumbnail || fallbackImage;
+    const imageUrl = imageResource?.url || youtubeThumbnail || fallbackImage;
     const imageMimeType = imageResource?.mimeType || 'image/jpeg';
     const imageFilesize = imageResource?.filesize || 0;
-    
-    // Use backend URL for media files, frontend URL for fallback images
+
+    // Use appropriate URL based on image source
     let finalImageUrl: string;
     if (imageUrl === youtubeThumbnail || imageUrl?.startsWith('http')) {
       // YouTube thumbnails and absolute URLs - use as is (with encoding)
@@ -103,8 +103,8 @@ function generateRSSFeed(posts: Post[]): string {
       // Fallback image - use frontend URL
       finalImageUrl = joinUrl(baseUrl, imageUrl);
     } else {
-      // Payload CMS media files - use backend URL
-      finalImageUrl = joinUrl(backendUrl, imageUrl);
+      // Frontspace CMS media files - use Frontspace URL
+      finalImageUrl = joinUrl(frontspaceUrl, imageUrl);
     }
 
     return `

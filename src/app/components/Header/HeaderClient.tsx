@@ -5,16 +5,35 @@ import MaxWidthWrapper from '../MaxWidthWrapper';
 import React, { useState, useEffect } from 'react';
 import Script from 'next/script';
 import Link from 'next/link';
-import { Header, Partner } from '@/types';
+import { Partner } from '@/types';
 import MobileNav from './MobileNav';
 
 
+interface FrontspaceMenuItem {
+    id: string;
+    title: string;
+    link_type: string;
+    url?: string;
+    slug?: string;
+    page_id?: string;
+    target?: string;
+    image?: string | number | any;
+    children?: FrontspaceMenuItem[];
+}
+
+interface SocialMedia {
+    id: string;
+    platform: string;
+    url: string;
+}
+
 export interface HeaderClientProps {
-    headerData: Header;
+    menuItems: FrontspaceMenuItem[];
+    socialMedia: SocialMedia[];
     huvudpartners?: Partner[];
 }
 
-export const HeaderClient: React.FC<HeaderClientProps> = ({ headerData, huvudpartners }) => {
+export const HeaderClient: React.FC<HeaderClientProps> = ({ menuItems, socialMedia, huvudpartners }) => {
     const [isScrolled, setIsScrolled] = useState(true);
 
     useEffect(() => {
@@ -35,7 +54,7 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ headerData, huvudpar
             {huvudpartners && huvudpartners.length > 0 && (
                 <div className="bg-custom_dark_red sticky top-0 z-40 overflow-hidden">
                     <MaxWidthWrapper>
-                        <ul className="flex justify-between items-center gap-2 sm:gap-4 md:gap-6 py-2 overflow-hidden">
+                        <ul className="flex justify-between items-center gap-2 sm:gap-4 md:gap-6 py-1 overflow-hidden">
                             {huvudpartners.map((partner) => (
                                 <li key={partner.id} className="flex justify-center items-center flex-shrink-0">
                                     <div className="relative h-3 w-6 xs:h-4 xs:w-8 sm:w-14 sm:h-7">
@@ -47,14 +66,14 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ headerData, huvudpar
                                                 className="block w-full h-full relative"
                                             >
                                                 <img
-                                                    src={typeof partner.logotyp === 'object' && partner.logotyp ? partner.logotyp.url : ''}
+                                                    src={typeof partner.logotyp === 'object' && partner.logotyp ? partner.logotyp.url || '' : ''}
                                                     alt={partner.namn || partner.title}
                                                     className="w-full h-full object-contain"
                                                 />
                                             </Link>
                                         ) : (
                                             <img
-                                                src={typeof partner.logotyp === 'object' && partner.logotyp ? partner.logotyp.url : ''}
+                                                src={typeof partner.logotyp === 'object' && partner.logotyp ? partner.logotyp.url || '' : ''}
                                                 alt={partner.namn || partner.title}
                                                 className="w-full h-full object-contain"
                                             />
@@ -86,7 +105,8 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ headerData, huvudpar
                         </div>
                         <div className="flex items-center justify-end col-start-3">
                             <MobileNav
-                                headerData={headerData}
+                                menuItems={menuItems}
+                                socialMedia={socialMedia}
                             />
                         </div>
                     </div>

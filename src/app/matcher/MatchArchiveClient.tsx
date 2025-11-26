@@ -14,7 +14,7 @@ import { MatchCardSkeleton } from '../components/Skeletons/MatchCardSkeleton';
 
 import { Button } from '../components/ui/Button';
 import MatchFilter from './MatchFilters';
-import { Drawer, DrawerClose, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
+import { Drawer, DrawerClose, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle, DrawerTrigger } from '../../components/ui/drawer';
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
 import CalenderIcon from '../components/Icons/CalenderIcon';
 import { MatchCalendar } from './MatchCalendar';
@@ -240,7 +240,7 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons }) => {
                 clearInterval(intervalId);
             }
         };
-    }, [seasons, isPlayedFilter, locationFilter, leagueIdsToFetch, selectedRange, dateFromParam, dateToParam, selectedSeason]);
+    }, [seasons, isPlayedFilter, locationFilter, leagueFilter, leagueIdsToFetch, selectedRange, dateFromParam, dateToParam, selectedSeason]);
 
 
     const updateQueryParam = (key: string, value?: string) => {
@@ -311,7 +311,7 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons }) => {
     return (
         <div className="space-y-6 text-white">
             <h1 className="text-6xl font-bold mb-6">{getHeadingText()}</h1>
-            <div className='flex flex-wrap xl:flex-nowrap gap-4 xl:gap-10 flex-row items-center justify-between  border-t border-slate-400 pt-4'>
+            <div className='flex flex-wrap xl:flex-nowrap gap-4 xl:gap-10 flex-row items-center justify-between  border-t pt-6 mt-6 border-slate-400 pt-4'>
                 <div className='grid grid-cols-2 xl:flex w-full gap-4 justify-between'>
                     <div>
                         <Button
@@ -364,7 +364,6 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons }) => {
                             sideOffset={8} // adds space from the trigger
                         >
                             <MatchCalendar
-                                initialFocus
                                 mode="range"
                                 defaultMonth={selectedRange?.from}
                                 selected={selectedRange}

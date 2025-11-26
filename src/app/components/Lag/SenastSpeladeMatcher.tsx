@@ -11,7 +11,7 @@ import { MatchCardSkeleton } from "../Skeletons/MatchCardSkeleton";
 
 export default function SenastSpeladeMatcher() {
     const [matches, setMatches] = useState<MatchCardData[]>([]);
-    const [teamsWithSEF, setTeamsWithSEF] = useState<Lag[] | null>(null);
+    const [_teamsWithSEF, setTeamsWithSEF] = useState<Lag[] | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -38,7 +38,7 @@ export default function SenastSpeladeMatcher() {
                     });
                 });
 
-                const leagueIds = Array.from(leagueIdsSet);
+                const leagueIds = Array.from(leagueIdsSet).map(String);
                 const smcTeamId = fetchedTeams[0]?.smcTeamId;
 
                 if (!smcTeamId) {
@@ -88,7 +88,6 @@ export default function SenastSpeladeMatcher() {
                             key={match.matchId}
                             match={match}
                             colorTheme="outline"
-                            teamsWithSEF={teamsWithSEF ?? undefined}
                         />
                     ))}
                 </div>

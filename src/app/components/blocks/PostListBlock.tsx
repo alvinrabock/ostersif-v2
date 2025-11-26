@@ -126,7 +126,7 @@ export async function PostListBlock({ block, blockId }: PostListBlockProps) {
     : 'space-y-4'
 
   // Remove padding from block styles
-  const { padding, ...stylesWithoutPadding } = block.styles || {}
+  const { padding: _padding, ...stylesWithoutPadding } = block.styles || {}
 
   return (
     <div

@@ -80,14 +80,31 @@ const MiniMatchCard = ({ match, colorTheme = "blue" }: MatchCardProps) => {
                     <div className="flex items-start justify-center gap-2">
                         {/* Home team */}
                         <div className="flex flex-col w-20 items-center text-center">
-                            <div
-                                className={`p-2 aspect-square rounded-lg flex items-center justify-center ${darkBackgroundColor}`}
-                            >
-                                <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 relative">
-                                    <TeamLogo teamName={match.homeTeam} />
-                                </div>
-                            </div>
-                            <p className="text-xs font-bold">{match.homeTeam}</p>
+                            {match.homeTeam ? (
+                                <>
+                                    <div
+                                        className={`p-2 aspect-square rounded-lg flex items-center justify-center ${darkBackgroundColor}`}
+                                    >
+                                        <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 relative">
+                                            <TeamLogo teamName={match.homeTeam} />
+                                        </div>
+                                    </div>
+                                    <p className="text-xs font-bold">{match.homeTeam}</p>
+                                </>
+                            ) : (
+                                <>
+                                    <div
+                                        className={`p-2 aspect-square rounded-lg flex items-center justify-center ${darkBackgroundColor}`}
+                                    >
+                                        <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center">
+                                            <span className="bg-gray-50/10 rounded-xl p-2 text-xs font-bold text-white">
+                                                ?
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <p className="text-xs font-semibold text-gray-300">Kommer snart</p>
+                                </>
+                            )}
                         </div>
 
                         {/* Match Info */}
@@ -123,14 +140,31 @@ const MiniMatchCard = ({ match, colorTheme = "blue" }: MatchCardProps) => {
 
                         {/* Away team */}
                         <div className="flex flex-col w-20 items-center text-center">
-                            <div
-                                className={`p-2 aspect-square rounded-lg flex items-center justify-center ${darkBackgroundColor}`}
-                            >
-                                <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 relative">
-                                    <TeamLogo teamName={match.awayTeam} />
-                                </div>
-                            </div>
-                            <p className="text-xs font-bold">{match.awayTeam}</p>
+                            {match.awayTeam ? (
+                                <>
+                                    <div
+                                        className={`p-2 aspect-square rounded-lg flex items-center justify-center ${darkBackgroundColor}`}
+                                    >
+                                        <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 relative">
+                                            <TeamLogo teamName={match.awayTeam} />
+                                        </div>
+                                    </div>
+                                    <p className="text-xs font-bold">{match.awayTeam}</p>
+                                </>
+                            ) : (
+                                <>
+                                    <div
+                                        className={`p-2 aspect-square rounded-lg flex items-center justify-center ${darkBackgroundColor}`}
+                                    >
+                                        <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center">
+                                            <span className="bg-gray-50/10 rounded-xl p-2 text-xs font-bold text-white">
+                                                ?
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <p className="text-xs font-semibold text-gray-300">Kommer snart</p>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>

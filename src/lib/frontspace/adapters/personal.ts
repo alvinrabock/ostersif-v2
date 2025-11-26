@@ -4,33 +4,44 @@
  */
 
 import { frontspace } from '../client';
-import type { Personal as FrontspacePersonal } from '../types';
+import type { Personal as _FrontspacePersonal } from '../types';
 import type { Personal } from '@/types';
 
 /**
  * Transform Frontspace Personal to legacy Personal format
  */
-function transformPersonal(personal: FrontspacePersonal): Personal {
+function transformPersonal(personal: any): Personal {
+  // Frontspace stores custom fields in the 'content' object
+  const content = personal.content || {};
+
+  // Transform the photo/bild - it's a URL string in Frontspace
+  const bildUrl = content.profilbild || content.bild;
+  const photo = bildUrl ? {
+    id: bildUrl,
+    url: bildUrl,
+    alt: personal.title,
+    filename: bildUrl.split('/').pop() || 'profile.jpg',
+  } : undefined;
+
   return {
     id: personal.id,
     slug: personal.slug,
-    title: personal.namn,
-    namn: personal.namn,
-    befattning: personal.befattning,
-    avdelning: personal.avdelning,
-    bild: personal.bild ? {
-      id: personal.bild.id,
-      url: personal.bild.url,
-      alt: personal.bild.alt || personal.namn,
-      width: personal.bild.width,
-      height: personal.bild.height,
-    } : undefined,
-    telefon: personal.telefon,
-    epost: personal.epost,
-    beskrivning: personal.beskrivning,
-    visaPaHemsida: personal.visaPaHemsida || false,
-    createdAt: personal.createdAt,
-    updatedAt: personal.updatedAt,
+    title: personal.title,
+    namn: personal.title,
+    befattning: content.roll || content.befattning,
+    jobTitle: content.roll || content.befattning,
+    avdelning: content.avdelning,
+    bild: photo,
+    photo: photo,
+    telefon: content.telefon,
+    phoneNumber: content.telefon,
+    epost: content.email || content.epost,
+    email: content.email || content.epost,
+    beskrivning: content.beskrivning,
+    visaPaHemsida: content.visaPaHemsida || false,
+    sortOrder: personal.sort_order ?? content.sort_order ?? 999,
+    createdAt: personal.created_at || personal.createdAt,
+    updatedAt: personal.updated_at || personal.updatedAt,
   } as Personal;
 }
 

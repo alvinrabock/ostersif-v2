@@ -32,10 +32,6 @@ interface LiverapporteringNewProps {
 
 const LiverapporteringNew: React.FC<LiverapporteringNewProps> = ({
     events,
-    homeTeamName,
-    visitingTeamName,
-    homeTeamLogo,
-    visitingTeamLogo,
     onVideoClick,
     homeLineup = [],
     awayLineup = []

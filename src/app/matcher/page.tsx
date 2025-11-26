@@ -1,10 +1,10 @@
 // app/matcher/page.tsx
 import MaxWidthWrapper from "@/app/components/MaxWidthWrapper";
-import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getLeaguesGroupedBySeason } from "@/lib/leagueCache";
 import MatcherArchiveClient from "./MatchArchiveClient";
 import type { Metadata } from 'next';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Matcher - Östers IF',
@@ -42,18 +42,18 @@ export default async function Page() {
             <div className="bg-yellow-900/50 border border-yellow-600 rounded-lg p-6 text-left">
               <h2 className="font-bold text-xl mb-4">Setup Instructions:</h2>
               <ol className="list-decimal list-inside space-y-2">
-                <li>Visit the admin page: <a href="/new-smc/admin" className="underline text-yellow-300">/new-smc/admin</a></li>
-                <li>Click the "🔄 Refresh Cache" button</li>
+                <li>Visit the admin page: <Link href="/new-smc/admin" className="underline text-yellow-300">/new-smc/admin</Link></li>
+                <li>Click the &ldquo;🔄 Refresh Cache&rdquo; button</li>
                 <li>Wait for the discovery to complete (may take a few minutes)</li>
                 <li>Return to this page to view matches</li>
               </ol>
             </div>
-            <a
+            <Link
               href="/new-smc/admin"
               className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
             >
               Go to Admin Page
-            </a>
+            </Link>
           </div>
         </MaxWidthWrapper>
       </div>

@@ -8,8 +8,8 @@ import { getTeamLogoPath } from '@/utils/getTeamLogoPath';
 import PlayerStats from './PlayerStats';
 
 interface LiveStatsProps {
-  leagueId: number;
-  matchId: number;
+  leagueId: number | string;
+  matchId: number | string;
   homeTeam: string;
   awayTeam: string;
   lineupData: MatchLineup | null;

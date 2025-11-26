@@ -27,7 +27,7 @@ export async function getClientSafe(): Promise<FrontspaceClient> {
       const { getTenantClient } = await import('./fetch-with-tenant')
       return await getTenantClient()
     }
-  } catch (error) {
+  } catch {
     // Headers not available (build time) or other error - use default client
   }
 

@@ -48,7 +48,7 @@ function transformLag(lag: FrontspaceLag): Lag {
 export async function fetchAllLag(limit = 100): Promise<Lag[]> {
   try {
     const { posts } = await frontspace.lag.getAll({ limit });
-    return posts.map(transformLag);
+    return (posts as FrontspaceLag[]).map(transformLag);
   } catch (error) {
     console.error('Error fetching lag from Frontspace:', error);
     return [];
@@ -63,7 +63,7 @@ export async function fetchSingleLag(slug: string): Promise<Lag | null> {
     const lag = await frontspace.lag.getBySlug(slug);
     if (!lag) return null;
 
-    return transformLag(lag);
+    return transformLag(lag as FrontspaceLag);
   } catch (error) {
     console.error(`Error fetching lag ${slug} from Frontspace:`, error);
     return null;
@@ -80,7 +80,7 @@ export async function fetchLagByKon(kon: 'herr' | 'dam'): Promise<Lag[]> {
       limit: 100,
     });
 
-    return posts.map(transformLag);
+    return (posts as FrontspaceLag[]).map(transformLag);
   } catch (error) {
     console.error(`Error fetching lag by kon ${kon}:`, error);
     return [];

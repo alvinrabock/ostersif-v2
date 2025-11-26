@@ -21,7 +21,7 @@ const StandingsTable = ({ leagueId, homeTeamId, awayTeamId }: StandingsTableProp
         if (leagueId !== previousLeagueId) {
             const getStandings = async () => {
                 try {
-                    const data: TeamStanding[] = await fetchStandings(leagueId);
+                    const data: TeamStanding[] = await fetchStandings(String(leagueId));
                     setStandings(data);
                 } catch (error) {
                     const err = error instanceof Error ? error.message : "An unexpected error occurred.";

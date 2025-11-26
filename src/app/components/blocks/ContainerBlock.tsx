@@ -4,9 +4,11 @@
  * Layout container that holds child blocks
  * Supports background images, videos, and overlays
  * Can be flex or grid container based on display style
+ * Supports clickable containers with link functionality
  */
 
 import React from 'react'
+import Link from 'next/link'
 import { BlockRenderer } from '@/app/components/BlockRenderer'
 
 export interface Block {
@@ -149,7 +151,8 @@ export default async function ContainerBlock({ block, blockId }: ContainerBlockP
     overlay: {
       enabled: content.overlayEnabled || false,
       color: content.overlayColor || '#000000',
-      opacity: content.overlayOpacity || 0.5
+      // Convert percentage (0-100) to decimal (0-1) for CSS opacity
+      opacity: content.overlayOpacity ? content.overlayOpacity / 100 : 0.5
     },
     size: content.backgroundSize || 'cover',
     position: content.backgroundPosition || 'center center',
@@ -164,53 +167,132 @@ export default async function ContainerBlock({ block, blockId }: ContainerBlockP
   const displayType = block.styles?.display || 'flex'
   const containerTypeClass = displayType === 'grid' ? 'grid-container' : 'flex-container'
 
+  // Helper: Get container URL
+  const getContainerUrl = (): string => {
+    if (!content.link) return ''
+
+    if (content.link.type === 'external') {
+      return content.link.url || ''
+    } else if (content.link.type === 'internal') {
+      const url = content.link.url || ''
+      return url.startsWith('/') ? url : `/${url}`
+    }
+    return ''
+  }
+
+  // Helper: Get link attributes
+  const getLinkAttributes = () => {
+    const url = getContainerUrl()
+    const shouldOpenInNewWindow =
+      content.link?.openInNewWindow ||
+      (content.link?.type === 'external' && url.startsWith('http'))
+
+    return {
+      target: shouldOpenInNewWindow ? '_blank' : '_self',
+      rel: shouldOpenInNewWindow ? 'noopener noreferrer' : undefined
+    }
+  }
+
+  // Determine if clickable
+  const isClickable = content.clickable && content.link
+  const containerUrl = getContainerUrl()
+  const linkAttributes = getLinkAttributes()
+
+  // Common container content
+  const containerContent = (
+    <>
+      {/* Video background */}
+      {background?.type === 'video' && background.videoUrl && (
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            zIndex: 0
+          }}
+        >
+          <source src={background.videoUrl} type="video/mp4" />
+        </video>
+      )}
+      {/* Overlay for video */}
+      {background?.type === 'video' && background.overlay?.enabled && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: background.overlay.color,
+            opacity: background.overlay.opacity,
+            zIndex: 1
+          }}
+        />
+      )}
+      {content.children && content.children.length > 0 && (
+        <BlockRenderer blocks={content.children} />
+      )}
+    </>
+  )
+
+  // Common props for both clickable and non-clickable containers
+  const commonProps = {
+    id: blockId,
+    className: `container-block ${containerTypeClass} block-${blockId} relative`,
+    'data-block-id': blockId
+  }
+
+  // Render non-clickable container
+  if (!isClickable || !containerUrl) {
+    return (
+      <>
+        {backgroundCSS && <style dangerouslySetInnerHTML={{ __html: backgroundCSS }} />}
+        <div {...commonProps}>
+          {containerContent}
+        </div>
+      </>
+    )
+  }
+
+  // Render clickable container
+  const isInternal = content.link.type === 'internal'
+
+  if (isInternal) {
+    // Use Next.js Link for internal navigation
+    return (
+      <>
+        {backgroundCSS && <style dangerouslySetInnerHTML={{ __html: backgroundCSS }} />}
+        <Link
+          href={containerUrl}
+          {...commonProps}
+          style={{ textDecoration: 'none', color: 'inherit' }}
+        >
+          {containerContent}
+        </Link>
+      </>
+    )
+  }
+
+  // External link - use regular <a> tag
   return (
     <>
       {backgroundCSS && <style dangerouslySetInnerHTML={{ __html: backgroundCSS }} />}
-      <div
-        id={blockId}
-        className={`container-block ${containerTypeClass} block-${blockId} relative`}
-        data-block-id={blockId}
+      <a
+        href={containerUrl}
+        target={linkAttributes.target}
+        rel={linkAttributes.rel}
+        {...commonProps}
+        style={{ textDecoration: 'none', color: 'inherit' }}
       >
-        {/* Video background */}
-        {background?.type === 'video' && background.videoUrl && (
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              zIndex: 0
-            }}
-          >
-            <source src={background.videoUrl} type="video/mp4" />
-          </video>
-        )}
-        {/* Overlay for video */}
-        {background?.type === 'video' && background.overlay?.enabled && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              backgroundColor: background.overlay.color,
-              opacity: background.overlay.opacity,
-              zIndex: 1
-            }}
-          />
-        )}
-        {content.children && content.children.length > 0 && (
-          <BlockRenderer blocks={content.children} />
-        )}
-      </div>
+        {containerContent}
+      </a>
     </>
   )
 }

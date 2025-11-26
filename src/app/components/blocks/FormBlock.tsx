@@ -48,15 +48,10 @@ export default async function FormBlock({ block, blockId }: FormBlockProps) {
         className={`form-block block-${blockId}`}
         data-block-id={blockId}
       >
-        <FormComponent
-          form={form}
-          className={`block-${blockId}`}
-          submitButtonColor={content.submitButtonColor}
-          submitButtonTextColor={content.submitButtonTextColor}
-        />
+        <FormComponent form={form} />
       </div>
     )
-  } catch (error) {
+  } catch {
     // Silently fail - form doesn't exist or backend error
     // This prevents pages with broken forms from crashing
     return null

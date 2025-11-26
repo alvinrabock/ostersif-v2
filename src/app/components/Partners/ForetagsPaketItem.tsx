@@ -1,8 +1,8 @@
 import { Foretagspaket } from '@/types';
 import React from 'react';
-import { Media } from '../Media/index';
 import Link from 'next/link';
 import { Button } from '../ui/Button';
+import Image from 'next/image';
 
 interface ForetagsPaketItemProps {
     item: Foretagspaket;
@@ -18,8 +18,6 @@ const ForetagsPaketItem: React.FC<ForetagsPaketItemProps> = ({ item }) => {
             : item.link?.custom || '#'
         : '#';
 
-
-
     const hasInternalSlug =
         item.link?.internal &&
         typeof item.link.internal === 'object' &&
@@ -27,16 +25,23 @@ const ForetagsPaketItem: React.FC<ForetagsPaketItemProps> = ({ item }) => {
 
     const hasLink = item.enableLink && (hasInternalSlug || item.link?.custom);
 
+    // Extract image URL from heroImage
+    const imageUrl = typeof item.heroImage === 'string'
+        ? item.heroImage
+        : item.heroImage?.url;
+
     return (
         <div key={item.id} className="bg-custom_dark_red rounded-lg overflow-hidden flex flex-col">
-            {/* Image section using Media component */}
+            {/* Image section */}
             <div className="relative aspect-[16/10] w-full overflow-hidden">
-                {item.heroImage ? (
-                    <Media
-                        resource={item.heroImage || '/default-image.jpg'}
-                        imgClassName="w-full h-full object-cover"
-                        size="(max-width: 1025px) 50vw, (max-width: 1280px) 36vw, 25vw"
+                {imageUrl ? (
+                    <Image
+                        src={imageUrl}
+                        alt={item.title || 'Partner package'}
                         fill
+                        sizes="(max-width: 1025px) 50vw, (max-width: 1280px) 36vw, 25vw"
+                        className="object-cover"
+                        loading="lazy"
                     />
                 ) : (
                     <div className="absolute inset-0 flex items-center justify-center bg-gray-300 text-white text-xl font-semibold">

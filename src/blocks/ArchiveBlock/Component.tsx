@@ -8,9 +8,7 @@ import { fetchPostsByCategory } from '@/lib/apollo/fetchNyheter/PostByCategoryQu
 import { Post, ArchiveBlock as ArchiveBlockProps, Personal, Personalavdelningar, Foretagspaket, Foretagspaketkategorier } from '@/types';
 import React from 'react';
 import ForetagsPaketItem from '@/app/components/Partners/ForetagsPaketItem';
-import { fetchAllForetagspaketKategorier } from '@/lib/apollo/fetchForetagspaketKategorier/fetchAllForetagspaketKategorierAction';
-import { fetchForetagspaketByCategory } from '@/lib/apollo/fetchForetagpaket/fetchForetagsPaketByCategory';
-import { fetchSingleForetagpaket } from '@/lib/apollo/fetchForetagpaket/fetchSingleForetagpaketAction';
+import { fetchPosts } from '@/lib/frontspace/client';
 
 // Helper function to generate grid column classes based on column count
 const getGridColumnClasses = (columns: number): string => {
@@ -111,51 +109,46 @@ export const ArchiveBlock: React.FC<ArchiveBlockProps & { id?: string; slug?: st
       const includeCategories = categoryInput?.map((cat) => typeof cat === 'string' ? cat : cat.id) || [];
       const excludeCategories = excludeCategoryInput?.map((cat) => typeof cat === 'string' ? cat : cat.id) || [];
 
+      // Fetch all categories from Frontspace
+      const { posts: paketKategorier } = await fetchPosts('partnerpaket-kategorier', { limit: 100 });
+
+      // Transform and filter categories
+      const transformedKategorier = paketKategorier.map((category: any) => {
+        let content = category.content || {};
+        if (typeof content === 'string') {
+          try {
+            content = JSON.parse(content);
+          } catch {
+            content = {};
+          }
+        }
+
+        return {
+          id: category.id,
+          title: category.title,
+          slug: category.slug,
+          updatedAt: category.updated_at || category.updatedAt,
+          createdAt: category.created_at || category.createdAt,
+          koppladepaket: {
+            docs: content.koppladepaket || []
+          }
+        } as Foretagspaketkategorier;
+      });
+
+      // Apply include/exclude filters
       if (includeCategories.length > 0) {
-        // Fetch packages from specific categories
-        const fetched = await fetchForetagspaketByCategory(includeCategories, limit);
-
-        // Group packages by category
-        const groupedByCategory: Record<string, Foretagspaketkategorier> = {};
-
-        for (const paket of fetched) {
-          const category = paket.foretagspaketkategorier;
-
-          if (!category) {
-            continue;
-          }
-
-          // Skip if this category should be excluded
-          if (excludeCategories.includes(category.id)) {
-            continue;
-          }
-
-          if (!groupedByCategory[category.id]) {
-            groupedByCategory[category.id] = {
-              ...category,
-              koppladepaket: { docs: [] },
-            };
-          }
-
-          groupedByCategory[category.id]?.koppladepaket?.docs?.push(paket);
-        }
-
-        foretagspaketKategorier = Object.values(groupedByCategory);
-      } else {
-        // Fetch all categories, including their linked packages
-        const allKategorier = await fetchAllForetagspaketKategorier();
-
-        foretagspaketKategorier = allKategorier.filter(
-          (k: Foretagspaketkategorier) => k.koppladepaket?.docs?.length
+        foretagspaketKategorier = transformedKategorier.filter(
+          (k: Foretagspaketkategorier) =>
+            includeCategories.includes(k.id) &&
+            k.koppladepaket?.docs?.length &&
+            !excludeCategories.includes(k.id)
         );
-
-        // Apply exclude filter if specified
-        if (excludeCategories.length > 0) {
-          foretagspaketKategorier = foretagspaketKategorier.filter(
-            (kategori: Foretagspaketkategorier) =>
-              !excludeCategories.includes(kategori.id)
-          );
-        }
+      } else {
+        foretagspaketKategorier = transformedKategorier.filter(
+          (k: Foretagspaketkategorier) =>
+            k.koppladepaket?.docs?.length &&
+            !excludeCategories.includes(k.id)
+        );
       }
     }
   }
@@ -201,16 +194,43 @@ export const ArchiveBlock: React.FC<ArchiveBlockProps & { id?: string; slug?: st
         })
         .filter((slug): slug is string => typeof slug === 'string') ?? [];
 
-      const fetchedPakets = await Promise.all(
-        selectedSlugs.map((slug) => fetchSingleForetagpaket(slug))
-      );
+      // Fetch all partnerpaket and filter by selected slugs
+      const { posts: allPakets } = await fetchPosts('partnerpaket', { limit: 500 });
 
-      const validPakets = fetchedPakets.filter((p): p is Foretagspaket => !!p);
+      const validPakets = allPakets
+        .filter((paket: any) => selectedSlugs.includes(paket.slug))
+        .map((paket: any) => {
+          let content = paket.content || {};
+          if (typeof content === 'string') {
+            try {
+              content = JSON.parse(content);
+            } catch {
+              content = {};
+            }
+          }
+
+          return {
+            id: paket.id,
+            title: paket.title,
+            slug: paket.slug,
+            heroImage: content.heroImage || content.omslagsbild,
+            shortDescription: content.shortDescription || content.kortbeskrivning,
+            price: content.price || content.pris,
+            enableLink: content.enableLink,
+            link: content.link,
+            Ingaripaketet: content.Ingaripaketet || [],
+            updatedAt: paket.updated_at || paket.updatedAt,
+            createdAt: paket.created_at || paket.createdAt,
+          } as Foretagspaket;
+        });
 
       if (validPakets.length > 0) {
         foretagspaketKategorier = [{
           id: 'selected-foretagspaket',
           title: '', // Optional: Set a custom title
+          slug: 'selected',
+          updatedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
           koppladepaket: {
             docs: validPakets,
           },

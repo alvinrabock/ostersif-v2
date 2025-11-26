@@ -1,8 +1,6 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import { Play } from 'lucide-react';
 import { Post } from '@/types';
-import { Media } from '../Media/index';
 
 interface MiniNyhetItemProps {
   post: Post;
@@ -23,9 +21,8 @@ const MiniNyheterItem = ({ post, closeDialog, priority = false }: MiniNyhetItemP
 
   const fallbackImage = '/oster-placeholder-image.jpg';
 
-  const finalImageUrl = imageResource
-    ? null // handled by <Media />
-    : youtubeThumbnail || fallbackImage;
+  // Get the image URL from heroImage or YouTube thumbnail
+  const finalImageUrl = imageResource?.url || youtubeThumbnail || fallbackImage;
 
   return (
     <Link href={`/nyhet/${post.slug}`} onClick={closeDialog} className="block group">
@@ -37,28 +34,12 @@ const MiniNyheterItem = ({ post, closeDialog, priority = false }: MiniNyhetItemP
             </div>
           )}
 
-          {imageResource ? (
-            <Media
-              resource={imageResource}
-              size="(max-width: 640px) 33vw, (max-width: 1024px) 20vw, 150px"
-              fill
-              imgClassName="object-cover"
-              priority={priority}
-            />
-          ) : (
-            <Image
-              src={finalImageUrl ?? fallbackImage}
-              alt="News Thumbnail"
-              fill
-              className="object-cover"
-              sizes="(max-width: 640px) 33vw, (max-width: 1024px) 20vw, 150px"
-              priority={priority}
-              loading={priority ? "eager" : "lazy"}
-              quality={70}
-              placeholder="blur"
-              blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
-            />
-          )}
+          <img
+            src={finalImageUrl}
+            alt={imageResource?.alt || post.title}
+            className="w-full h-full object-cover"
+            loading={priority ? "eager" : "lazy"}
+          />
         </div>
 
         <div className="col-span-2 min-w-0">

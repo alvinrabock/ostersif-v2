@@ -4,7 +4,6 @@
  */
 
 import { frontspace } from '../client';
-import type { Nyhet } from '../types';
 import type { Post } from '@/types';
 
 /**
@@ -30,6 +29,42 @@ function transformNyhetToPost(nyhet: any): Post {
       ? omslagsbild.url
       : `${baseUrl}${omslagsbild.url}`;
   }
+
+  // Transform categories from Frontspace format
+  // Categories can be in kategori (for single post) or content.kategori (for list)
+  const kategorier = nyhet.kategori || content.kategori || [];
+
+  // Ensure kategorier is an array
+  const kategorierArray = Array.isArray(kategorier) ? kategorier : [];
+
+  const categories = kategorierArray.map((kat: any) => {
+    // If it's just a string ID, we can't do much with it
+    if (typeof kat === 'string') {
+      return {
+        id: kat,
+        title: '',
+        slug: '',
+        parent: null,
+        updatedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      };
+    }
+
+    // Handle parent - it might be an object with an id or just a string/null
+    let parent = null;
+    if (kat.content?.parent) {
+      parent = typeof kat.content.parent === 'object' ? kat.content.parent.id : kat.content.parent;
+    }
+
+    return {
+      id: kat.id,
+      title: kat.title,
+      slug: kat.slug,
+      parent,
+      updatedAt: kat.updated_at || kat.updatedAt || new Date().toISOString(),
+      createdAt: kat.created_at || kat.createdAt || new Date().toISOString(),
+    };
+  });
 
   return {
     id: nyhet.id,
@@ -60,7 +95,11 @@ function transformNyhetToPost(nyhet: any): Post {
     } : undefined,
     // Map YouTube link
     youtubeLink: content.youtube_link || null,
-    // Map content
+    // Map categories
+    categories,
+    // Map content - the RichText component expects HTML content directly
+    content: content.content || '',
+    // Also provide layout format for compatibility
     layout: content.content ? [{
       blockType: 'content',
       columns: [{
@@ -164,7 +203,7 @@ export async function fetchHomepageNyheter(limit = 5): Promise<Post[]> {
     const { posts } = await frontspace.nyheter.getAll({
       limit,
       filters: {
-        visaPaHemsida: true,
+        visa_upp_pa_start: true,  // Use the actual Frontspace field name
       },
       sort: '-publishedAt',
     });
@@ -172,6 +211,28 @@ export async function fetchHomepageNyheter(limit = 5): Promise<Post[]> {
     return posts.map(transformNyhetToPost);
   } catch (error) {
     console.error('Error fetching homepage nyheter from Frontspace:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetch posts for app/RSS feed (with publicera_till_app filter)
+ */
+export async function fetchAppPosts(limit = 50, page = 1): Promise<Post[]> {
+  try {
+    const offset = (page - 1) * limit;
+    const { posts } = await frontspace.nyheter.getAll({
+      limit,
+      offset,
+      filters: {
+        publicera_till_app: true,
+      },
+      sort: '-publishedAt',
+    });
+
+    return posts.map(transformNyhetToPost);
+  } catch (error) {
+    console.error('Error fetching app posts from Frontspace:', error);
     return [];
   }
 }

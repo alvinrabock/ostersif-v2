@@ -7,7 +7,7 @@ import KommandeMatcherBlock from './KommandeMatcherBlock/Component'
 import PopularaProdukterBlock from './PopularaProdukterBlock/Component'
 import { ArchiveBlock } from './ArchiveBlock/Component'
 import CodeBlock from './codeSnippet/Component'
-import TabellBlock from './TabellBlock/Component'
+import TabellBlock from './TabellBlock'
 import SpeladeMatcherBlock from './SpeladeMatcherBlock/Component'
 import { DownloadAssetsBlock } from './DownloadAssetBlock/Component'
 import { FaqBlock } from './FaqBlock/Component'
@@ -16,7 +16,6 @@ import { ButtonBlock } from './ButtonBlock/Component'
 import { IconListBlock } from './ListIconBlock/Component'
 import { ImageGalleryBlockComponent } from './ImageGalleryBlockComponent/Component'
 import { CardBlockComponent } from './CardBlock/Component'
-import { VideoBlockComponent } from './VideoBlock/Component'
 import ForetagIOsterNatverketComponent from './ForetagIOsterNatverketComponent/Component'
 import PartnerOsterISamhalletComponent from './PartnerOsterISamhalletComponent/Component'
 
@@ -37,7 +36,6 @@ const blockComponents = {
   iconListBlock: IconListBlock,
   imageGalleryBlock: ImageGalleryBlockComponent,
   cardBlock: CardBlockComponent,
-  videoBlock: VideoBlockComponent,
   foretagiosternatverket: ForetagIOsterNatverketComponent,
   partnerosterisamhallet: PartnerOsterISamhalletComponent
 } as const;

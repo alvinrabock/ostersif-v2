@@ -14,6 +14,8 @@ interface RawMatchData {
   "league-id": number;
   "home-team": string;
   "away-team": string;
+  "home-engaging-team"?: string;
+  "away-engaging-team"?: string;
   "round-number": number;
   "goals-home": number;
   "goals-away": number;
@@ -321,6 +323,10 @@ for (const team of selectedMatches) {
 
     const ticketData = ticketDataMap.get(match["match-id"]);
 
+    // Use engaging teams as fallback if main team names are empty
+    const homeTeam = match["home-team"] || match["home-engaging-team"] || "";
+    const awayTeam = match["away-team"] || match["away-engaging-team"] || "";
+
     const matchData: MatchCardData = {
       matchId: match["match-id"],
       kickoff: matchKickoff,
@@ -328,8 +334,8 @@ for (const team of selectedMatches) {
       status: match["status"],
       arenaName: match["arena-name"],
       leagueId: match["league-id"],
-      homeTeam: match["home-team"],
-      awayTeam: match["away-team"],
+      homeTeam: homeTeam,
+      awayTeam: awayTeam,
       roundNumber: match["round-number"],
       goalsHome: match["goals-home"] >= 0 ? match["goals-home"] : 0,
       goalsAway: match["goals-away"] >= 0 ? match["goals-away"] : 0,

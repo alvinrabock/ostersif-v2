@@ -4,7 +4,7 @@
  */
 
 import { frontspace } from '../client';
-import type { Partner as FrontspacePartner } from '../types';
+import type { Partner as _FrontspacePartner } from '../types';
 import type { Partner } from '@/types';
 
 /**
@@ -22,23 +22,34 @@ function transformPartner(partner: any): Partner {
     }
   }
 
+  // Debug: Log the raw content to see what fields are available
+  console.log(`🔍 Partner "${partner.title}" content:`, {
+    keys: Object.keys(content),
+    logotype: content.logotype,
+    logotyp: content.logotyp,
+    logo: content.logo,
+  });
+
   // Handle logotype - it can be a string URL or an object
+  // Try multiple field names: logotype, logotyp, logo
   let logotyp: any = undefined;
-  if (typeof content.logotype === 'string') {
+  const logoField = content.logotype || content.logotyp || content.logo;
+
+  if (typeof logoField === 'string') {
     logotyp = {
       id: partner.id,
-      url: content.logotype,
+      url: logoField,
       alt: partner.title || '',
       width: null,
       height: null,
     };
-  } else if (content.logotype && typeof content.logotype === 'object') {
+  } else if (logoField && typeof logoField === 'object') {
     logotyp = {
-      id: content.logotype.id,
-      url: content.logotype.url,
-      alt: content.logotype.alt || partner.title,
-      width: content.logotype.width,
-      height: content.logotype.height,
+      id: logoField.id,
+      url: logoField.url,
+      alt: logoField.alt || partner.title,
+      width: logoField.width,
+      height: logoField.height,
     };
   }
 
@@ -48,12 +59,16 @@ function transformPartner(partner: any): Partner {
     title: partner.title,
     namn: partner.title,
     logotyp,
-    beskrivning: content.beskrivning || '',
+    logotype: logotyp,
+    link: content.hemsida || content.webbplats || '',
     webbplats: content.hemsida || content.webbplats || '',
+    beskrivning: content.beskrivning || '',
     partnerniva: content.partnerniva || '',
+    partnernivaer: content.partnerniva || '',
     paket: [],
     visaPaHemsida: content.partner_till_oster_i_samhallet || false,
-    ordning: 0,
+    ordning: partner.sort_order ?? 0,
+    sortOrder: partner.sort_order ?? 999,
     createdAt: partner.created_at,
     updatedAt: partner.updated_at,
   } as Partner;
@@ -148,6 +163,27 @@ export async function fetchHuvudpartners(): Promise<Partner[]> {
     return posts.map(transformPartner);
   } catch (error) {
     console.error('Error fetching huvudpartners from Frontspace:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetch partners in Affärsnatverket
+ * Filters by med_i_osternatverket = true using GraphQL contentFilter
+ */
+export async function fetchPartnersInAffarsnatverket(): Promise<Partner[]> {
+  try {
+    const { posts } = await frontspace.partners.getAll({
+      contentFilter: {
+        med_i_osternatverket: true,
+      },
+      sort: 'title',
+      limit: 500,
+    });
+
+    return posts.map(transformPartner);
+  } catch (error) {
+    console.error('Error fetching partners in Affärsnatverket from Frontspace:', error);
     return [];
   }
 }

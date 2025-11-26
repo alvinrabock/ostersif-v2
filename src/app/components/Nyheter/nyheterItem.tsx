@@ -1,9 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { Post } from "@/types";
-import { Media } from "../Media/index";
 import { Play } from "lucide-react";
-import Image from "next/image";
 
 interface NyheterItemProps {
   post: Post;

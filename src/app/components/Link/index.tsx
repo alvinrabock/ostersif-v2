@@ -99,7 +99,9 @@ export const CMSLink: React.FC<CMSLinkType> = ({
 }) => {
   const href =
     type === 'reference' && typeof reference?.value === 'object' && reference.value.slug
-      ? `${reference?.relationTo !== 'pages' ? `/${reference?.relationTo}` : ''}/${reference.value.slug}`
+      ? reference?.relationTo === 'pages'
+        ? reference.value.slug // Already contains full path like /partners/partnernivaer
+        : `/${reference?.relationTo}/${reference.value.slug.replace(/^\//, '')}` // Remove leading slash if present
       : url
 
   if (!href) return null

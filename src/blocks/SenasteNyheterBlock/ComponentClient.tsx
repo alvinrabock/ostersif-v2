@@ -43,7 +43,7 @@ export default function SenasteNyheterClient({ posts }: SenasteNyheterClientProp
     const prevRef = useRef<HTMLButtonElement>(null);
     const nextRef = useRef<HTMLButtonElement>(null);
 
-    const slidesPerView = useResponsiveSlides();
+    const _slidesPerView = useResponsiveSlides();
 
     return (
         <div className="bg-custom_dark_dark_red flex flex-col gap-4 px-4 sm:px-6 w-full py-8 relative overflow-hidden max-w-[1500px] mx-auto">

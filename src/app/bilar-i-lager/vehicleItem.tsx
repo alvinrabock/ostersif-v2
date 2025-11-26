@@ -5,11 +5,7 @@
 
 import React from 'react';
 
-interface VehicleItemProps {
-  vehicle: any;
-}
-
-export default function VehicleItem({ vehicle }: VehicleItemProps) {
+export default function VehicleItem() {
   return (
     <div className="vehicle-item">
       <p>Vehicle component placeholder</p>

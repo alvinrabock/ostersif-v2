@@ -1,124 +1,129 @@
-import { MediaBlock } from '@/blocks/MediaBlock/Component'
-import {
-  DefaultNodeTypes,
-  SerializedBlockNode,
-  SerializedLinkNode,
-  type DefaultTypedEditorState,
-} from '@payloadcms/richtext-lexical'
-import {
-  JSXConvertersFunction,
-  LinkJSXConverter,
-  RichText as ConvertRichText,
-} from '@payloadcms/richtext-lexical/react'
+/**
+ * Simple RichText renderer for Frontspace CMS
+ * Renders rich text content from Frontspace's format
+ */
 
-import { CodeBlock, CodeBlockProps } from '@/blocks/Code/Component'
+import React from 'react'
 
-import type {
-  BannerBlock as BannerBlockProps,
-  CallToActionBlock as CTABlockProps,
-  MediaBlock as MediaBlockProps,
-  MatchPickerBlock as MatchPickerBlockProps,
-  VideoBlock as VideoBlockProps,
-  ButtonBlock as ButtonBlockProps,
-  IconListBlock as IconListBlockType,
-  ImageGalleryBlock as ImageGalleryBlockType
-} from '@/types'
-
-import { BannerBlock } from '@/blocks/Banner/Component'
-import { CallToActionBlock } from '@/blocks/CallToAction/Component'
-import { cn } from '@/lib/utils'
-import { VideoBlockComponent } from '@/blocks/VideoBlock/Component'
-import { MatchPickerBlock } from '@/blocks/matchPickerBlock/Component'
-import { ButtonBlock } from '@/blocks/ButtonBlock/Component'
-import { IconListBlock } from '@/blocks/ListIconBlock/Component'
-import { ImageGalleryBlockComponent } from '@/blocks/ImageGalleryBlockComponent/Component'
-
-type NodeTypes =
-  | DefaultNodeTypes
-  | SerializedBlockNode<CTABlockProps | MediaBlockProps | BannerBlockProps | CodeBlockProps | MatchPickerBlockProps | VideoBlockProps | ButtonBlockProps | IconListBlockType | ImageGalleryBlockType>
-
-// Correct function signature for internalDocToHref
-const internalDocToHref = ({ linkNode }: { linkNode: SerializedLinkNode }) => {
-  console.log('internalDocToHref called with linkNode:', linkNode);
-  
-  // Handle case where doc field is missing
-  if (!linkNode.fields.doc) {
-    console.warn('Link node missing doc field:', linkNode);
-    return '/';
-  }
-
-  const { value, relationTo } = linkNode.fields.doc;
-  
-  // Handle case where value is not an object
-  if (typeof value !== 'object' || !value) {
-    console.warn('Expected value to be an object, got:', typeof value, value);
-    return '/';
-  }
-
-  const slug = value.slug;
-  console.log(`Processing ${relationTo} with slug: ${slug}`);
-
-  // Handle different collection types
-  switch (relationTo) {
-    case 'pages':
-      return slug === 'home' ? '/' : `/${slug}`;
-    case 'posts':
-      return `/blog/${slug}`;
-    case 'products':  
-      return `/products/${slug}`;
-    case 'categories':
-      return `/categories/${slug}`;
-    default:
-      console.warn(`Unknown relationTo: ${relationTo}`);
-      return slug ? `/${slug}` : '/';
-  }
+interface RichTextNode {
+  type: string
+  children?: RichTextNode[]
+  text?: string
+  [key: string]: any
 }
 
-const jsxConverters: JSXConvertersFunction<NodeTypes> = ({ defaultConverters }) => ({
-  ...defaultConverters,
-  ...LinkJSXConverter({ internalDocToHref }), // This is the key line!
-  blocks: {
-    banner: ({ node }) => <BannerBlock className="col-start-2 mb-4" {...node.fields} />,
-    mediaBlock: ({ node }) => (
-      <MediaBlock
-        {...node.fields}
-        captionClassName="mx-auto max-w-[48rem]"
-        className="w-full max-w-full overflow-hidden" 
-        imgClassName="w-full h-auto max-w-full object-cover" 
-      />
-    ),
-    code: ({ node }) => <CodeBlock className="col-start-2" {...node.fields} />,
-    cta: ({ node }) => <CallToActionBlock {...node.fields} />,
-    matchPickerBlock: ({ node }) => <MatchPickerBlock {...node.fields} />,
-    videoBlock: ({ node }) => <VideoBlockComponent {...node.fields} />,
-    ButtonBlock: ({ node }) => <ButtonBlock {...node.fields} />,
-    iconListBlock: ({ node }) => <IconListBlock {...node.fields} />,
-    imageGalleryBlock: ({ node }) => <ImageGalleryBlockComponent {...node.fields} />,
-  },
-})
+interface LexicalFormat {
+  root: {
+    children: RichTextNode[]
+    [key: string]: any
+  }
+  [key: string]: any
+}
 
-type Props = {
-  data: DefaultTypedEditorState
+interface RichTextProps {
+  data?: RichTextNode[] | LexicalFormat
+  className?: string
   enableGutter?: boolean
   enableProse?: boolean
-} & React.HTMLAttributes<HTMLDivElement>
+}
 
-export default function RichText(props: Props) {
-  const { className, enableProse = true, enableGutter = true, ...rest } = props
-  
+const RichText: React.FC<RichTextProps> = ({ data, className }) => {
+  if (!data) {
+    return null
+  }
+
+  // Handle Lexical format (with root object)
+  let nodes: RichTextNode[]
+  if (Array.isArray(data)) {
+    nodes = data
+  } else if (typeof data === 'object' && 'root' in data && data.root?.children) {
+    nodes = data.root.children
+  } else {
+    return null
+  }
+
+  const renderNode = (node: RichTextNode, index: number): React.ReactNode => {
+    // Text node
+    if (node.text !== undefined) {
+      let text: React.ReactNode = node.text
+
+      // Apply text formatting
+      if (node.bold) text = <strong key={index}>{text}</strong>
+      if (node.italic) text = <em key={index}>{text}</em>
+      if (node.underline) text = <u key={index}>{text}</u>
+      if (node.strikethrough) text = <s key={index}>{text}</s>
+      if (node.code) text = <code key={index} className="bg-gray-100 px-1 rounded">{text}</code>
+
+      return text
+    }
+
+    // Element nodes
+    const children = node.children?.map((child, i) => renderNode(child, i))
+
+    switch (node.type) {
+      case 'h1':
+        return <h1 key={index} className="text-4xl font-bold mb-4">{children}</h1>
+      case 'h2':
+        return <h2 key={index} className="text-3xl font-bold mb-3">{children}</h2>
+      case 'h3':
+        return <h3 key={index} className="text-2xl font-bold mb-3">{children}</h3>
+      case 'h4':
+        return <h4 key={index} className="text-xl font-bold mb-2">{children}</h4>
+      case 'h5':
+        return <h5 key={index} className="text-lg font-bold mb-2">{children}</h5>
+      case 'h6':
+        return <h6 key={index} className="text-base font-bold mb-2">{children}</h6>
+      case 'p':
+      case 'paragraph':
+        return <p key={index} className="mb-4">{children}</p>
+      case 'ul':
+        return <ul key={index} className="list-disc list-inside mb-4 ml-4">{children}</ul>
+      case 'ol':
+        return <ol key={index} className="list-decimal list-inside mb-4 ml-4">{children}</ol>
+      case 'li':
+      case 'listitem':
+        return <li key={index} className="mb-1">{children}</li>
+      case 'link':
+        return (
+          <a
+            key={index}
+            href={node.url || node.href || '#'}
+            className="text-blue-600 hover:underline"
+            target={node.newTab ? '_blank' : undefined}
+            rel={node.newTab ? 'noopener noreferrer' : undefined}
+          >
+            {children}
+          </a>
+        )
+      case 'blockquote':
+      case 'quote':
+        return (
+          <blockquote key={index} className="border-l-4 border-gray-300 pl-4 italic mb-4">
+            {children}
+          </blockquote>
+        )
+      case 'code':
+      case 'code-block':
+        return (
+          <pre key={index} className="bg-gray-100 p-4 rounded mb-4 overflow-x-auto">
+            <code>{children}</code>
+          </pre>
+        )
+      case 'hr':
+        return <hr key={index} className="my-8 border-gray-300" />
+      case 'br':
+        return <br key={index} />
+      default:
+        // Default: render children in a div or return null
+        return children ? <div key={index}>{children}</div> : null
+    }
+  }
+
   return (
-    <ConvertRichText
-      converters={jsxConverters}
-      className={cn(
-        'payload-richtext text-white [&_*]:text-white', 
-        {
-          container: enableGutter,
-          'max-w-none': !enableGutter,
-          'mx-auto prose md:prose-md': enableProse,
-        },
-        className,
-      )}
-      {...rest}
-    />  
+    <div className={className}>
+      {nodes.map((node, index) => renderNode(node, index))}
+    </div>
   )
 }
+
+export default RichText

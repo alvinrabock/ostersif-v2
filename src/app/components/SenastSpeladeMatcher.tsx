@@ -8,14 +8,12 @@ import "swiper/css/navigation";
 import "swiper/css/pagination";
 
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { Bell, Ticket, Play, Calendar, Trophy } from "lucide-react";
-import { Lag, MatchCardData } from "@/types";
+import { MatchCardData } from "@/types";
 import { getMatches } from "@/lib/fetchMatches";
 import MiniMatchCard from "@/app/components/Match/MiniMatchCard";
-import Link from "next/link";
-import Image from "next/image";
 import type { Swiper as SwiperType } from 'swiper';
 import MiniMatchCardSkeleton from "@/app/components/Skeletons/MiniMatchCardSkeleton";
+import { useLeagueData } from "@/lib/hooks/useLeagueData";
 
 interface SenastSpeladeMatherProps {
     maxMatches?: number;
@@ -23,7 +21,10 @@ interface SenastSpeladeMatherProps {
 
 export default function SenastSpeladeMatcher({ maxMatches = 5 }: SenastSpeladeMatherProps) {
     const [matches, setMatches] = useState<MatchCardData[]>([]);
-    const [error, setError] = useState<string | null>(null);
+    const [matchError, setMatchError] = useState<string | null>(null);
+
+    // Use shared league data hook
+    const { data: leagueData, loading: leagueLoading, error: leagueError } = useLeagueData();
 
     // Refs for navigation
     const prevRef = useRef<HTMLButtonElement>(null);
@@ -32,18 +33,13 @@ export default function SenastSpeladeMatcher({ maxMatches = 5 }: SenastSpeladeMa
 
     useEffect(() => {
         async function fetchData() {
+            // Wait for league data to load
+            if (leagueLoading || !leagueData) {
+                return;
+            }
+
             try {
-                // Fetch league cache data
-                const response = await fetch('/api/discover-leagues');
-                const cacheData = await response.json();
-
-                if (!cacheData.success || !cacheData.data) {
-                    setError("Kunde inte ladda ligainformation.");
-                    setMatches([]);
-                    return;
-                }
-
-                const { teamId, leagues } = cacheData.data;
+                const { teamId, leagues } = leagueData;
 
                 // Get current year for latest season
                 const currentYear = new Date().getFullYear().toString();
@@ -57,17 +53,17 @@ export default function SenastSpeladeMatcher({ maxMatches = 5 }: SenastSpeladeMa
                 const targetLeagues = leagues.filter((l: any) => l.seasonYear === targetSeason);
 
                 if (targetLeagues.length === 0) {
-                    setError("Inga ligor hittades för aktuell säsong.");
+                    setMatchError("Inga ligor hittades för aktuell säsong.");
                     setMatches([]);
                     return;
                 }
 
                 // Extract league IDs and use the first league's team ID
-                const leagueIds = targetLeagues.map((l: any) => l.leagueId);
+                const leagueIds = targetLeagues.map((l: any) => String(l.leagueId));
                 const smcTeamId = targetLeagues[0]?.ostersTeamId || teamId;
 
                 if (!smcTeamId) {
-                    setError("Ogiltigt lag-ID.");
+                    setMatchError("Ogiltigt lag-ID.");
                     setMatches([]);
                     return;
                 }
@@ -96,13 +92,13 @@ export default function SenastSpeladeMatcher({ maxMatches = 5 }: SenastSpeladeMa
                 setSwiperReady(true);
             } catch (err) {
                 console.error("Error fetching played matches:", err);
-                setError("Kunde inte ladda matcher.");
+                setMatchError("Kunde inte ladda matcher.");
                 setMatches([]);
             }
         }
 
         fetchData();
-    }, [maxMatches]);
+    }, [maxMatches, leagueLoading, leagueData]);
 
     return (
         <div className="bg-custom_dark_dark_red flex flex-col gap-4 w-full py-2 relative overflow-hidden w-[1500px] max-w-full">
@@ -127,15 +123,15 @@ export default function SenastSpeladeMatcher({ maxMatches = 5 }: SenastSpeladeMa
                     <ArrowRight className="w-5 h-5 text-gray-700" />
                 </button>
 
-                {matches.length === 0 && !error ? (
+                {matches.length === 0 && !matchError && !leagueError ? (
                     <div className="flex flex-row flex-nowrap gap-10">
                         {[...Array(4)].map((_, i) => (
                             <MiniMatchCardSkeleton key={i} />
                         ))}
                     </div>
-                ) : error ? (
+                ) : (matchError || leagueError) ? (
                     <div className="bg-red-500 text-white p-4 rounded-md text-center">
-                        {error}
+                        {matchError || leagueError}
                     </div>
                 ) : swiperReady ? (
                     <Swiper

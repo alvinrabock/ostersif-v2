@@ -5,7 +5,7 @@ import { getSingleMatch } from "@/lib/fetchSingleMatch";
 import { fetchtLineupData } from "@/lib/Superadmin/fetchLineup";
 import { Match, LiveStats, Event, GoalEvent, SMCMatchPhaseTypes, MatchLineup, MatchEventData } from "@/types";
 import { fetchMatchDataBulk, fetchLeaguePlayers } from "./fetchMatchDataBulk";
-import { getFogisLeagueId, hasFogisMapping } from "@/utils/fogisLeagueMapping";
+import { getFogisLeagueId } from "@/utils/fogisLeagueMapping";
 
 // Cache for processed data to avoid re-computation
 const dataCache = new Map();
@@ -167,8 +167,8 @@ export function useOptimizedMatchData(
                 playerTeamIdType: typeof playerTeamId,
                 homeTeamIdType: typeof homeTeamId,
                 awayTeamIdType: typeof awayTeamId,
-                isHomeMatch: playerTeamId === homeTeamId,
-                isAwayMatch: playerTeamId === awayTeamId,
+                isHomeMatch: String(playerTeamId) === String(homeTeamId),
+                isAwayMatch: String(playerTeamId) === String(awayTeamId),
             });
 
             const processedGoal = {
@@ -210,7 +210,7 @@ export function useOptimizedMatchData(
             try {
                 // PHASE 1: Critical path - Match details only (fastest possible)
                 console.log('📡 Phase 1: Loading critical match data...');
-                const matchDetails = await getSingleMatch(parsedLeagueId, parsedMatchId);
+                const matchDetails = await getSingleMatch(String(parsedLeagueId), String(parsedMatchId));
 
                 if (currentRequestRef.current !== requestId) return;
 

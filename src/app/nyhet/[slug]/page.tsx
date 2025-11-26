@@ -1,9 +1,6 @@
 import MaxWidthWrapper from "@/app/components/MaxWidthWrapper";
-import { Media } from "@/app/components/Media/index";
 import MiniNyhetertItem from "@/app/components/Nyheter/miniNyheterItem";
-import RichText from "@/app/components/RichText/index";
-import { fetchRelatedPosts } from "@/lib/apollo/fetchNyheter/fetchRelatedNyheter";
-import { fetchSinglePosts } from "@/lib/apollo/fetchNyheter/fetchSinglePostsAction";
+import { fetchSingleNyhet, fetchNyheterByCategory, fetchAllNyheter } from "@/lib/frontspace/adapters/nyheter";
 import { Category, Media as MediaType } from "@/types";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -17,7 +14,7 @@ export async function generateMetadata({ params }: PageProps) {
   const { slug } = resolvedParams;
 
   // Fetch the post data for metadata
-  const post = await fetchSinglePosts(slug);
+  const post = await fetchSingleNyhet(slug);
 
   if (!post) {
     return {
@@ -139,28 +136,38 @@ export default async function Page({ params }: PageProps) {
   const { slug } = resolvedParams;
 
   // Fetch the single post data
-  const post = await fetchSinglePosts(slug);
+  const post = await fetchSingleNyhet(slug);
 
   // Handle the null case early
   if (!post) return notFound();
 
-  // Now TypeScript knows post is not null
-  // Safely access categories and handle null/undefined values
-  const categoryIds = post.categories?.map((cat) => (typeof cat === "string" ? cat : cat.id)) ?? [];
-  const parentCategoryIds = post.categories
-    ?.map((cat) => (typeof cat === "string" ? null : cat.parent))
-    .filter(Boolean) ?? [];
+  // Fetch related posts from the same category
+  // First try to get posts from the same category
+  let relatedPosts: typeof post[] = [];
 
-  // Merge category and parent category IDs into one array
-  const relatedCategoryIds = Array.from(
-    new Set([
-      ...categoryIds,
-      ...parentCategoryIds.filter((id): id is string => id !== null && id !== undefined)
-    ])
-  );
+  if (post.categories && post.categories.length > 0) {
+    const categorySlug = typeof post.categories[0] === 'string'
+      ? post.categories[0]
+      : post.categories[0].slug;
 
-  // Fetch related posts (excluding the current one)
-  const relatedPosts = await fetchRelatedPosts(relatedCategoryIds, post.id);
+    if (categorySlug) {
+      const categoryPosts = await fetchNyheterByCategory(categorySlug, 11, 1);
+      relatedPosts = categoryPosts.filter(p => p.id !== post.id).slice(0, 10);
+    }
+  }
+
+  // If we don't have enough related posts, fetch latest posts as fallback
+  if (relatedPosts.length < 10) {
+    const latestPosts = await fetchAllNyheter(11, 1);
+    const filteredLatest = latestPosts.filter(p => p.id !== post.id);
+
+    // Add latest posts that aren't already in relatedPosts
+    for (const latestPost of filteredLatest) {
+      if (!relatedPosts.find(rp => rp.id === latestPost.id) && relatedPosts.length < 10) {
+        relatedPosts.push(latestPost);
+      }
+    }
+  }
 
   // Extract YouTube video ID
   const youtubeLink = post?.youtubeLink || '';
@@ -205,8 +212,9 @@ export default async function Page({ params }: PageProps) {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
           {/* Main content */}
           <div className="lg:col-span-2">
-            <div className="relative pb-[56.25%] w-full mb-6">
-              {youtubeVideoId ? (
+            {/* Hero Image or YouTube Video */}
+            {youtubeVideoId ? (
+              <div className="relative pb-[56.25%] w-full mb-6">
                 <iframe
                   width="100%"
                   height="100%"
@@ -219,25 +227,40 @@ export default async function Page({ params }: PageProps) {
                   allowFullScreen
                   className="absolute top-0 left-0 w-full h-full rounded-lg"
                 />
-              ) : (
-                <Media
-                  resource={post.heroImage ?? ""}
-                  fill
-                  imgClassName="w-full h-full object-cover rounded-lg"
-                  size="(max-width: 768px) 100vw, (max-width: 1280px) 80vw, 800px"
+              </div>
+            ) : post.heroImage && typeof post.heroImage !== 'string' && post.heroImage.url ? (
+              <div className="w-full mb-6">
+                <img
+                  src={post.heroImage.url}
+                  alt={post.heroImage.alt || post.title}
+                  className="w-full h-auto object-cover rounded-lg"
+                  loading="lazy"
                 />
-              )}
+              </div>
+            ) : null}
+
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold mb-4">{post.title}</h1>
+              <p className="text-sm text-gray-500">
+                {new Date(post.publishedAt || '').toLocaleDateString()}
+              </p>
             </div>
 
-            <h1 className="text-3xl font-bold mb-4">{post.title}</h1>
-
-            <p className="text-sm text-gray-500 mb-4">
-              {new Date(post.publishedAt || '').toLocaleDateString()}
-            </p>
-
-            <div>
-              <RichText className="w-full mx-auto" data={post.content} enableGutter={false} />
-            </div>
+            {/* Render HTML content from Frontspace */}
+            <style dangerouslySetInnerHTML={{ __html: `
+              .article-content p { margin-bottom: 1.5rem; }
+              .article-content h2 { margin-top: 2rem; margin-bottom: 1rem; font-size: 1.5rem; font-weight: bold; }
+              .article-content h3 { margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.25rem; font-weight: 600; }
+              .article-content strong { font-weight: bold; }
+              .article-content a { color: #93c5fd; text-decoration: underline; }
+              .article-content a:hover { color: #bfdbfe; }
+              .article-content ul { margin-bottom: 1.5rem; list-style-type: disc; padding-left: 1.5rem; }
+              .article-content ol { margin-bottom: 1.5rem; list-style-type: decimal; padding-left: 1.5rem; }
+            ` }} />
+            <div
+              className="article-content text-white"
+              dangerouslySetInnerHTML={{ __html: post.content || '' }}
+            />
           </div>
 
           {/* Related posts */}

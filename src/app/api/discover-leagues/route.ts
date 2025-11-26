@@ -140,7 +140,7 @@ export async function GET(request: Request) {
     try {
       const cacheContent = await fs.readFile(CACHE_FILE_PATH, 'utf-8')
       cacheData = JSON.parse(cacheContent)
-    } catch (error) {
+    } catch {
       console.log('No existing cache found, will create new one')
     }
 
@@ -175,7 +175,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST() {
   try {
     // Force refresh on POST
     console.log('🔄 Manual refresh triggered')

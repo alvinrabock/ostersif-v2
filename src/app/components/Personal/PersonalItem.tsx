@@ -1,6 +1,5 @@
 import React from 'react';
 import Image from 'next/image';
-import { Media } from '@/app/components/Media/index';
 import { Personal } from '@/types';
 
 interface PersonalItemProps {
@@ -8,18 +7,27 @@ interface PersonalItemProps {
 }
 
 const PersonalItem: React.FC<PersonalItemProps> = ({ person }) => {
+  // Extract photo URL - handle both string and object cases
+  const photoUrl = typeof person.photo === 'string'
+    ? person.photo
+    : person.photo?.url;
+  const photoAlt = typeof person.photo === 'object' && person.photo?.alt
+    ? person.photo.alt
+    : person.title;
+
   return (
     <div
       key={person.id}
       className="flex flex-row gap-4 w-full min-w-0"
     >
       <div className="relative w-24 aspect-[4/5] rounded-md overflow-hidden flex-shrink-0">
-        {person.photo ? (
-          <Media
-            resource={person.photo}
-            size="(max-width: 640px) 96px, (max-width: 768px) 33vw, (max-width: 1200px) 25vw, 15vw"
-            alt={person.title}
-            imgClassName="object-cover w-full h-full"
+        {photoUrl ? (
+          <Image
+            src={photoUrl}
+            alt={photoAlt}
+            fill
+            sizes="(max-width: 640px) 96px, (max-width: 768px) 33vw, (max-width: 1200px) 25vw, 15vw"
+            className="object-cover"
           />
         ) : (
           <div className="w-full h-full bg-custom_red flex items-center justify-center">

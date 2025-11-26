@@ -39,7 +39,7 @@ export default function UpcomingMatches() {
                         });
                     });
                 });
-                const leagueIds = Array.from(leagueIdsSet);
+                const leagueIds = Array.from(leagueIdsSet).map(String);
 
                 const smcTeamId = fetchedTeams[0]?.smcTeamId;
 
@@ -83,7 +83,6 @@ export default function UpcomingMatches() {
                                 key={match.matchId}
                                 match={match}
                                 colorTheme={index === 0 ? "red" : "outline"}
-                                teamsWithSEF={teamsWithSEF}
                             />
                         ))}
                     </div>

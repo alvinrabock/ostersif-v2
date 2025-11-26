@@ -178,10 +178,25 @@ const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) =
             <div className="flex flex-col xl:flex-row gap-6 md:gap-8 w-full">
                 <div className="flex flex-row items-start justify-center gap-2">
                     <div className="flex flex-col w-20 gap-2 items-center justify-center text-center">
-                        <div className={`p-1 aspect-square rounded-lg flex items-center justify-center p-2 ${darkBackgroundColor}`}>
-                            <TeamLogo teamName={match.homeTeam} isHome={true} />
-                        </div>
-                        <p className={`text-xs font-bold !m-0 ${textColor}`}>{match.homeTeam}</p>
+                        {match.homeTeam ? (
+                            <>
+                                <div className={`p-1 aspect-square rounded-lg flex items-center justify-center p-2 ${darkBackgroundColor}`}>
+                                    <TeamLogo teamName={match.homeTeam} isHome={true} />
+                                </div>
+                                <p className={`text-xs font-bold !m-0 ${textColor}`}>{match.homeTeam}</p>
+                            </>
+                        ) : (
+                            <>
+                                <div className={`p-1 aspect-square rounded-lg flex items-center justify-center p-2 ${darkBackgroundColor}`}>
+                                    <div className="w-12 h-12 flex items-center justify-center">
+                                        <span className="bg-gray-50/10 rounded-xl p-3 text-xs font-bold text-white">
+                                            ?
+                                        </span>
+                                    </div>
+                                </div>
+                                <p className={`text-xs font-semibold !m-0 text-gray-300`}>Kommer snart</p>
+                            </>
+                        )}
                     </div>
 
                     {matchIsLive && (
@@ -231,10 +246,25 @@ const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) =
                     )}
 
                     <div className="flex flex-col w-20 gap-2 items-center justify-center text-center">
-                        <div className={`aspect-square rounded-lg flex items-center justify-center p-2 ${darkBackgroundColor}`}>
-                            <TeamLogo teamName={match.awayTeam} isHome={false} />
-                        </div>
-                        <p className={`text-xs font-bold !m-0 ${textColor}`}>{match.awayTeam}</p>
+                        {match.awayTeam ? (
+                            <>
+                                <div className={`aspect-square rounded-lg flex items-center justify-center p-2 ${darkBackgroundColor}`}>
+                                    <TeamLogo teamName={match.awayTeam} isHome={false} />
+                                </div>
+                                <p className={`text-xs font-bold !m-0 ${textColor}`}>{match.awayTeam}</p>
+                            </>
+                        ) : (
+                            <>
+                                <div className={`aspect-square rounded-lg flex items-center justify-center p-2 ${darkBackgroundColor}`}>
+                                    <div className="w-12 h-12 flex items-center justify-center">
+                                        <span className="bg-gray-50/10 rounded-xl p-3 text-xs font-bold text-white">
+                                            ?
+                                        </span>
+                                    </div>
+                                </div>
+                                <p className={`text-xs font-semibold !m-0 text-gray-300`}>Kommer snart</p>
+                            </>
+                        )}
                     </div>
                 </div>
 

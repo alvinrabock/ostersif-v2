@@ -170,7 +170,7 @@ const StandingsTable = ({
       // Extract league name and season from leagueId
       // leagueId format examples: "allsvenskan", "superettan", or ULID from SMC API
       let league = 'allsvenskan'; // default
-      let season = '2025'; // default
+      const season = '2025'; // default
 
       if (leagueId) {
         // Normalize league name to lowercase
