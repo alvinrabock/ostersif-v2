@@ -1,95 +1,23 @@
-'use client';
-
-import { fetchAllDocuments } from '@/lib/apollo/fetchDocuments/fetchAllDocumentsAction';
-import { Document } from '@/types';
+import { fetchAllDokument, type FrontspaceDokument } from '@/lib/frontspace/adapters/dokument';
 import Link from 'next/link';
 import MaxWidthWrapper from '../components/MaxWidthWrapper';
 import { Button } from '../components/ui/Button';
-import { useEffect, useState } from 'react';
+import type { Metadata } from 'next';
 
-const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
-
-// Function to handle file download
-const handleDownload = async (fileUrl: string, fileName: string) => {
-  try {
-    const response = await fetch(fileUrl);
-    
-    if (!response.ok) {
-      throw new Error('Network response was not ok');
-    }
-    
-    const blob = await response.blob();
-    
-    // Create download link
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    
-    // Cleanup
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error('Download failed:', error);
-    // Fallback to direct link
-    window.open(fileUrl, '_blank');
-  }
+export const metadata: Metadata = {
+  title: 'Dokument - Östers IF',
+  description: 'Ladda ner dokument och filer från Östers IF.',
+  openGraph: {
+    title: 'Dokument - Östers IF',
+    description: 'Ladda ner dokument och filer från Östers IF.',
+    type: 'website',
+    locale: 'sv_SE',
+    siteName: 'Östers IF',
+  },
 };
 
-export default function Page() {
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadDocuments = async () => {
-      try {
-        const docs = await fetchAllDocuments();
-        setDocuments(docs);
-      } catch (error) {
-        console.error('Failed to fetch documents:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadDocuments();
-  }, []);
-
-  // Skeleton component
-  const DocumentSkeleton = () => (
-    <li className="border border-white/10 rounded p-6 shadow-sm bg-white/5">
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-        {/* Left side skeleton */}
-        <div className="flex-1">
-          <div className="h-6 bg-white/20 rounded animate-pulse mb-2 w-3/4"></div>
-          <div className="h-4 bg-white/10 rounded animate-pulse w-1/2"></div>
-        </div>
-        
-        {/* Right side skeleton */}
-        <div className="flex gap-3 shrink-0">
-          <div className="h-10 w-32 bg-white/20 rounded animate-pulse"></div>
-          <div className="h-10 w-24 bg-white/20 rounded animate-pulse"></div>
-        </div>
-      </div>
-    </li>
-  );
-
-  if (loading) {
-    return (
-      <main className="w-full py-40 bg-custom_dark_dark_red text-white">
-        <MaxWidthWrapper>
-          <h1 className="text-3xl font-bold mb-6">Alla Dokument</h1>
-          <ul className="space-y-6">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <DocumentSkeleton key={index} />
-            ))}
-          </ul>
-        </MaxWidthWrapper>
-      </main>
-    );
-  }
+export default async function Page() {
+  const documents: FrontspaceDokument[] = await fetchAllDokument();
 
   return (
     <main className="w-full py-40 bg-custom_dark_dark_red text-white">
@@ -99,18 +27,11 @@ export default function Page() {
         {documents?.length > 0 ? (
           <ul className="space-y-6">
             {documents.map((doc) => {
-              const filePath =
-                typeof doc.fil === 'string'
-                  ? doc.fil
-                  : doc.fil?.url ?? null;
+              const fileUrl = doc.content.fil || null;
 
-              const fileUrl = filePath
-                ? `${backendURL}${filePath}`
-                : null;
-
-              // Extract filename from path or use title as fallback
-              const fileName = filePath
-                ? filePath.split('/').pop() || `${doc.title}.pdf`
+              // Extract filename from URL or use title as fallback
+              const fileName = fileUrl
+                ? fileUrl.split('/').pop() || `${doc.title}.pdf`
                 : `${doc.title}.pdf`;
 
               return (
@@ -122,35 +43,36 @@ export default function Page() {
                     {/* Left side: title and description */}
                     <div>
                       <h2 className="text-xl font-semibold mb-1">{doc.title}</h2>
-                      {doc.beskrivning && (
+                      {doc.content.beskrivning && (
                         <p className="text-sm text-white/70">
-                          {doc.beskrivning}
+                          {doc.content.beskrivning}
                         </p>
                       )}
                     </div>
 
                     {/* Right side: buttons */}
-                    {fileUrl && (
-                      <div className="flex gap-3 shrink-0">
-                        <Link
-                          href={fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <Button variant="outline" className="whitespace-nowrap">
-                            Visa dokument
-                          </Button>
-                        </Link>
+                    <div className="flex gap-3 shrink-0">
+                      <Link
+                        href={fileUrl || `/dokument/${doc.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Button variant="outline" className="whitespace-nowrap">
+                          Visa dokument
+                        </Button>
+                      </Link>
 
-                        <Button
-                          variant="secondary"
-                          className="whitespace-nowrap"
-                          onClick={() => handleDownload(fileUrl, fileName)}
-                        >
+                      <Link
+                        href={fileUrl || `/dokument/${doc.slug}`}
+                        download={fileName}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Button variant="secondary" className="whitespace-nowrap">
                           Ladda ner
                         </Button>
-                      </div>
-                    )}
+                      </Link>
+                    </div>
                   </div>
                 </li>
               );

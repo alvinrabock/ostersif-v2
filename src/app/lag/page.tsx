@@ -1,9 +1,7 @@
 import MaxWidthWrapper from '@/app/components/MaxWidthWrapper';
-import { Media } from '@/app/components/Media/index';
-import { fetchAllTeams } from '@/lib/apollo/fetchTeam/fetchAllTeamsAction';
+import { fetchAllLag, type FrontspaceLag } from '@/lib/frontspace/adapters/lag';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-import { Lag } from '@/types';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -20,15 +18,12 @@ export const metadata: Metadata = {
 };
 
 export default async function TeamsArchivePage() {
-  const teams: Lag[] = await fetchAllTeams();
+  const teams: FrontspaceLag[] = await fetchAllLag();
 
+  // Sort teams by published_at descending (newest first)
   const sortedTeams = [...teams].sort((a, b) => {
-    if (a.aLag && !b.aLag) return -1;
-    if (!a.aLag && b.aLag) return 1;
-
-    // Then sort by publishedAt descending (newest first)
-    const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
-    const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+    const dateA = a.published_at ? new Date(a.published_at).getTime() : 0;
+    const dateB = b.published_at ? new Date(b.published_at).getTime() : 0;
     return dateB - dateA;
   });
 
@@ -39,34 +34,33 @@ export default async function TeamsArchivePage() {
 
         <ul className="grid grid-cols-2 gap-6">
           {sortedTeams.map((team) => {
-            // Determine the link URL:
-            const sportadminLinkValid =
-              team.linkDirectToSportadmin && team.Sportadminlink && team.Sportadminlink.trim() !== '';
+            const hasImage = !!team.content.omslagsbild;
+            const sportadminLink = team.content.sportadminlank;
+            const linkToSportadmin = team.content.lanka_helt_till_sportadmin === true ||
+                                     team.content.lanka_helt_till_sportadmin === 'true';
 
-            // If checkbox is checked and link exists, use the external link with <a> and target _blank,
-            // else use internal Link to `/lag/${team.slug}`
-            if (sportadminLinkValid) {
+            // If linking directly to sportadmin
+            if (linkToSportadmin && sportadminLink) {
               return (
                 <li
                   key={team.id}
                   className={`
                     col-span-2 border border-white/20 rounded-lg p-6 shadow hover:shadow-lg transition relative overflow-hidden
-                    ${team.aLag ? 'text-white min-h-[500px]' : 'text-white'}
+                    ${hasImage ? 'text-white min-h-[500px]' : 'text-white'}
                   `}
                 >
                   <Link
-                    href={team.Sportadminlink!}
+                    href={sportadminLink}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block w-full h-full"
                   >
-                    {team.banner && (
+                    {hasImage && (
                       <div className="absolute inset-0 w-full h-full z-0 rounded-lg overflow-hidden">
-                        <Media
-                          resource={team.banner}
+                        <img
+                          src={team.content.omslagsbild}
                           alt={team.title}
-                          imgClassName="w-full h-full object-cover"
-                          fill
+                          className="w-full h-full object-cover"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-custom_dark_blue via-transparent to-transparent z-10" />
                       </div>
@@ -75,7 +69,7 @@ export default async function TeamsArchivePage() {
                     <div
                       className={`
                         z-20 p-6 text-center
-                        ${team.aLag
+                        ${hasImage
                           ? 'absolute bottom-6 left-6 text-left'
                           : 'relative flex items-center justify-start h-full'}
                       `}
@@ -96,16 +90,15 @@ export default async function TeamsArchivePage() {
                 <li
                   className={`
                     border border-white/20 rounded-lg p-6 shadow hover:shadow-lg transition relative overflow-hidden
-                    ${team.aLag ? 'text-white min-h-[500px]' : 'text-white'}
+                    ${hasImage ? 'text-white min-h-[500px]' : 'text-white'}
                   `}
                 >
-                  {team.banner && (
+                  {hasImage && (
                     <div className="absolute inset-0 w-full h-full z-0 rounded-lg overflow-hidden">
-                      <Media
-                        resource={team.banner}
+                      <img
+                        src={team.content.omslagsbild}
                         alt={team.title}
-                        imgClassName="w-full h-full object-cover"
-                        fill
+                        className="w-full h-full object-cover"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-custom_dark_blue via-transparent to-transparent z-10" />
                     </div>
@@ -114,7 +107,7 @@ export default async function TeamsArchivePage() {
                   <div
                     className={`
                       z-20 p-6 text-center
-                      ${team.aLag
+                      ${hasImage
                         ? 'absolute bottom-6 left-6 text-left'
                         : 'relative flex items-center justify-start h-full'}
                     `}

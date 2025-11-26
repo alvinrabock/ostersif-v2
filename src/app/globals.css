@@ -209,3 +209,39 @@ a {
   background-color: red; /* Highlight active bullet */
   opacity: 1; /* Full opacity for active bullet */
 }
+
+/* Gallery Swiper Styles */
+.gallery-swiper .swiper {
+  padding-bottom: 2.5rem;
+}
+
+.gallery-swiper .swiper-button-next,
+.gallery-swiper .swiper-button-prev {
+  color: #fff;
+  background: rgba(0, 0, 0, 0.5);
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  --swiper-navigation-size: 1rem;
+}
+
+.gallery-swiper .swiper-button-next:hover,
+.gallery-swiper .swiper-button-prev:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.gallery-swiper .swiper-button-next:after,
+.gallery-swiper .swiper-button-prev:after {
+  font-size: 0.875rem;
+  font-weight: bold;
+}
+
+.gallery-swiper .swiper-pagination-bullet {
+  background: #fff;
+  opacity: 0.5;
+}
+
+.gallery-swiper .swiper-pagination-bullet-active {
+  background: #fff;
+  opacity: 1;
+}

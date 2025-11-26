@@ -92,7 +92,7 @@ async function renderBlock(block: Block, blockId: string) {
     }
 
     case 'form': {
-      const { default: FormBlock } = await import('@/app/components/blocks/FormBlock')
+      const { default: FormBlock } = await import('@/blocks/FormBlock/Component')
       return <FormBlock block={block} blockId={blockId} />
     }
 

@@ -501,4 +501,96 @@ export const frontspace = {
     getBySlug: (slug: string) =>
       fetchPostBySlug('nyhetskategorier', slug),
   },
+  dokument: {
+    getAll: (options?: Parameters<typeof fetchPosts>[1]) =>
+      fetchPosts('dokument', options),
+    getBySlug: (slug: string) =>
+      fetchPostBySlug('dokument', slug),
+  },
+  jobb: {
+    getAll: (options?: Parameters<typeof fetchPosts>[1]) =>
+      fetchPosts('jobb', options),
+    getBySlug: (slug: string) =>
+      fetchPostBySlug('jobb', slug),
+  },
+  forms: {
+    getById: (formId: string) => fetchFormById(formId),
+  },
 };
+
+// ============================================================================
+// FORMS
+// ============================================================================
+
+export interface FormField {
+  name: string
+  label: string
+  type: string // 'text' | 'email' | 'tel' | 'textarea' | 'select' | 'checkbox' | 'radio'
+  required: boolean
+  placeholder?: string
+  options?: string[] // For select, radio, checkbox fields
+}
+
+export interface Form {
+  id: string
+  name: string
+  status: string // 'active' | 'inactive'
+  fields: FormField[]
+  email_settings?: {
+    send_to_type?: string
+    to_email?: string
+    form_email_field?: string
+    subject?: string
+    send_confirmation_to_user?: boolean
+    confirmation_subject?: string
+    confirmation_message?: string
+  }
+  created_at?: string
+  updated_at?: string
+}
+
+/**
+ * Fetch a specific form by ID
+ */
+export async function fetchFormById(formId: string): Promise<Form | null> {
+  const query = `
+    query GetForm($storeId: String!, $id: String!) {
+      form(storeId: $storeId, id: $id) {
+        id
+        name
+        status
+        fields {
+          name
+          label
+          type
+          required
+          placeholder
+          options
+        }
+        email_settings {
+          send_to_type
+          to_email
+          form_email_field
+          subject
+          send_confirmation_to_user
+          confirmation_subject
+          confirmation_message
+        }
+        created_at
+        updated_at
+      }
+    }
+  `;
+
+  try {
+    const data = await frontspaceGraphQLFetch<{ form: Form }>(query, {
+      storeId: FRONTSPACE_STORE_ID,
+      id: formId,
+    });
+
+    return data.form || null;
+  } catch (error) {
+    console.error('Error fetching form:', error);
+    return null;
+  }
+}

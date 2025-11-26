@@ -1,5 +1,6 @@
 import MaxWidthWrapper from "@/app/components/MaxWidthWrapper";
 import MiniNyhetertItem from "@/app/components/Nyheter/miniNyheterItem";
+import RichTextContent from "@/app/components/RichTextContent";
 import { fetchSingleNyhet, fetchNyheterByCategory, fetchAllNyheter } from "@/lib/frontspace/adapters/nyheter";
 import { Category, Media as MediaType } from "@/types";
 import { notFound } from "next/navigation";
@@ -257,9 +258,9 @@ export default async function Page({ params }: PageProps) {
               .article-content ul { margin-bottom: 1.5rem; list-style-type: disc; padding-left: 1.5rem; }
               .article-content ol { margin-bottom: 1.5rem; list-style-type: decimal; padding-left: 1.5rem; }
             ` }} />
-            <div
+            <RichTextContent
+              content={(post.content as unknown as string) || ''}
               className="article-content text-white"
-              dangerouslySetInnerHTML={{ __html: post.content || '' }}
             />
           </div>
 
