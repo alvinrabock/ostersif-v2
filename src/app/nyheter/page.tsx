@@ -1,5 +1,5 @@
-import { fetchAllCategoryPosts } from '@/lib/apollo/fetchNyheter/fetchAllCategoryAction';
-import { fetchAllPosts } from '@/lib/apollo/fetchNyheter/fetchAllPosts';
+import { fetchAllNyhetskategorier } from '@/lib/frontspace/adapters/nyhetskategorier';
+import { fetchAllNyheter } from '@/lib/frontspace/adapters/nyheter';
 import NewsPageClient from './NyheterClient';
 
 export const metadata = {
@@ -19,8 +19,8 @@ export const metadata = {
 
 export default async function NewsPage() {
   const [posts, categories] = await Promise.all([
-    fetchAllPosts(10),
-    fetchAllCategoryPosts(),
+    fetchAllNyheter(10, 1),
+    fetchAllNyhetskategorier(100),
   ]);
 
   return <NewsPageClient posts={posts} categories={categories} />;

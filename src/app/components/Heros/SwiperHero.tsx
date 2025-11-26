@@ -1,10 +1,10 @@
 // components/hero/SwiperHero.tsx
-import { fetchFeaturedPosts } from '@/lib/apollo/fetchNyheter/fetchSliderNyheter'
+import { fetchFastPosts } from '@/lib/frontspace/adapters/nyheter'
 import React from 'react'
 import SwiperHeroClient from './SwiperHeroClient'
 
 export const SwiperHero = async () => {
-  const posts = await fetchFeaturedPosts()
+  const posts = await fetchFastPosts(100)
 
   return <SwiperHeroClient posts={posts} />
 }

@@ -495,4 +495,10 @@ export const frontspace = {
     getBySlug: (slug: string) =>
       fetchPostBySlug('personal', slug),
   },
+  nyhetskategorier: {
+    getAll: (options?: Parameters<typeof fetchPosts>[1]) =>
+      fetchPosts('nyhetskategorier', options),
+    getBySlug: (slug: string) =>
+      fetchPostBySlug('nyhetskategorier', slug),
+  },
 };

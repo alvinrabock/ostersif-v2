@@ -11,26 +11,38 @@ import {
     DialogTrigger,
     DialogDescription,
 } from '../ui/dialog';
-import client from '@/lib/apollo/apolloClient';
-import { useLazyQuery } from '@apollo/client';
-import { SEARCH_POSTS } from '@/lib/apollo/fetchNyheter/SearchPosts';
+import { searchNyheter } from '@/lib/frontspace/adapters/nyheter';
 import { Post } from '@/types';
 import MiniNyheterItem from '../Nyheter/miniNyheterItem';
 
 export function SearchDialog() {
     const [searchValue, setSearchValue] = useState('');
     const [open, setOpen] = useState(false);
-
-    const [searchPosts, { loading, data, error }] = useLazyQuery(SEARCH_POSTS, {
-        client,
-        fetchPolicy: 'no-cache',
-    });
+    const [loading, setLoading] = useState(false);
+    const [data, setData] = useState<Post[]>([]);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (searchValue.length > 2) {
-            searchPosts({ variables: { search: searchValue } });
-        }
-    }, [searchValue, searchPosts]);
+        const searchPosts = async () => {
+            if (searchValue.length > 2) {
+                setLoading(true);
+                setError(null);
+                try {
+                    const results = await searchNyheter(searchValue, 50);
+                    setData(results);
+                } catch (err) {
+                    setError(err instanceof Error ? err.message : 'Search failed');
+                } finally {
+                    setLoading(false);
+                }
+            } else {
+                setData([]);
+            }
+        };
+
+        const timeoutId = setTimeout(searchPosts, 300); // Debounce search
+        return () => clearTimeout(timeoutId);
+    }, [searchValue]);
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -81,9 +93,9 @@ export function SearchDialog() {
                 {/* Results */}
                 <div className="flex flex-col mt-6 overflow-y-auto gap-10 max-h-96">
                     {loading && <p>Laddar...</p>}
-                    {error && <p className="text-red-500">Error: {error.message}</p>}
-                    {data?.Posts?.docs?.length === 0 && <p>Inga resultat</p>}
-                    {data?.Posts?.docs?.map((post: Post) => (
+                    {error && <p className="text-red-500">Error: {error}</p>}
+                    {data.length === 0 && searchValue.length > 2 && !loading && <p>Inga resultat</p>}
+                    {data.map((post: Post) => (
                         <MiniNyheterItem key={post.id} post={post} closeDialog={() => setOpen(false)} />
                     ))}
                 </div>

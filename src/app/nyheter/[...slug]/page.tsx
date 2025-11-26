@@ -1,5 +1,5 @@
-import { fetchAllCategoryPosts } from '@/lib/apollo/fetchNyheter/fetchAllCategoryAction';
-import { fetchPostsByCategory } from '@/lib/apollo/fetchNyheter/PostByCategoryQuery';
+import { fetchAllNyhetskategorier } from '@/lib/frontspace/adapters/nyhetskategorier';
+import { fetchNyheterByCategory } from '@/lib/frontspace/adapters/nyheter';
 import NewsPageClient from '../NyheterClient';
 import type { Metadata } from 'next';
 
@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
 
     try {
         // Fetch all categories
-        const categories = await fetchAllCategoryPosts();
+        const categories = await fetchAllNyhetskategorier();
 
         const finalSlug = slugParts[slugParts.length - 1];
         const currentCategory = categories.find(
@@ -63,7 +63,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     const slugParts = resolvedParams.slug;
 
     // Fetch all categories
-    const categories = await fetchAllCategoryPosts();
+    const categories = await fetchAllNyhetskategorier();
 
     const finalSlug = slugParts[slugParts.length - 1];
     const currentCategory = categories.find(
@@ -74,13 +74,11 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
         throw new Error(`Category with slug ${finalSlug} not found`);
     }
 
-    const categoryId = currentCategory.id;
-
     // Fetch posts by category with pagination params
     const limit = 10;  // for example, 10 posts per page
     const page = 1;    // or get this from query params if supporting pagination in URL
 
-    const posts = await fetchPostsByCategory([categoryId], limit, page);
+    const posts = await fetchNyheterByCategory(currentCategory.slug, limit, page);
 
     return (
         <NewsPageClient

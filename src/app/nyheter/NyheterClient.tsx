@@ -9,8 +9,6 @@ import { Media } from '@/app/components/Media/index';
 import { Button } from '../components/ui/Button';
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import Link from 'next/link';
-import { fetchAllPosts } from '@/lib/apollo/fetchNyheter/fetchAllPosts';
-import { fetchPostsByCategory } from '@/lib/apollo/fetchNyheter/PostByCategoryQuery';
 
 // --- Skeleton component for loading state ---
 const NyheterItemSkeleton = () => (
@@ -139,15 +137,26 @@ export default function NewsPageClient({
     }, []);
 
     const loadMore = useCallback(async () => {
-        if (loadingMore || !hasMore) return; 
-        
+        if (loadingMore || !hasMore) return;
+
         setLoadingMore(true);
         const nextPage = currentPage + 1;
 
         try {
-            const newPosts = currentCategory 
-                ? await fetchPostsByCategory([currentCategory.id], 10, nextPage)
-                : await fetchAllPosts(10, nextPage);
+            const url = new URL('/api/nyheter/list', window.location.origin);
+            url.searchParams.set('limit', '10');
+            url.searchParams.set('page', nextPage.toString());
+            if (currentCategory) {
+                url.searchParams.set('category', currentCategory.slug);
+            }
+
+            const response = await fetch(url.toString());
+            if (!response.ok) {
+                throw new Error('Failed to fetch posts');
+            }
+
+            const data = await response.json();
+            const newPosts = data.posts;
 
             if (!newPosts?.length) {
                 setHasMore(false);
@@ -156,7 +165,7 @@ export default function NewsPageClient({
 
             // Efficiently filter duplicates using the memoized Set
             const uniqueNewPosts = newPosts.filter((post: Post) => !existingPostIds.has(post.id));
-            
+
             if (uniqueNewPosts.length > 0) {
                 setPosts(prev => [...prev, ...uniqueNewPosts]);
             }

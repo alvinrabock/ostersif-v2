@@ -3,8 +3,8 @@ import PersonalItem from '@/app/components/Personal/PersonalItem';
 import RichText from '@/app/components/RichText/index';
 import { fetchAllPersonalAvdelningar } from '@/lib/apollo/fechPersonalAvdelningar/fetchAllPersonalAvdelningarAction';
 import { fetchSinglePersonalAvdelningar } from '@/lib/apollo/fechPersonalAvdelningar/fetchSinglePersonalAvdelningarAction';
-import { fetchAllPosts } from '@/lib/apollo/fetchNyheter/fetchAllPosts';
-import { fetchPostsByCategory } from '@/lib/apollo/fetchNyheter/PostByCategoryQuery';
+import { fetchAllNyheter, fetchNyheterByCategory } from '@/lib/frontspace/adapters/nyheter';
+import { fetchAllNyhetskategorier } from '@/lib/frontspace/adapters/nyhetskategorier';
 import { Post, ArchiveBlock as ArchiveBlockProps, Personal, Personalavdelningar, Foretagspaket, Foretagspaketkategorier } from '@/types';
 import React from 'react';
 import ForetagsPaketItem from '@/app/components/Partners/ForetagsPaketItem';
@@ -59,10 +59,19 @@ export const ArchiveBlock: React.FC<ArchiveBlockProps & { id?: string; slug?: st
 
       if (includeCategories.length > 0) {
         // Fetch posts from specific categories
-        posts = await fetchPostsByCategory(includeCategories, limit);
+        // Note: fetchNyheterByCategory expects a slug, but we have IDs
+        // We need to fetch all categories first to map IDs to slugs
+        const allCategories = await fetchAllNyhetskategorier();
+        const categorySlug = allCategories.find(cat => cat.id === includeCategories[0])?.slug;
+
+        if (categorySlug) {
+          posts = await fetchNyheterByCategory(categorySlug, limit);
+        } else {
+          posts = await fetchAllNyheter(limit);
+        }
       } else {
         // Fetch all posts
-        posts = await fetchAllPosts(limit);
+        posts = await fetchAllNyheter(limit);
       }
 
       // Apply exclude filter if specified

@@ -151,6 +151,7 @@ export async function fetchSingleNyhet(slug: string): Promise<Post | null> {
 
 /**
  * Fetch news posts by category
+ * Uses Frontspace's contentFilter to filter by category UUID
  */
 export async function fetchNyheterByCategory(
   categorySlug: string,
@@ -158,16 +159,38 @@ export async function fetchNyheterByCategory(
   page = 1
 ): Promise<Post[]> {
   try {
+    // Step 1: Get the category UUID from the slug
+    const category = await frontspace.nyhetskategorier.getBySlug(categorySlug);
+
+    if (!category) {
+      console.warn(`[fetchNyheterByCategory] Category not found: ${categorySlug}`);
+      return [];
+    }
+
+    console.log(`[fetchNyheterByCategory] Found category ${categorySlug} with ID: ${category.id}`);
+
+    // Step 2: Fetch posts filtered by category UUID
+    // The kategori field is nested in content.kategori and is an array of UUIDs
     const offset = (page - 1) * limit;
-    const { posts } = await frontspace.nyheter.getAll({
-      limit,
-      offset,
+
+    // Fetch all posts and filter client-side since contentFilter on nested arrays might not work
+    const { posts: allPosts } = await frontspace.nyheter.getAll({
+      limit: 1000, // Fetch more to ensure we have enough after filtering
       sort: '-publishedAt',
-      filters: {
-        'kategorier.slug': categorySlug,
-      },
     });
 
+    // Filter posts that have this category in their content.kategori array
+    const filteredPosts = allPosts.filter((post: any) => {
+      const kategorier = post.content?.kategori || [];
+      return kategorier.includes(category.id);
+    });
+
+    // Apply pagination after filtering
+    const posts = filteredPosts.slice(offset, offset + limit);
+
+    console.log(`[fetchNyheterByCategory] Found ${filteredPosts.length} total posts for category: ${categorySlug}, returning ${posts.length} for page ${page}`);
+
+    // Transform and return
     return posts.map(transformNyhetToPost);
   } catch (error) {
     console.error(`Error fetching nyheter by category ${categorySlug}:`, error);
