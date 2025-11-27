@@ -7,7 +7,7 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { isInternalUrl } from '@/lib/block-utils'
+import { isInternalUrl, resolveInternalLinkUrl } from '@/lib/block-utils'
 
 export interface Block {
   id: string
@@ -27,21 +27,21 @@ export default function ButtonBlock({ block, blockId }: ButtonBlockProps) {
 
   // Resolve link URL based on type
   const resolveLink = () => {
-    if (!link || !link.url) return null
+    if (!link) return null
 
     switch (link.type) {
       case 'internal':
-        return link.url
+        return resolveInternalLinkUrl(link)
       case 'external':
-        return link.url
+        return link.url || null
       case 'email':
-        return `mailto:${link.url}`
+        return link.url ? `mailto:${link.url}` : null
       case 'phone':
-        return `tel:${link.url}`
+        return link.url ? `tel:${link.url}` : null
       case 'anchor':
-        return link.url // Already has # prefix
+        return link.url || null // Already has # prefix
       default:
-        return link.url
+        return link.url || null
     }
   }
 

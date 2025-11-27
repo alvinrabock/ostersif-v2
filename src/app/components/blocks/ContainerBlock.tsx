@@ -10,6 +10,7 @@
 import React from 'react'
 import Link from 'next/link'
 import { BlockRenderer } from '@/app/components/BlockRenderer'
+import { resolveInternalLinkUrl } from '@/lib/block-utils'
 
 export interface Block {
   id: string
@@ -174,8 +175,7 @@ export default async function ContainerBlock({ block, blockId }: ContainerBlockP
     if (content.link.type === 'external') {
       return content.link.url || ''
     } else if (content.link.type === 'internal') {
-      const url = content.link.url || ''
-      return url.startsWith('/') ? url : `/${url}`
+      return resolveInternalLinkUrl(content.link)
     }
     return ''
   }

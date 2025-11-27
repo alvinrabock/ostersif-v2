@@ -18,7 +18,7 @@ const PersonalItem: React.FC<PersonalItemProps> = ({ person }) => {
   return (
     <div
       key={person.id}
-      className="flex flex-row gap-4 w-full min-w-0"
+      className="flex flex-row gap-4 w-full min-w-0 items-start"
     >
       <div className="relative w-24 aspect-[4/5] rounded-md overflow-hidden flex-shrink-0">
         {photoUrl ? (
@@ -42,7 +42,7 @@ const PersonalItem: React.FC<PersonalItemProps> = ({ person }) => {
         )}
       </div>
 
-      <div className="flex flex-col justify-center gap-1 flex-1 min-w-0 overflow-hidden">
+      <div className="flex flex-col justify-start gap-1 flex-1 min-w-0 overflow-hidden">
         {/* Dynamic font sizing based on container width */}
         <h4 
           className="font-semibold text-white"

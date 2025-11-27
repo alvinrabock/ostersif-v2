@@ -331,6 +331,30 @@ export function isInternalUrl(url: string): boolean {
 }
 
 /**
+ * Resolve internal link URL from Frontspace link data
+ * Uses pageSlug if available, otherwise falls back to url
+ */
+export function resolveInternalLinkUrl(link: { pageSlug?: string; url?: string } | null | undefined): string {
+  if (!link) return ''
+
+  // First check if there's a pageSlug (preferred)
+  if (link.pageSlug) {
+    const slug = link.pageSlug
+    return slug.startsWith('/') ? slug : `/${slug}`
+  }
+
+  // Fall back to URL
+  const url = link.url || ''
+
+  // Ensure it starts with /
+  if (url && !url.startsWith('/')) {
+    return `/${url}`
+  }
+
+  return url || '/'
+}
+
+/**
  * Extract numeric value from CSS size string
  */
 export function extractNumericValue(value: string | undefined, defaultValue: number = 0): number {
