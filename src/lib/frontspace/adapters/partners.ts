@@ -22,14 +22,6 @@ function transformPartner(partner: any): Partner {
     }
   }
 
-  // Debug: Log the raw content to see what fields are available
-  console.log(`🔍 Partner "${partner.title}" content:`, {
-    keys: Object.keys(content),
-    logotype: content.logotype,
-    logotyp: content.logotyp,
-    logo: content.logo,
-  });
-
   // Handle logotype - it can be a string URL or an object
   // Try multiple field names: logotype, logotyp, logo
   let logotyp: any = undefined;
@@ -148,19 +140,27 @@ export async function fetchPartnersByLevel(levelSlug: string): Promise<Partner[]
 
 /**
  * Fetch Huvudpartners (main partners)
- * Filters by partnerniva = "Huvudpartner" using GraphQL contentFilter
+ * Filters by partnerniva string - can be either UUID or text "Huvudpartner"
  */
 export async function fetchHuvudpartners(): Promise<Partner[]> {
+  // Known UUID for "Huvudpartner" partnernivå
+  const HUVUDPARTNER_UUID = 'eaf356ff-2d48-4c85-91e5-de39ea0dc485';
+
   try {
     const { posts } = await frontspace.partners.getAll({
-      contentFilter: {
-        partnerniva: 'Huvudpartner',
-      },
       sort: 'title',
-      limit: 100,
+      limit: 500,
     });
 
-    return posts.map(transformPartner);
+    // Filter by partnerniva - it's stored as a string (either UUID or text)
+    const huvudpartners = posts.filter((partner: any) => {
+      const partnerniva = partner.content?.partnerniva;
+      if (!partnerniva || typeof partnerniva !== 'string') return false;
+
+      return partnerniva === HUVUDPARTNER_UUID || partnerniva.toLowerCase() === 'huvudpartner';
+    });
+
+    return huvudpartners.map(transformPartner);
   } catch (error) {
     console.error('Error fetching huvudpartners from Frontspace:', error);
     return [];
