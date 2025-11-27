@@ -40,7 +40,7 @@ export default async function CustomComponentBlock({
           className={`custom-component-block senast-spelade-matcher block-${blockId}`}
           data-block-id={blockId}
         >
-          <SenastSpeladeMatcher maxMatches={props.maxMatches || 5} />
+          <SenastSpeladeMatcher />
         </div>
       );
     }

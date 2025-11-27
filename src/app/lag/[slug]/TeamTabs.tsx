@@ -142,7 +142,7 @@ export default function TeamTabs({
         number: player.content.trojnummer || null,
         position: player.content.position || null,
         land: player.content.land || null,
-        utlanad: player.content.utlanad === 'true' || player.content.utlanad === true,
+        utlanad: player.content.utlanad === 'true',
         kommentar: player.content.kommentar || null,
     });
 
