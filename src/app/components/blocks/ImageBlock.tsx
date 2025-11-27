@@ -22,34 +22,29 @@ interface ImageBlockProps {
 }
 
 export default function ImageBlock({ block, blockId }: ImageBlockProps) {
-  const { src, alt, width, height, link, logoOnScroll } = block.content
+  const { src, alt, link, logoOnScroll } = block.content
 
   if (!src) return null
 
-  // The block-level styles (like borderRadius) are already applied via CSS by BlockComponent
-  // We only apply inline styles for dimension controls
+  // The CSS styles are applied via the block-${blockId} class
+  // The image should fill its container and inherit border-radius via overflow:hidden
   const imageElement = (
     <img
       src={src}
-      alt={alt || ''}
-      className={`block-image block-${blockId}`}
-      style={{
-        width: width || '100%',
-        height: height || 'auto',
-        display: 'block'
-      }}
+      alt={alt || 'Image'}
+      className="w-full h-full object-cover"
     />
   )
 
   const content = link?.url ? (
-    <a href={link.url} target={link.target || '_self'} style={{ display: 'block' }}>
+    <a href={link.url} target={link.target || '_self'} className="block w-full h-full">
       {imageElement}
     </a>
   ) : imageElement
 
   return (
     <div
-      className={`image-block block-${blockId}`}
+      className={`image-block block-${blockId} overflow-hidden`}
       data-block-id={blockId}
       data-logo-on-scroll={logoOnScroll || undefined}
     >
