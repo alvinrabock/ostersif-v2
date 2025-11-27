@@ -54,7 +54,13 @@ export async function POST(request: NextRequest) {
 
     // Parse the payload
     const payload = JSON.parse(rawBody);
-    const { postType, slug } = payload;
+    const { postType: rawPostType, slug } = payload;
+
+    // Normalize postType to lowercase for consistent matching
+    const postType = rawPostType?.toLowerCase?.() || rawPostType;
+
+    console.log(`🔔 Webhook received: postType="${rawPostType}" (normalized: "${postType}"), slug="${slug}"`);
+    console.log(`📦 Full payload:`, JSON.stringify(payload, null, 2));
 
     // Revalidate based on post type
     switch (postType) {
@@ -63,6 +69,15 @@ export async function POST(request: NextRequest) {
         revalidatePath('/nyheter');
         if (slug) revalidatePath(`/nyhet/${slug}`);
         revalidateTag('nyheter');
+        console.log(`📰 Revalidated nyheter: ${slug || 'all'}`);
+        break;
+
+      case 'nyhetskategorier':
+        // Revalidate news categories
+        revalidatePath('/nyheter');
+        revalidateTag('nyhetskategorier');
+        revalidateTag('nyheter');
+        console.log(`🏷️ Revalidated nyhetskategorier`);
         break;
 
       case 'lag':
@@ -70,12 +85,15 @@ export async function POST(request: NextRequest) {
         revalidatePath('/lag');
         if (slug) revalidatePath(`/lag/${slug}`);
         revalidateTag('lag');
+        revalidateTag('frontspace'); // Also revalidate the general frontspace tag
+        console.log(`⚽ Revalidated lag: ${slug || 'all'}`);
         break;
 
       case 'personal':
         // Revalidate staff pages
         revalidatePath('/om-oss/personal');
         revalidateTag('personal');
+        console.log(`👥 Revalidated personal`);
         break;
 
       case 'partners':
@@ -83,19 +101,22 @@ export async function POST(request: NextRequest) {
         revalidatePath('/partners');
         if (slug) revalidatePath(`/partner/${slug}`);
         revalidateTag('partners');
+        console.log(`🤝 Revalidated partners: ${slug || 'all'}`);
         break;
 
       case 'jobb':
-        // Revalidate jobs listing
-        revalidatePath('/karriar');
+        // Revalidate jobs listing and detail pages
+        revalidatePath('/jobb');
         if (slug) revalidatePath(`/jobb/${slug}`);
         revalidateTag('jobb');
+        console.log(`💼 Revalidated jobb: ${slug || 'all'}`);
         break;
 
       case 'dokument':
         // Revalidate documents
         revalidatePath('/dokument');
         revalidateTag('dokument');
+        console.log(`📄 Revalidated dokument`);
         break;
 
       case 'pages':
@@ -110,9 +131,24 @@ export async function POST(request: NextRequest) {
         revalidateTag('pages');
         break;
 
+      case 'menus':
+        // Revalidate menus (affects header/footer)
+        revalidateTag('menus');
+        revalidatePath('/', 'layout');
+        console.log(`📋 Revalidated menus`);
+        break;
+
+      case 'footer':
+        // Revalidate footer
+        revalidateTag('footer');
+        revalidatePath('/', 'layout');
+        console.log(`📋 Revalidated footer`);
+        break;
+
       default:
-        // Revalidate homepage for other content types
+        // Revalidate homepage and the general frontspace tag for other content types
         revalidatePath('/');
+        revalidateTag('frontspace');
         console.log(`📄 Revalidated root path for ${postType}`);
     }
 

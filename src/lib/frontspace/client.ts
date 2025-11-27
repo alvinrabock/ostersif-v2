@@ -20,7 +20,8 @@ if (!FRONTSPACE_STORE_ID) {
  */
 async function frontspaceGraphQLFetch<T>(
   query: string,
-  variables?: Record<string, any>
+  variables?: Record<string, any>,
+  tags?: string[]
 ): Promise<T> {
   try {
     const headers: Record<string, string> = {
@@ -39,7 +40,10 @@ async function frontspaceGraphQLFetch<T>(
         query,
         variables,
       }),
-      next: { revalidate: 60 }, // Cache for 60 seconds
+      next: {
+        revalidate: 60, // Cache for 60 seconds
+        tags: tags || ['frontspace'], // Add cache tags for on-demand revalidation
+      },
     });
 
     const result = await response.json();
@@ -133,7 +137,7 @@ export async function fetchMenuBySlug(slug: string): Promise<any> {
     const data = await frontspaceGraphQLFetch<{ menuBySlug: any }>(query, {
       storeId: FRONTSPACE_STORE_ID,
       slug,
-    });
+    }, ['menus', 'frontspace']);
 
     if (!data.menuBySlug) {
       console.warn(`Menu with slug "${slug}" not found for store ${FRONTSPACE_STORE_ID}`);
@@ -172,7 +176,7 @@ export async function fetchFooter(): Promise<any> {
   try {
     const data = await frontspaceGraphQLFetch<{ footer: any }>(query, {
       storeId: FRONTSPACE_STORE_ID,
-    });
+    }, ['footer', 'frontspace']);
 
     // Handle null or empty blocks gracefully
     if (data.footer && data.footer.content) {
@@ -225,7 +229,7 @@ export async function fetchPageBySlug(slug: string): Promise<any> {
     const data = await frontspaceGraphQLFetch<{ page: any }>(query, {
       storeId: FRONTSPACE_STORE_ID,
       slug,
-    });
+    }, ['pages', 'frontspace']);
     return data.page;
   } catch (error) {
     console.error(`Error fetching page ${slug}:`, error);
@@ -274,7 +278,7 @@ export async function fetchAllPages(options?: {
     const data = await frontspaceGraphQLFetch<{ pages: any[] }>(query, {
       storeId: FRONTSPACE_STORE_ID,
       limit,
-    });
+    }, ['pages', 'frontspace']);
     // Filter to only published pages on the client side
     const publishedPages = (data.pages || []).filter((page: any) => page.status === 'published');
     return publishedPages;
@@ -384,7 +388,7 @@ export async function fetchPosts<T>(
       contentFilter: actualContentFilter,
     };
 
-    const data = await frontspaceGraphQLFetch<{ posts: T[] }>(query, variables);
+    const data = await frontspaceGraphQLFetch<{ posts: T[] }>(query, variables, [postType, 'frontspace']);
 
     return {
       posts: data.posts || [],
@@ -435,7 +439,7 @@ export async function fetchPostBySlug<T>(
       storeId: FRONTSPACE_STORE_ID,
       postTypeSlug: postType,
       slug
-    });
+    }, [postType, 'frontspace']);
     return data.post || null;
   } catch (_error) {
     console.error(`Post not found: ${postType}/${slug}`);
@@ -513,6 +517,18 @@ export const frontspace = {
     getBySlug: (slug: string) =>
       fetchPostBySlug('jobb', slug),
   },
+  spelare: {
+    getAll: (options?: Parameters<typeof fetchPosts>[1]) =>
+      fetchPosts('spelare', options),
+    getBySlug: (slug: string) =>
+      fetchPostBySlug('spelare', slug),
+  },
+  stab: {
+    getAll: (options?: Parameters<typeof fetchPosts>[1]) =>
+      fetchPosts('stab', options),
+    getBySlug: (slug: string) =>
+      fetchPostBySlug('stab', slug),
+  },
   forms: {
     getById: (formId: string) => fetchFormById(formId),
   },
@@ -586,7 +602,7 @@ export async function fetchFormById(formId: string): Promise<Form | null> {
     const data = await frontspaceGraphQLFetch<{ form: Form }>(query, {
       storeId: FRONTSPACE_STORE_ID,
       id: formId,
-    });
+    }, ['forms', 'frontspace']);
 
     return data.form || null;
   } catch (error) {

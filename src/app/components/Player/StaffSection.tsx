@@ -1,22 +1,23 @@
-import { Media } from "../Media/index";
-import type { Lag } from "@/types";
 import Image from "next/image";
 
-type Staff = NonNullable<Lag['staff']>[number];
+interface StaffMember {
+  name: string;
+  role?: string;
+  image?: string | null;
+}
 
-export const StaffSection = ({ staff }: { staff: Staff[] }) => (
+export const StaffSection = ({ staff }: { staff: StaffMember[] }) => (
   <aside className="col-span-1">
-    <h2 className="text-white text-3xl font-bold mb-6">Stab</h2>
+    <h2 className="text-white text-3xl font-bold mb-6">Ledarstab</h2>
     <div className="flex flex-col gap-6">
       {staff.map((person, index) => (
         <div key={index} className="flex text-white rounded-2xl overflow-hidden group">
           {person.image ? (
             <div className="flex-shrink-0 w-20 h-20 relative rounded-full overflow-hidden">
-              <Media
-                resource={person.image}
+              <img
+                src={person.image}
                 alt={person.name}
-                size="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 15vw"
-                imgClassName="object-cover w-full h-full"
+                className="object-cover object-top w-full h-full"
                 loading="lazy"
               />
             </div>

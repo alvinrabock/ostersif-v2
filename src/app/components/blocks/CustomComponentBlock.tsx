@@ -67,6 +67,13 @@ export default async function CustomComponentBlock({
       return <SenasteNyheterBlock maxPosts={props.maxPosts || 3} />;
     }
 
+    case 'HistoriaPostsComponent': {
+      // Dynamically import the component (server component)
+      const { default: HistoriaPostsBlock } = await import('@/blocks/HistoriaPostsBlock/Component');
+
+      return <HistoriaPostsBlock maxPosts={props.maxPosts || 3} />;
+    }
+
     case 'KommandeMatcher':
     case 'UpcomingMatchesBlock': {
       // Dynamically import the component (client component)
@@ -232,7 +239,7 @@ export default async function CustomComponentBlock({
 
     default:
       console.warn(`⚠️ Unknown custom component: ${componentName}`);
-      console.warn('Available components: SenastSpeladeMatcher, TabellBlock, SenasteNyheter, LatestNewsBlock, KommandeMatcher, UpcomingMatchesBlock, HeroSlider, KontaktSection, StyrelseSection, PartnerSection, PartnersIAffarsnatverket, Partnerpaket, PartnernivaerComponent, PartnerpaketAffarsnatverk, PartnerpaketPrivatloge, PartnerpaketStigsvensson, PartnerpaketOsterisamhallet');
+      console.warn('Available components: SenastSpeladeMatcher, TabellBlock, SenasteNyheter, LatestNewsBlock, HistoriaPostsComponent, KommandeMatcher, UpcomingMatchesBlock, HeroSlider, KontaktSection, StyrelseSection, PartnerSection, PartnersIAffarsnatverket, Partnerpaket, PartnernivaerComponent, PartnerpaketAffarsnatverk, PartnerpaketPrivatloge, PartnerpaketStigsvensson, PartnerpaketOsterisamhallet');
       return (
         <div
           className={`custom-component-block block-${blockId}`}

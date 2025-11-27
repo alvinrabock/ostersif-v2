@@ -196,8 +196,13 @@ a {
 .swiper-pagination {
   position: absolute;
   bottom: 20px; /* Adjust the position */
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
 }
 
 .swiper-pagination-bullet {

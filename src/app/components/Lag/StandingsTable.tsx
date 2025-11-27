@@ -449,8 +449,8 @@ const StandingsTable = ({
       
       {/* Summary statistics */}
       <div className="mt-4 text-xs text-gray-400 flex gap-4">
-        <span>Last updated: {new Date().toLocaleTimeString()}</span>
-        {refreshInterval && <span>Auto-refresh: {refreshInterval / 1000}s</span>}
+        <span>Senast uppdaterad: {new Date().toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</span>
+        {refreshInterval && <span>Uppdateras automatiskt: {refreshInterval / 1000}s</span>}
       </div>
     </div>
   );

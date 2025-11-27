@@ -5,15 +5,31 @@
 
 import { frontspace } from '../client';
 
+// Training session type
+export interface TrainingSession {
+  _entryId?: string;
+  _entryNumber?: number;
+  datum: string;
+  startid: string;
+  sluttid: string;
+  plats?: string;
+  notering?: string;
+}
+
 // Frontspace Lag type based on actual API response
 export interface FrontspaceLagContent {
   omslagsbild?: string;
-  traningstillfallen?: string;
+  traningstillfallen?: TrainingSession[];
   spelare?: string;
   stab?: string;
   sportadminlank?: string;
   lanka_helt_till_sportadmin?: string | boolean;
   fetchfromsefapi?: boolean;
+  sorteringsordning?: number;
+  // SMC/Fogis integration fields
+  fogis_teamid?: string;
+  fogis_teamslug?: string;
+  smc_teamid?: string;
 }
 
 export interface FrontspaceLag {
@@ -68,5 +84,21 @@ export async function fetchSingleLag(slug: string): Promise<FrontspaceLag | null
   } catch (error) {
     console.error(`Error fetching lag ${slug} from Frontspace:`, error);
     return null;
+  }
+}
+
+/**
+ * Fetch teams with SEF/SMC API enabled
+ * Returns teams that have fetchfromsefapi=true and have smc_teamid set
+ */
+export async function fetchTeamsWithSEF(): Promise<FrontspaceLag[]> {
+  try {
+    const allTeams = await fetchAllLag();
+    return allTeams.filter(
+      (team) => team.content.fetchfromsefapi === true && team.content.smc_teamid
+    );
+  } catch (error) {
+    console.error('Error fetching SEF teams from Frontspace:', error);
+    return [];
   }
 }

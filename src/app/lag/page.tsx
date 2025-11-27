@@ -20,11 +20,11 @@ export const metadata: Metadata = {
 export default async function TeamsArchivePage() {
   const teams: FrontspaceLag[] = await fetchAllLag();
 
-  // Sort teams by published_at descending (newest first)
+  // Sort teams by sorteringsordning (ascending), teams without sort order go to the end
   const sortedTeams = [...teams].sort((a, b) => {
-    const dateA = a.published_at ? new Date(a.published_at).getTime() : 0;
-    const dateB = b.published_at ? new Date(b.published_at).getTime() : 0;
-    return dateB - dateA;
+    const orderA = a.content.sorteringsordning ?? 9999;
+    const orderB = b.content.sorteringsordning ?? 9999;
+    return orderA - orderB;
   });
 
   return (

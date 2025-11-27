@@ -1,35 +1,20 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation } from "swiper/modules";
-import "swiper/css";
-import "swiper/css/navigation";
-import "swiper/css/pagination";
-
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import MatchCard from "@/app/components/Match/MatchCard";
 import { MatchCardData } from "@/types";
 import { getMatches } from "@/lib/fetchMatches";
-import MiniMatchCard from "@/app/components/Match/MiniMatchCard";
-import type { Swiper as SwiperType } from 'swiper';
-import MiniMatchCardSkeleton from "@/app/components/Skeletons/MiniMatchCardSkeleton";
 import { useLeagueData } from "@/lib/hooks/useLeagueData";
+import { Button } from "./ui/Button";
+import Link from "next/link";
+import { MatchCardSkeleton } from "./Skeletons/MatchCardSkeleton";
 
-interface SenastSpeladeMatherProps {
-    maxMatches?: number;
-}
-
-export default function SenastSpeladeMatcher({ maxMatches = 5 }: SenastSpeladeMatherProps) {
+export default function SenastSpeladeMatcher() {
     const [matches, setMatches] = useState<MatchCardData[]>([]);
-    const [matchError, setMatchError] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     // Use shared league data hook
     const { data: leagueData, loading: leagueLoading, error: leagueError } = useLeagueData();
-
-    // Refs for navigation
-    const prevRef = useRef<HTMLButtonElement>(null);
-    const nextRef = useRef<HTMLButtonElement>(null);
-    const [swiperReady, setSwiperReady] = useState(false);
 
     useEffect(() => {
         async function fetchData() {
@@ -45,132 +30,78 @@ export default function SenastSpeladeMatcher({ maxMatches = 5 }: SenastSpeladeMa
                 const currentYear = new Date().getFullYear().toString();
 
                 // Get leagues from latest season (current year)
-                const latestSeasonLeagues = leagues.filter((l: any) => l.seasonYear === currentYear);
+                const latestSeasonLeagues = leagues.filter((l) => l.seasonYear === currentYear);
 
                 // If no leagues for current year, use most recent season
-                const seasonsAvailable = [...new Set(leagues.map((l: any) => l.seasonYear))].sort((a: string, b: string) => Number(b) - Number(a));
+                const seasonsAvailable = [...new Set(leagues.map((l) => l.seasonYear))].sort((a, b) => Number(b) - Number(a));
                 const targetSeason = latestSeasonLeagues.length > 0 ? currentYear : seasonsAvailable[0];
-                const targetLeagues = leagues.filter((l: any) => l.seasonYear === targetSeason);
+                const targetLeagues = leagues.filter((l) => l.seasonYear === targetSeason);
 
                 if (targetLeagues.length === 0) {
-                    setMatchError("Inga ligor hittades för aktuell säsong.");
+                    setError("Inga ligor hittades för aktuell säsong.");
                     setMatches([]);
                     return;
                 }
 
                 // Extract league IDs and use the first league's team ID
-                const leagueIds = targetLeagues.map((l: any) => String(l.leagueId));
+                const leagueIds = targetLeagues.map((l) => String(l.leagueId));
                 const smcTeamId = targetLeagues[0]?.ostersTeamId || teamId;
 
                 if (!smcTeamId) {
-                    setMatchError("Ogiltigt lag-ID.");
+                    setError("Ogiltigt lag-ID.");
                     setMatches([]);
                     return;
                 }
 
-                const homeTeamId = smcTeamId;
-                const awayTeamId = smcTeamId;
-
-                const data = await getMatches(leagueIds, homeTeamId, awayTeamId);
-
-                // Debug: Log all match statuses
-                console.log('📊 All matches:', data.length);
-                console.log('📊 Match statuses:', data.map(m => m.status));
-                console.log('📊 Matches with Over status:', data.filter(m => m.status === "Over").length);
+                const data = await getMatches(leagueIds, smcTeamId, smcTeamId);
 
                 const filteredMatches = data
                     .filter((match) => match.status === "Over")
-                    .sort(
-                        (a, b) =>
-                            new Date(b.kickoff).getTime() - new Date(a.kickoff).getTime()
-                    )
-                    .slice(0, maxMatches);
-
-                console.log('✅ Filtered matches to show:', filteredMatches.length);
+                    .sort((a, b) => new Date(b.kickoff).getTime() - new Date(a.kickoff).getTime());
 
                 setMatches(filteredMatches);
-                setSwiperReady(true);
             } catch (err) {
                 console.error("Error fetching played matches:", err);
-                setMatchError("Kunde inte ladda matcher.");
+                setError("Kunde inte ladda matcher.");
                 setMatches([]);
             }
         }
 
         fetchData();
-    }, [maxMatches, leagueLoading, leagueData]);
+    }, [leagueLoading, leagueData]);
+
+    // Memoized 4 latest played matches
+    const latestPlayedMatches = useMemo(() => {
+        return matches.slice(0, 4);
+    }, [matches]);
 
     return (
-        <div className="bg-custom_dark_dark_red flex flex-col gap-4 w-full py-2 relative overflow-hidden w-[1500px] max-w-full">
-            <h2 className="text-4xl font-bold mb-8 text-left text-white">
-                Senast spelade matcher
-            </h2>
-            <div className="relative overflow-visible">
-                {/* Custom Navigation Buttons */}
-                <button
-                    ref={prevRef}
-                    className="swiper-played-button-prev absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-white/80 hover:bg-white rounded-full w-10 h-10 flex items-center justify-center shadow-md disabled:opacity-0"
-                    aria-label="Föregående"
-                >
-                    <ArrowLeft className="w-5 h-5 text-gray-700" />
-                </button>
+        <div className="flex flex-col gap-4 p-6 w-full rounded-md">
+            <h2 className="text-3xl font-bold mb-8 text-left">Senast spelade matcher</h2>
 
-                <button
-                    ref={nextRef}
-                    className="swiper-played-button-next absolute right-0 top-1/2 -translate-y-1/2 z-30 bg-white/80 hover:bg-white rounded-full w-10 h-10 flex items-center justify-center shadow-md disabled:opacity-0"
-                    aria-label="Nästa"
-                >
-                    <ArrowRight className="w-5 h-5 text-gray-700" />
-                </button>
+            {(matches.length === 0 && !error && !leagueError) ? (
+                <div className="flex flex-col gap-4">
+                    {[...Array(4)].map((_, i) => (
+                        <MatchCardSkeleton key={i} />
+                    ))}
+                </div>
+            ) : (error || leagueError) ? (
+                <div className="bg-red-500 text-white p-4 rounded-md text-center">{error || leagueError}</div>
+            ) : (
+                <div className="flex flex-col gap-4">
+                    {latestPlayedMatches.map((match) => (
+                        <MatchCard
+                            key={match.matchId}
+                            match={match}
+                            colorTheme="outline"
+                        />
+                    ))}
+                </div>
+            )}
 
-                {matches.length === 0 && !matchError && !leagueError ? (
-                    <div className="flex flex-row flex-nowrap gap-10">
-                        {[...Array(4)].map((_, i) => (
-                            <MiniMatchCardSkeleton key={i} />
-                        ))}
-                    </div>
-                ) : (matchError || leagueError) ? (
-                    <div className="bg-red-500 text-white p-4 rounded-md text-center">
-                        {matchError || leagueError}
-                    </div>
-                ) : swiperReady ? (
-                    <Swiper
-                        modules={[Navigation]}
-                        spaceBetween={16}
-                        slidesPerView={1.5}
-                        navigation={{
-                            nextEl: nextRef.current,
-                            prevEl: prevRef.current,
-                        }}
-                        onBeforeInit={(swiper: SwiperType) => {
-                            if (
-                                swiper.params.navigation &&
-                                typeof swiper.params.navigation !== 'boolean'
-                            ) {
-                                swiper.params.navigation.prevEl = prevRef.current;
-                                swiper.params.navigation.nextEl = nextRef.current;
-                            }
-                        }}
-
-                        breakpoints={{
-                            1224: { slidesPerView: 4 },
-                            768: { slidesPerView: 3.5 },
-                            500: { slidesPerView: 2.3 },
-                        }}
-                    >
-                        {matches.slice(0, 8).map((match) => (
-                            <SwiperSlide
-                                key={match.matchId}
-                            >
-                                <MiniMatchCard
-                                    match={match}
-                                    colorTheme="red"
-                                />
-                            </SwiperSlide>
-                        ))}
-                    </Swiper>
-                ) : null}
-            </div>
+            <Button variant="outline" className="text-left">
+                <Link href="/matcher">Visa alla matcher</Link>
+            </Button>
         </div>
     );
 }

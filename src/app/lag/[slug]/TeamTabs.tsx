@@ -1,234 +1,230 @@
 'use client';
 
-import { lazy, Suspense, useCallback } from 'react';
+import { useCallback, lazy, Suspense, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import MaxWidthWrapper from "@/app/components/MaxWidthWrapper";
 import NyheterItem from "@/app/components/Nyheter/nyheterItem";
 import MiniNyheterItem from "@/app/components/Nyheter/miniNyheterItem";
-import type { Lag, Post, SuperAdminTeamStats, TruppPlayers } from "@/types";
-import { Users, BarChart3, Trophy, Calendar, Newspaper, Clock } from "lucide-react";
+import { PlayerCardCMS } from "@/app/components/Player/PlayerCardCMS";
+import { StaffSection } from "@/app/components/Player/StaffSection";
+import type { Post, TruppPlayers, SuperAdminTeamStats } from "@/types";
+import { Newspaper, Clock, Users, Calendar, BarChart3, Trophy } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
-import { StaffSection } from '@/app/components/Player/StaffSection';
-import { PlayerCardCMS } from '@/app/components/Player/PlayerCardCMS';
+import type { FrontspaceSpelare } from "@/lib/frontspace/adapters/spelare";
+import type { FrontspaceStab } from "@/lib/frontspace/adapters/stab";
 
-// Lazy load heavy components
+// Lazy load heavy components for better performance
 const StandingsTable = lazy(() => import('@/app/components/Lag/StandingsTable'));
-const TeamStatsOverview = lazy(() => import('@/app/components/Lag/TeamStatsOverview'));
-const KommandeMatcher = lazy(() => import('@/app/components/Lag/KommandeMatcher'));
-const SenastSpeladeMatcher = lazy(() => import('@/app/components/Lag/SenastSpeladeMatcher'));
+const KommandeMatcher = lazy(() => import('@/app/components/KommandeMatcher'));
+const SenastSpeladeMatcher = lazy(() => import('@/app/components/SenastSpeladeMatcher'));
 const FunStats = lazy(() => import('@/app/components/Player/FunStats'));
+const TeamStatsOverview = lazy(() => import('@/app/components/Lag/TeamStatsOverview'));
 
 const TabContentSkeleton = () => (
     <div className="animate-pulse p-8">
-        <div className="h-8 bg-gray-300 rounded w-1/4 mb-4"></div>
+        <div className="h-8 bg-gray-300/20 rounded w-1/4 mb-4"></div>
         <div className="space-y-3">
-            <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-            <div className="h-4 bg-gray-300 rounded w-1/2"></div>
-            <div className="h-4 bg-gray-300 rounded w-5/6"></div>
+            <div className="h-4 bg-gray-300/20 rounded w-3/4"></div>
+            <div className="h-4 bg-gray-300/20 rounded w-1/2"></div>
+            <div className="h-4 bg-gray-300/20 rounded w-5/6"></div>
         </div>
     </div>
 );
 
-
-interface TrainingSession {
-    dag: string;
-    startTid: string;
-    slutTid: string;
-    plats?: string | null;
-    noteringar?: string | null;
-    id?: string | null;
+// Formatted training session type (after processing in page.tsx)
+interface FormattedTrainingSession {
+    _entryId?: string;
+    _entryNumber?: number;
+    datum: string;
+    startid: string;
+    sluttid: string;
+    plats?: string;
+    notering?: string;
     formattedDag: string;
     formattedStartTid: string;
     formattedSlutTid: string;
 }
 
 interface TeamTabsProps {
-    teamData: Lag;
-    sortedPosts: Post[];
-    squad: TruppPlayers[];
-    teamStats: SuperAdminTeamStats | null;
-    isALag: boolean;
-    hasStaff: boolean;
+    teamTitle: string;
+    teamNews: Post[];
     hasTraining: boolean;
-    upcomingTraining: TrainingSession[];
+    upcomingTraining: FormattedTrainingSession[];
     currentTab: string;
     slug: string;
+    // New props for SMC/Fogis integration
+    isSEFTeam?: boolean; // Team has fetchfromsefapi=true
+    players?: FrontspaceSpelare[];
+    staff?: FrontspaceStab[];
+    smcTeamId?: string;
+    fogisTeamId?: string;
+    fogisTeamSlug?: string;
+    // Stats data from SMC API
+    squad?: TruppPlayers[];
+    teamStats?: SuperAdminTeamStats | null;
 }
 
+// Tab trigger class for consistency
+const tabTriggerClass = `
+    transition-all duration-200 border-b-2 border-transparent
+    hover:bg-custom_red/20 rounded-xl
+    text-xs sm:text-[15px] text-center whitespace-nowrap px-4 py-2
+    shadow-none text-white font-bold
+    data-[state=active]:text-white
+    data-[state=active]:border-white
+    data-[state=active]:bg-transparent
+    data-[state=active]:shadow-none
+    data-[state=active]:rounded-none
+    flex items-center justify-center gap-2
+`;
+
 export default function TeamTabs({
-    teamData,
-    sortedPosts,
-    squad,
-    teamStats,
-    isALag,
-    hasStaff,
+    teamTitle,
+    teamNews,
     hasTraining,
     upcomingTraining,
     currentTab,
     slug,
+    isSEFTeam = false,
+    players = [],
+    staff = [],
+    smcTeamId,
+    squad = [],
+    teamStats,
 }: TeamTabsProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
 
+    const hasPlayers = players.length > 0;
+    const hasStaff = staff.length > 0;
+    const hasTrupp = hasPlayers || hasStaff;
+
     const handleTabChange = useCallback((value: string) => {
         const params = new URLSearchParams(searchParams.toString());
-        
+
         if (value === 'nyheter') {
-            // Remove tab param for default tab
             params.delete('tab');
         } else {
             params.set('tab', value);
         }
-        
-        const newUrl = params.toString() 
+
+        const newUrl = params.toString()
             ? `/lag/${slug}?${params.toString()}`
             : `/lag/${slug}`;
-            
+
         router.push(newUrl, { scroll: false });
     }, [router, searchParams, slug]);
 
+    // Position order for sorting players (case-insensitive matching)
+    const getPositionOrder = (position: string): number => {
+        const pos = position.toLowerCase();
+        if (pos.includes('målvakt') || pos.includes('keeper') || pos === 'mv') return 1;
+        if (pos.includes('försvarare') || pos.includes('back') || pos === 'b') return 2;
+        if (pos.includes('mittfältare') || pos.includes('mitt') || pos === 'mf') return 3;
+        if (pos.includes('anfallare') || pos.includes('forward') || pos.includes('anfall') || pos === 'a') return 4;
+        return 99; // Unknown positions go to the end
+    };
+
+    // Get pluralized display name for position titles
+    const getPositionDisplayName = (position: string): string => {
+        const pos = position.toLowerCase();
+        if (pos.includes('målvakt') || pos.includes('keeper') || pos === 'mv') return 'Målvakter';
+        if (pos.includes('försvarare') || pos.includes('back') || pos === 'b') return 'Backar';
+        if (pos.includes('mittfältare') || pos.includes('mitt') || pos === 'mf') return 'Mittfältare';
+        if (pos.includes('anfallare') || pos.includes('forward') || pos.includes('anfall') || pos === 'a') return 'Anfallare';
+        return position; // Return original if unknown
+    };
+
+    // Transform FrontspaceSpelare to PlayerCardCMS format
+    const transformToPlayerCard = (player: FrontspaceSpelare) => ({
+        title: player.title,
+        image: player.content.bild || null,
+        number: player.content.trojnummer || null,
+        position: player.content.position || null,
+        land: player.content.land || null,
+        utlanad: player.content.utlanad === 'true' || player.content.utlanad === true,
+        kommentar: player.content.kommentar || null,
+    });
+
+    // Sort players by position and memoize
+    const sortedPlayers = useMemo(() => {
+        return [...players].sort((a, b) => {
+            const posA = getPositionOrder(a.content.position || '');
+            const posB = getPositionOrder(b.content.position || '');
+            if (posA !== posB) return posA - posB;
+            // Then by jersey number
+            const numA = parseInt(a.content.trojnummer || '999', 10);
+            const numB = parseInt(b.content.trojnummer || '999', 10);
+            return numA - numB;
+        });
+    }, [players]);
+
+    // Group players by position
+    const playersByPosition = useMemo(() => {
+        return sortedPlayers.reduce((acc, player) => {
+            const position = player.content.position || 'Övriga';
+            if (!acc[position]) acc[position] = [];
+            acc[position].push(player);
+            return acc;
+        }, {} as Record<string, FrontspaceSpelare[]>);
+    }, [sortedPlayers]);
+
     return (
         <div className="bg-custom_dark_dark_red">
-            <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full z-10 relative">
+            <Tabs value={currentTab || 'nyheter'} defaultValue="nyheter" onValueChange={handleTabChange} className="w-full z-10 relative">
                 <MaxWidthWrapper>
                     <TabsList className="w-full justify-start px-2 py-8 sm:p-8 overflow-x-auto overflow-y-hidden scrollbar-thin scrollbar-thumb-white scrollbar-track-transparent bg-custom_dark_red gap-2">
-                        <TabsTrigger
-                            value="nyheter"
-                            className="
-                            transition-all duration-200 border-b-2 border-transparent
-                            hover:bg-custom_red/20 rounded-xl
-                            text-xs sm:text-[15px] text-center whitespace-nowrap px-4 py-2
-                            shadow-none text-white font-bold
-                            data-[state=active]:text-white
-                            data-[state=active]:border-white
-                            data-[state=active]:bg-transparent
-                            data-[state=active]:shadow-none
-                            data-[state=active]:rounded-none
-                            flex items-center justify-center gap-2
-                        "
-                        >
-                            <Newspaper className="w-8 h-8" />
+                        <TabsTrigger value="nyheter" className={tabTriggerClass}>
+                            <Newspaper className="w-6 h-6 sm:w-8 sm:h-8" />
                             Nyheter
                         </TabsTrigger>
 
-                        {isALag && (
-                            <TabsTrigger
-                                value="truppen"
-                                className="
-                                transition-all duration-200 border-b-2 border-transparent
-                                hover:bg-custom_red/20 rounded-xl
-                                text-xs sm:text-[15px] text-center whitespace-nowrap px-4 py-2
-                                shadow-none text-white font-bold
-                                data-[state=active]:text-white
-                                data-[state=active]:border-white
-                                data-[state=active]:bg-transparent
-                                data-[state=active]:shadow-none
-                                data-[state=active]:rounded-none
-                                flex items-center justify-center gap-2
-                            "
-                            >
-                                <Users className="w-8 h-8" />
+                        {hasTrupp && (
+                            <TabsTrigger value="truppen" className={tabTriggerClass}>
+                                <Users className="w-6 h-6 sm:w-8 sm:h-8" />
                                 Truppen
                             </TabsTrigger>
                         )}
 
                         {hasTraining && (
-                            <TabsTrigger
-                                value="traning"
-                                className="
-                                transition-all duration-200 border-b-2 border-transparent
-                                hover:bg-custom_red/20 rounded-xl
-                                text-xs sm:text-[15px] text-center whitespace-nowrap px-4 py-2
-                                shadow-none text-white font-bold
-                                data-[state=active]:text-white
-                                data-[state=active]:border-white
-                                data-[state=active]:bg-transparent
-                                data-[state=active]:shadow-none
-                                data-[state=active]:rounded-none
-                                flex items-center justify-center gap-2
-                            "
-                            >
-                                <Clock className="w-8 h-8" />
+                            <TabsTrigger value="traning" className={tabTriggerClass}>
+                                <Clock className="w-6 h-6 sm:w-8 sm:h-8" />
                                 Träning
                             </TabsTrigger>
                         )}
 
-                        {isALag && (
-                            <TabsTrigger
-                                value="matcher"
-                                className="
-                                transition-all duration-200 border-b-2 border-transparent
-                                hover:bg-custom_red/20 rounded-xl
-                                text-xs sm:text-[15px] text-center whitespace-nowrap px-4 py-2
-                                shadow-none text-white font-bold
-                                data-[state=active]:text-white
-                                data-[state=active]:border-white
-                                data-[state=active]:bg-transparent
-                                data-[state=active]:shadow-none
-                                data-[state=active]:rounded-none
-                                flex items-center justify-center gap-2
-                            "
-                            >
-                                <Calendar className="w-8 h-8" />
-                                Matcher
-                            </TabsTrigger>
-                        )}
+                        {isSEFTeam && (
+                            <>
+                                <TabsTrigger value="matcher" className={tabTriggerClass}>
+                                    <Calendar className="w-6 h-6 sm:w-8 sm:h-8" />
+                                    Matcher
+                                </TabsTrigger>
 
-                        {isALag && (
-                            <TabsTrigger
-                                value="statistik"
-                                className="
-                                transition-all duration-200 border-b-2 border-transparent
-                                hover:bg-custom_red/20 rounded-xl
-                                text-xs sm:text-[15px] text-center whitespace-nowrap px-4 py-2
-                                shadow-none text-white font-bold
-                                data-[state=active]:text-white
-                                data-[state=active]:border-white
-                                data-[state=active]:bg-transparent
-                                data-[state=active]:shadow-none
-                                data-[state=active]:rounded-none
-                                flex items-center justify-center gap-2
-                            "
-                            >
-                                <BarChart3 className="w-8 h-8" />
-                                Statistik
-                            </TabsTrigger>
-                        )}
+                                <TabsTrigger value="statistik" className={tabTriggerClass}>
+                                    <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8" />
+                                    Statistik
+                                </TabsTrigger>
 
-                        {isALag && (
-                            <TabsTrigger
-                                value="tabell"
-                                className="
-                                transition-all duration-200 border-b-2 border-transparent
-                                hover:bg-custom_red/20 rounded-xl
-                                text-xs sm:text-[15px] text-center whitespace-nowrap px-4 py-2
-                                shadow-none text-white font-bold
-                                data-[state=active]:text-white
-                                data-[state=active]:border-white
-                                data-[state=active]:bg-transparent
-                                data-[state=active]:shadow-none
-                                data-[state=active]:rounded-none
-                                flex items-center justify-center gap-2
-                            "
-                            >
-                                <Trophy className="w-8 h-8" />
-                                Tabell
-                            </TabsTrigger>
+                                <TabsTrigger value="tabell" className={tabTriggerClass}>
+                                    <Trophy className="w-6 h-6 sm:w-8 sm:h-8" />
+                                    Tabell
+                                </TabsTrigger>
+                            </>
                         )}
                     </TabsList>
                 </MaxWidthWrapper>
 
-                {/* Tab Contents */}
+                {/* Nyheter Tab */}
                 <TabsContent value="nyheter" className="mt-0">
                     <MaxWidthWrapper>
                         <div className="pt-10 pb-20">
-                            {sortedPosts.length > 0 ? (
+                            {teamNews.length > 0 ? (
                                 <div className='text-white'>
-                                    <h2 className="text-3xl font-bold mb-8 text-white">Nyheter om {teamData.title}</h2>
+                                    <h2 className="text-3xl font-bold mb-8 text-white">Nyheter om {teamTitle}</h2>
                                     <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-10">
-                                        <NyheterItem key={sortedPosts[0].id} post={sortedPosts[0]} />
+                                        <NyheterItem key={teamNews[0].id} post={teamNews[0]} />
                                         <div className="space-y-6">
-                                            {sortedPosts.slice(1).map((post: Post) => (
+                                            {teamNews.slice(1).map((post: Post) => (
                                                 <MiniNyheterItem key={post.id} post={post} />
                                             ))}
                                         </div>
@@ -237,37 +233,58 @@ export default function TeamTabs({
                             ) : (
                                 <div className="text-white text-center py-20">
                                     <h2 className="text-3xl font-bold mb-4">Inga nyheter än</h2>
-                                    <p className="text-gray-300">Det finns inga nyheter om {teamData.title} just nu.</p>
+                                    <p className="text-gray-300">Det finns inga nyheter om {teamTitle} just nu.</p>
                                 </div>
                             )}
                         </div>
                     </MaxWidthWrapper>
                 </TabsContent>
 
-                {isALag && (
+                {/* Truppen Tab */}
+                {hasTrupp && (
                     <TabsContent value="truppen" className="mt-0">
-                        <div className="w-full py-10 bg-custom_dark_dark_red">
-                            <MaxWidthWrapper>
-                                <div className="w-full">
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                        <div className="col-span-1 md:col-span-2 w-full">
-                                            <h2 className="text-white text-3xl font-bold mb-6">Spelare</h2>
-                                            <div className="mt-10 grid grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8 md:gap-10 lg:gap-12 xl:gap-16">
-                                                {teamData.players?.map((person, index: number) => (
-                                                    <PlayerCardCMS key={index} person={person} />
-                                                ))}
-                                            </div>
+                        <MaxWidthWrapper>
+                            <div className="pt-10 pb-20">
+                                <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-10">
+                                    {/* Players Section */}
+                                    {hasPlayers && (
+                                        <div>
+                                            <h2 className="text-3xl font-bold mb-8 text-white">Spelare</h2>
+                                            {Object.entries(playersByPosition)
+                                                .sort(([a], [b]) => getPositionOrder(a) - getPositionOrder(b))
+                                                .map(([position, positionPlayers]) => (
+                                                <div key={position} className="mb-10">
+                                                    <h3 className="text-xl font-semibold mb-6 text-white/80">{getPositionDisplayName(position)}</h3>
+                                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                                        {positionPlayers.map((player) => (
+                                                            <PlayerCardCMS
+                                                                key={player.id}
+                                                                person={transformToPlayerCard(player)}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
-                                        {hasStaff && teamData.staff && (
-                                            <StaffSection staff={teamData.staff} />
-                                        )}
-                                    </div>
+                                    )}
+
+                                    {/* Staff Section */}
+                                    {hasStaff && (
+                                        <StaffSection
+                                            staff={staff.map((member) => ({
+                                                name: member.title,
+                                                role: member.content.roll,
+                                                image: member.content.bild || null,
+                                            }))}
+                                        />
+                                    )}
                                 </div>
-                            </MaxWidthWrapper>
-                        </div>
+                            </div>
+                        </MaxWidthWrapper>
                     </TabsContent>
                 )}
 
+                {/* Träning Tab */}
                 {hasTraining && (
                     <TabsContent value="traning">
                         <MaxWidthWrapper>
@@ -276,8 +293,8 @@ export default function TeamTabs({
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {upcomingTraining.map((traning, index) => (
                                         <div
-                                            key={index}
-                                            className="relative rounded-xl p-6 pt-16 shadow-md border border-white/20 hover:border-white/20 hover:shadow-xl transition-all duration-300 group"
+                                            key={traning._entryId || index}
+                                            className="relative rounded-xl p-6 pt-16 shadow-md border border-white/20 hover:border-white/40 hover:shadow-xl transition-all duration-300 group"
                                         >
                                             <p className="absolute top-0 left-0 bg-custom_dark_red p-2 font-bold capitalize tracking-tight text-white rounded-tl-xl rounded-br-xl">
                                                 {traning.formattedDag}
@@ -289,10 +306,10 @@ export default function TeamTabs({
                                             </div>
                                             <div className="space-y-4 text-sm text-white">
                                                 {traning.plats && <p>{traning.plats}</p>}
-                                                {traning.noteringar && (
+                                                {traning.notering && (
                                                     <div className="bg-white/10 p-4 rounded-lg">
                                                         <p className="text-white/80 whitespace-pre-line text-sm">
-                                                            {traning.noteringar}
+                                                            {traning.notering}
                                                         </p>
                                                     </div>
                                                 )}
@@ -312,30 +329,30 @@ export default function TeamTabs({
                     </TabsContent>
                 )}
 
-                {isALag && (
+                {/* Matcher Tab (SEF Teams only) */}
+                {isSEFTeam && (
                     <TabsContent value="matcher" className="mt-0">
                         <MaxWidthWrapper>
                             <div className="pt-10 pb-20">
-                                <div className="grid grid-cols-1 gap-10">
-                                    <div>
-                                        <h2 className="text-3xl font-bold mb-8 text-left text-white">Kommande Matcher</h2>
-                                        <Suspense fallback={<TabContentSkeleton />}>
-                                            <KommandeMatcher />
-                                        </Suspense>
-                                    </div>
-                                </div>
+                                <h2 className="text-3xl font-bold mb-8 text-white">Kommande matcher</h2>
+                                <Suspense fallback={<TabContentSkeleton />}>
+                                    <KommandeMatcher maxMatches={5} />
+                                </Suspense>
                             </div>
                         </MaxWidthWrapper>
                     </TabsContent>
                 )}
 
-                {isALag && (
+                {/* Statistik Tab (SEF Teams only) */}
+                {isSEFTeam && (
                     <TabsContent value="statistik" className="mt-0">
                         <MaxWidthWrapper>
                             <div className="grid grid-cols-1 lg:grid-cols-3 lg:gap-10 mt-10 mb-10">
-                                <Suspense fallback={<TabContentSkeleton />}>
-                                    <FunStats players={squad} />
-                                </Suspense>
+                                {squad.length > 0 && (
+                                    <Suspense fallback={<TabContentSkeleton />}>
+                                        <FunStats players={squad} />
+                                    </Suspense>
+                                )}
                                 <div className="col-span-3 sm:col-span-1 lg:col-span-2 text-white">
                                     <Suspense fallback={<TabContentSkeleton />}>
                                         <SenastSpeladeMatcher />
@@ -345,19 +362,27 @@ export default function TeamTabs({
                         </MaxWidthWrapper>
                         <div className="mb-10 w-full bg-custom_dark_red">
                             <MaxWidthWrapper>
-                                <TeamStatsOverview stats={teamStats} />
+                                <Suspense fallback={<TabContentSkeleton />}>
+                                    <TeamStatsOverview stats={teamStats || null} />
+                                </Suspense>
                             </MaxWidthWrapper>
                         </div>
                     </TabsContent>
                 )}
 
-                {isALag && (
+                {/* Tabell Tab (SEF Teams only) */}
+                {isSEFTeam && (
                     <TabsContent value="tabell" className="mt-0">
                         <MaxWidthWrapper>
                             <div className="pt-10 pb-20">
-                                <h2 className="text-3xl font-bold mb-8 text-left text-white">Tabell</h2>
+                                <h2 className="text-3xl font-bold mb-8 text-white">Tabell</h2>
                                 <Suspense fallback={<TabContentSkeleton />}>
-                                    <StandingsTable />
+                                    <StandingsTable
+                                        config={{
+                                            highlightTeams: smcTeamId ? [parseInt(smcTeamId, 10)] : [19],
+                                            theme: 'dark',
+                                        }}
+                                    />
                                 </Suspense>
                             </div>
                         </MaxWidthWrapper>

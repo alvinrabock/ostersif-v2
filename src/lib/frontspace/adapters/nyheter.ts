@@ -93,8 +93,8 @@ function transformNyhetToPost(nyhet: any): Post {
       focalX: null,
       focalY: null,
     } : undefined,
-    // Map YouTube link
-    youtubeLink: content.youtube_link || null,
+    // Map YouTube link (field name is 'youtubelink' in Frontspace)
+    youtubeLink: content.youtubelink || content.youtube_link || null,
     // Map categories
     categories,
     // Map content - the RichText component expects HTML content directly
@@ -279,6 +279,48 @@ export async function searchNyheter(
     return posts.map(transformNyhetToPost);
   } catch (error) {
     console.error(`Error searching nyheter for "${searchTerm}":`, error);
+    return [];
+  }
+}
+
+/**
+ * Fetch news posts connected to a specific team
+ * Uses the kopplade_lag relation field to filter posts
+ */
+export async function fetchNyheterByTeam(
+  teamId: string,
+  limit = 10,
+  page = 1
+): Promise<Post[]> {
+  try {
+    const offset = (page - 1) * limit;
+
+    // Fetch all posts and filter client-side by team ID in kopplade_lag
+    const { posts: allPosts } = await frontspace.nyheter.getAll({
+      limit: 1000,
+      sort: '-publishedAt',
+    });
+
+    // Filter posts that have this team in their content.kopplade_lag array
+    const filteredPosts = allPosts.filter((post: any) => {
+      const koppladelag = post.content?.kopplade_lag || [];
+      // kopplade_lag can be an array of IDs (strings) or an array of objects with id
+      return koppladelag.some((lag: any) => {
+        if (typeof lag === 'string') {
+          return lag === teamId;
+        }
+        return lag?.id === teamId;
+      });
+    });
+
+    // Apply pagination after filtering
+    const posts = filteredPosts.slice(offset, offset + limit);
+
+    console.log(`[fetchNyheterByTeam] Found ${filteredPosts.length} total posts for team: ${teamId}, returning ${posts.length} for page ${page}`);
+
+    return posts.map(transformNyhetToPost);
+  } catch (error) {
+    console.error(`Error fetching nyheter by team ${teamId}:`, error);
     return [];
   }
 }

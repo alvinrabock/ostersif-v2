@@ -1,8 +1,14 @@
-import { Media } from "../Media/index";
-import type { Lag } from "@/types";
 import Image from "next/image";
 
-type Player = NonNullable<Lag['players']>[number];
+interface Player {
+  title: string;
+  image?: string | null;
+  number?: string | null;
+  position?: string | null;
+  land?: string | null;
+  utlanad?: boolean;
+  kommentar?: string | null;
+}
 
 const fallbackImageUrl = "/1496042.webp";
 
@@ -11,13 +17,11 @@ export const PlayerCardCMS = ({ person }: { person: Player }) => (
     {/* Background Image */}
     <div className="absolute inset-0 w-full h-full z-0">
       {person.image ? (
-        <Media
-          resource={person.image}
+        <img
+          src={person.image}
           alt={person.title}
-          size="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 15vw"
-          imgClassName="object-cover object-top w-full h-full"
+          className="object-cover object-top w-full h-full"
           loading="lazy"
-          fill
         />
       ) : (
         <div className="relative w-full h-full">
