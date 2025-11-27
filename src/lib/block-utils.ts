@@ -157,6 +157,7 @@ export function getBlockStyles(
  * Uses CSS custom properties (CSS variables) for better flexibility
  * Desktop-first approach: merges desktop responsive styles into base styles
  * Properly handles shorthand property expansion for responsive overrides
+ * Supports linkColor for styling anchor tags within text blocks
  */
 export function generateBlockCSS(
   blockId: string,
@@ -166,17 +167,23 @@ export function generateBlockCSS(
   const className = `.block-${blockId}`
   let css = `${className} {\n`
 
+  // Extract linkColor from responsiveStyles for special handling
+  const linkColor = responsiveStyles.linkColor as { desktop?: string; tablet?: string; mobile?: string } | undefined
+
+  // Create a copy of responsiveStyles without linkColor for normal processing
+  const { linkColor: _, ...normalResponsiveStyles } = responsiveStyles
+
   // Expand shorthand properties in base styles to avoid conflicts
   const expandedBaseStyles = expandShorthandProperties(baseStyles)
 
-  // Collect all responsive properties
-  const allResponsiveProps = Object.keys(responsiveStyles)
+  // Collect all responsive properties (excluding linkColor which is handled separately)
+  const allResponsiveProps = Object.keys(normalResponsiveStyles)
 
   // Merge desktop responsive styles into base styles (desktop-first approach)
   // This matches the non-headless version behavior
   const mergedBaseStyles = { ...expandedBaseStyles }
   allResponsiveProps.forEach((property) => {
-    let desktopValue = responsiveStyles[property]?.desktop
+    let desktopValue = normalResponsiveStyles[property]?.desktop
     if (desktopValue !== undefined && desktopValue !== null && desktopValue !== '') {
       // Convert grid-template-columns shorthand (e.g., "2" -> "repeat(2, 1fr)")
       if (property === 'gridTemplateColumns' && /^\d+$/.test(desktopValue)) {
@@ -208,7 +215,7 @@ export function generateBlockCSS(
 
   // Mobile styles (override desktop/base values on mobile)
   const mobileProps = allResponsiveProps.filter(prop => {
-    const value = responsiveStyles[prop]?.mobile
+    const value = normalResponsiveStyles[prop]?.mobile
     return value !== undefined && value !== null && value !== ''
   })
   if (mobileProps.length > 0) {
@@ -217,7 +224,7 @@ export function generateBlockCSS(
     // Expand shorthand properties in mobile responsive styles
     const mobileStyles: Record<string, any> = {}
     mobileProps.forEach(property => {
-      mobileStyles[property] = responsiveStyles[property].mobile
+      mobileStyles[property] = normalResponsiveStyles[property].mobile
     })
     const expandedMobileStyles = expandShorthandProperties(mobileStyles)
 
@@ -246,7 +253,7 @@ export function generateBlockCSS(
 
   // Tablet styles (override desktop/base values on tablet)
   const tabletProps = allResponsiveProps.filter(prop => {
-    const value = responsiveStyles[prop]?.tablet
+    const value = normalResponsiveStyles[prop]?.tablet
     return value !== undefined && value !== null && value !== ''
   })
   if (tabletProps.length > 0) {
@@ -255,7 +262,7 @@ export function generateBlockCSS(
     // Expand shorthand properties in tablet responsive styles
     const tabletStyles: Record<string, any> = {}
     tabletProps.forEach(property => {
-      tabletStyles[property] = responsiveStyles[property].tablet
+      tabletStyles[property] = normalResponsiveStyles[property].tablet
     })
     const expandedTabletStyles = expandShorthandProperties(tabletStyles)
 
@@ -279,7 +286,29 @@ export function generateBlockCSS(
       css += `    grid-row: auto !important;\n`
     }
 
-    css += `  }\n}`
+    css += `  }\n}\n\n`
+  }
+
+  // Generate linkColor CSS for anchor tags within the block
+  if (linkColor) {
+    const desktopLinkColor = linkColor.desktop
+    const tabletLinkColor = linkColor.tablet || desktopLinkColor
+    const mobileLinkColor = linkColor.mobile || tabletLinkColor || desktopLinkColor
+
+    // Desktop link color (base)
+    if (desktopLinkColor) {
+      css += `${className} a { color: ${desktopLinkColor}; }\n`
+    }
+
+    // Tablet link color
+    if (tabletLinkColor && tabletLinkColor !== desktopLinkColor) {
+      css += `@media (min-width: 768px) and (max-width: 1023px) { ${className} a { color: ${tabletLinkColor}; } }\n`
+    }
+
+    // Mobile link color
+    if (mobileLinkColor && mobileLinkColor !== tabletLinkColor) {
+      css += `@media (max-width: 767px) { ${className} a { color: ${mobileLinkColor}; } }\n`
+    }
   }
 
   return css
