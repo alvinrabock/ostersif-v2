@@ -9,6 +9,8 @@ import { frontspace, fetchPosts } from '../client';
 export interface FrontspaceStabContent {
   bild?: string;
   roll?: string;
+  epost?: string;
+  telefon?: string;
   lag?: {
     id: string;
     title: string;

@@ -275,6 +275,8 @@ export default function TeamTabs({
                                                 name: member.title,
                                                 role: member.content.roll,
                                                 image: member.content.bild || null,
+                                                epost: member.content.epost || null,
+                                                telefon: member.content.telefon || null,
                                             }))}
                                         />
                                     )}

@@ -145,11 +145,34 @@ export async function POST(request: NextRequest) {
         console.log(`📋 Revalidated footer`);
         break;
 
+      case 'spelare':
+        // Revalidate player data - affects team pages
+        revalidateTag('spelare');
+        revalidatePath('/lag');
+        revalidateTag('lag'); // Also revalidate lag since players are shown on team pages
+        console.log(`👤 Revalidated spelare`);
+        break;
+
+      case 'stab':
+        // Revalidate staff data - affects team pages
+        revalidateTag('stab');
+        revalidatePath('/lag');
+        revalidateTag('lag'); // Also revalidate lag since staff are shown on team pages
+        console.log(`👔 Revalidated stab`);
+        break;
+
+      case 'forms':
+        // Revalidate forms
+        revalidateTag('forms');
+        console.log(`📝 Revalidated forms`);
+        break;
+
       default:
         // Revalidate homepage and the general frontspace tag for other content types
         revalidatePath('/');
         revalidateTag('frontspace');
-        console.log(`📄 Revalidated root path for ${postType}`);
+        revalidateTag(postType); // Also revalidate the specific post type tag
+        console.log(`📄 Revalidated root path and tag for ${postType}`);
     }
 
     // Also revalidate homepage if content is marked for homepage display

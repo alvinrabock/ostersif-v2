@@ -16,6 +16,37 @@ if (!FRONTSPACE_STORE_ID) {
 }
 
 /**
+ * Cache tag constants for consistent revalidation
+ * These MUST match the tags used in the webhook handler
+ */
+export const CACHE_TAGS = {
+  FRONTSPACE: 'frontspace',
+  NYHETER: 'nyheter',
+  LAG: 'lag',
+  PARTNERS: 'partners',
+  PERSONAL: 'personal',
+  JOBB: 'jobb',
+  DOKUMENT: 'dokument',
+  NYHETSKATEGORIER: 'nyhetskategorier',
+  PAGES: 'pages',
+  MENUS: 'menus',
+  FOOTER: 'footer',
+  SPELARE: 'spelare',
+  STAB: 'stab',
+  FORMS: 'forms',
+} as const;
+
+/**
+ * Get cache tags for a post type
+ * Returns array of tags including the specific post type, general frontspace tag, and store-specific tag
+ */
+function getPostTypeCacheTags(postType: string): string[] {
+  const normalizedType = postType.toLowerCase();
+  const storeTag = `frontspace-${FRONTSPACE_STORE_ID}`;
+  return [normalizedType, CACHE_TAGS.FRONTSPACE, storeTag];
+}
+
+/**
  * Base GraphQL fetch function for Frontspace API
  */
 async function frontspaceGraphQLFetch<T>(
@@ -137,7 +168,7 @@ export async function fetchMenuBySlug(slug: string): Promise<any> {
     const data = await frontspaceGraphQLFetch<{ menuBySlug: any }>(query, {
       storeId: FRONTSPACE_STORE_ID,
       slug,
-    }, ['menus', 'frontspace']);
+    }, [CACHE_TAGS.MENUS, CACHE_TAGS.FRONTSPACE, `frontspace-${FRONTSPACE_STORE_ID}`]);
 
     if (!data.menuBySlug) {
       console.warn(`Menu with slug "${slug}" not found for store ${FRONTSPACE_STORE_ID}`);
@@ -176,7 +207,7 @@ export async function fetchFooter(): Promise<any> {
   try {
     const data = await frontspaceGraphQLFetch<{ footer: any }>(query, {
       storeId: FRONTSPACE_STORE_ID,
-    }, ['footer', 'frontspace']);
+    }, [CACHE_TAGS.FOOTER, CACHE_TAGS.FRONTSPACE, `frontspace-${FRONTSPACE_STORE_ID}`]);
 
     // Handle null or empty blocks gracefully
     if (data.footer && data.footer.content) {
@@ -229,7 +260,7 @@ export async function fetchPageBySlug(slug: string): Promise<any> {
     const data = await frontspaceGraphQLFetch<{ page: any }>(query, {
       storeId: FRONTSPACE_STORE_ID,
       slug,
-    }, ['pages', 'frontspace']);
+    }, [CACHE_TAGS.PAGES, CACHE_TAGS.FRONTSPACE, `frontspace-${FRONTSPACE_STORE_ID}`]);
     return data.page;
   } catch (error) {
     console.error(`Error fetching page ${slug}:`, error);
@@ -278,7 +309,7 @@ export async function fetchAllPages(options?: {
     const data = await frontspaceGraphQLFetch<{ pages: any[] }>(query, {
       storeId: FRONTSPACE_STORE_ID,
       limit,
-    }, ['pages', 'frontspace']);
+    }, [CACHE_TAGS.PAGES, CACHE_TAGS.FRONTSPACE, `frontspace-${FRONTSPACE_STORE_ID}`]);
     // Filter to only published pages on the client side
     const publishedPages = (data.pages || []).filter((page: any) => page.status === 'published');
     return publishedPages;
@@ -388,7 +419,7 @@ export async function fetchPosts<T>(
       contentFilter: actualContentFilter,
     };
 
-    const data = await frontspaceGraphQLFetch<{ posts: T[] }>(query, variables, [postType, 'frontspace']);
+    const data = await frontspaceGraphQLFetch<{ posts: T[] }>(query, variables, getPostTypeCacheTags(postType));
 
     return {
       posts: data.posts || [],
@@ -439,7 +470,7 @@ export async function fetchPostBySlug<T>(
       storeId: FRONTSPACE_STORE_ID,
       postTypeSlug: postType,
       slug
-    }, [postType, 'frontspace']);
+    }, getPostTypeCacheTags(postType));
     return data.post || null;
   } catch (_error) {
     console.error(`Post not found: ${postType}/${slug}`);
@@ -602,7 +633,7 @@ export async function fetchFormById(formId: string): Promise<Form | null> {
     const data = await frontspaceGraphQLFetch<{ form: Form }>(query, {
       storeId: FRONTSPACE_STORE_ID,
       id: formId,
-    }, ['forms', 'frontspace']);
+    }, [CACHE_TAGS.FORMS, CACHE_TAGS.FRONTSPACE, `frontspace-${FRONTSPACE_STORE_ID}`]);
 
     return data.form || null;
   } catch (error) {
