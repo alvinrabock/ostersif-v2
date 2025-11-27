@@ -10,7 +10,7 @@ export default async function HuvudpartnerComponentFooter() {
     }
 
     return (
-        <div className="bg-transparent overflow-hidden py-4">
+        <div className="bg-transparent overflow-hidden">
             <ul className="flex justify-between items-center gap-2 sm:gap-4 md:gap-6 overflow-hidden">
                 {huvudpartners.map((partner) => (
                     <li key={partner.id} className="flex justify-center items-center flex-shrink-0">
