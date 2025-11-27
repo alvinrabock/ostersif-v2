@@ -28,7 +28,7 @@ export default async function TeamsArchivePage() {
   });
 
   return (
-    <main className="py-40 bg-custom_dark_dark_red text-white">
+    <main className="pt-32 pb-20 bg-custom_dark_dark_red text-white">
       <MaxWidthWrapper>
         <h1 className="text-6xl font-bold mb-10 uppercase">Våra lag</h1>
 
@@ -46,7 +46,7 @@ export default async function TeamsArchivePage() {
                   key={team.id}
                   className={`
                     col-span-2 border border-white/20 rounded-lg p-6 shadow hover:shadow-lg transition relative overflow-hidden
-                    ${hasImage ? 'text-white min-h-[500px]' : 'text-white'}
+                    ${hasImage ? 'text-white h-[60vh] min-h-[400px]' : 'text-white'}
                   `}
                 >
                   <Link
@@ -90,7 +90,7 @@ export default async function TeamsArchivePage() {
                 <li
                   className={`
                     border border-white/20 rounded-lg p-6 shadow hover:shadow-lg transition relative overflow-hidden
-                    ${hasImage ? 'text-white min-h-[500px]' : 'text-white'}
+                    ${hasImage ? 'text-white h-[60vh] min-h-[400px]' : 'text-white'}
                   `}
                 >
                   {hasImage && (

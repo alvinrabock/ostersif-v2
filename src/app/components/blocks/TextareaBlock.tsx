@@ -47,7 +47,7 @@ export default function TextareaBlock({ block, blockId }: TextareaBlockProps) {
 
   return (
     <div
-      className={`textarea-block block-${blockId} leading-relaxed [&_ul]:space-y-3 [&_ol]:space-y-3 [&_li]:mb-3 [&_p]:leading-relaxed [&_p:empty]:min-h-[1em]`}
+      className={`textarea-block block-${blockId} leading-relaxed [&_ul]:space-y-3 [&_ol]:space-y-3 [&_li]:mb-3 [&_p]:leading-relaxed [&_p]:mb-4 [&_p:last-child]:mb-0`}
       data-block-id={blockId}
       dangerouslySetInnerHTML={{ __html: formattedText }}
     />
