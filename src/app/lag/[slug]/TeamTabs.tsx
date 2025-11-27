@@ -16,7 +16,7 @@ import type { FrontspaceStab } from "@/lib/frontspace/adapters/stab";
 // Lazy load heavy components for better performance
 const StandingsTable = lazy(() => import('@/app/components/Lag/StandingsTable'));
 const KommandeMatcher = lazy(() => import('@/app/components/KommandeMatcher'));
-const SenastSpeladeMatcher = lazy(() => import('@/app/components/SenastSpeladeMatcher'));
+const LagSenastSpeladeMatcher = lazy(() => import('@/app/components/LagSenastSpeladeMatcher'));
 const FunStats = lazy(() => import('@/app/components/Player/FunStats'));
 const TeamStatsOverview = lazy(() => import('@/app/components/Lag/TeamStatsOverview'));
 
@@ -357,7 +357,7 @@ export default function TeamTabs({
                                 )}
                                 <div className="col-span-3 sm:col-span-1 lg:col-span-2 text-white">
                                     <Suspense fallback={<TabContentSkeleton />}>
-                                        <SenastSpeladeMatcher />
+                                        <LagSenastSpeladeMatcher />
                                     </Suspense>
                                 </div>
                             </div>

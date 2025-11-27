@@ -1,15 +1,15 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import MiniMatchCard from "@/app/components/Match/MiniMatchCard";
-import MiniMatchCardSkeleton from "@/app/components/Skeletons/MiniMatchCardSkeleton";
+import MatchCard from "@/app/components/Match/MatchCard";
+import { MatchCardSkeleton } from "@/app/components/Skeletons/MatchCardSkeleton";
 import { MatchCardData } from "@/types";
 import { getMatches } from "@/lib/fetchMatches";
 import { useLeagueData } from "@/lib/hooks/useLeagueData";
 import { Button } from "./ui/Button";
 import Link from "next/link";
 
-export default function SenastSpeladeMatcher() {
+export default function LagSenastSpeladeMatcher() {
     const [matches, setMatches] = useState<MatchCardData[]>([]);
     const [error, setError] = useState<string | null>(null);
 
@@ -80,20 +80,20 @@ export default function SenastSpeladeMatcher() {
             <h2 className="text-3xl font-bold mb-4 text-left text-white">Senast spelade matcher</h2>
 
             {(matches.length === 0 && !error && !leagueError) ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="flex flex-col gap-4">
                     {[...Array(4)].map((_, i) => (
-                        <MiniMatchCardSkeleton key={i} />
+                        <MatchCardSkeleton key={i} />
                     ))}
                 </div>
             ) : (error || leagueError) ? (
                 <div className="bg-red-500 text-white p-4 rounded-md text-center">{error || leagueError}</div>
             ) : (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="flex flex-col gap-4">
                     {latestPlayedMatches.map((match) => (
-                        <MiniMatchCard
+                        <MatchCard
                             key={match.matchId}
                             match={match}
-                            colorTheme="red"
+                            colorTheme="outline"
                         />
                     ))}
                 </div>
