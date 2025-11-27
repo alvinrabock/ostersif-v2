@@ -140,27 +140,21 @@ export async function fetchPartnersByLevel(levelSlug: string): Promise<Partner[]
 
 /**
  * Fetch Huvudpartners (main partners)
- * Filters by partnerniva string - can be either UUID or text "Huvudpartner"
+ * Queries directly by partnerniva UUID using contentFilter
  */
 export async function fetchHuvudpartners(): Promise<Partner[]> {
   // Known UUID for "Huvudpartner" partnernivå
   const HUVUDPARTNER_UUID = 'eaf356ff-2d48-4c85-91e5-de39ea0dc485';
 
   try {
-    const { posts } = await frontspace.partners.getAll({
-      sort: 'title',
-      limit: 500,
+    const { posts } = await frontspace.partners.getAllWithRelations({
+      limit: 100,
+      contentFilter: {
+        partnerniva: HUVUDPARTNER_UUID,
+      },
     });
 
-    // Filter by partnerniva - it's stored as a string (either UUID or text)
-    const huvudpartners = posts.filter((partner: any) => {
-      const partnerniva = partner.content?.partnerniva;
-      if (!partnerniva || typeof partnerniva !== 'string') return false;
-
-      return partnerniva === HUVUDPARTNER_UUID || partnerniva.toLowerCase() === 'huvudpartner';
-    });
-
-    return huvudpartners.map(transformPartner);
+    return posts.map(transformPartner);
   } catch (error) {
     console.error('Error fetching huvudpartners from Frontspace:', error);
     return [];

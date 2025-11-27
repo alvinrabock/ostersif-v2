@@ -496,6 +496,63 @@ export async function fetchHuvudmeny() {
   return menu;
 }
 
+/**
+ * Fetch partners with expanded relation fields (partnerniva)
+ */
+async function fetchPartnersWithRelations(
+  options?: {
+    limit?: number;
+    offset?: number;
+    contentFilter?: Record<string, any>;
+  }
+): Promise<{ posts: any[]; total: number }> {
+  const { limit = 100, offset = 0, contentFilter } = options || {};
+
+  const query = `
+    query GetPartnersWithRelations($storeId: String!, $limit: Int, $offset: Int, $contentFilter: JSON) {
+      posts(storeId: $storeId, postTypeSlug: "partners", limit: $limit, offset: $offset, contentFilter: $contentFilter) {
+        id
+        title
+        slug
+        content
+        status
+        sort_order
+        created_at
+        updated_at
+        published_at
+        partnerniva {
+          id
+          title
+          slug
+          content
+        }
+        postType {
+          id
+          name
+          slug
+        }
+      }
+    }
+  `;
+
+  try {
+    const data = await frontspaceGraphQLFetch<{ posts: any[] }>(query, {
+      storeId: FRONTSPACE_STORE_ID,
+      limit,
+      offset,
+      contentFilter,
+    }, getPostTypeCacheTags('partners'));
+
+    return {
+      posts: data.posts || [],
+      total: data.posts?.length || 0,
+    };
+  } catch (error) {
+    console.error('Error fetching partners with relations:', error);
+    return { posts: [], total: 0 };
+  }
+}
+
 // Export specific post type fetchers
 export const frontspace = {
   pages: {
@@ -523,6 +580,8 @@ export const frontspace = {
       fetchPosts('partners', options),
     getBySlug: (slug: string) =>
       fetchPostBySlug('partners', slug),
+    getAllWithRelations: (options?: { limit?: number; offset?: number; contentFilter?: Record<string, any> }) =>
+      fetchPartnersWithRelations(options),
   },
   personal: {
     getAll: (options?: Parameters<typeof fetchPosts>[1]) =>
