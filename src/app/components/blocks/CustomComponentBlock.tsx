@@ -237,9 +237,23 @@ export default async function CustomComponentBlock({
       );
     }
 
+    case 'HuvudpartnerComponentFooter': {
+      // Dynamically import the component (server component)
+      const { default: HuvudpartnerComponentFooter } = await import('@/app/components/HuvudpartnerComponentFooter');
+
+      return (
+        <div
+          className={`custom-component-block huvudpartner-footer block-${blockId}`}
+          data-block-id={blockId}
+        >
+          <HuvudpartnerComponentFooter />
+        </div>
+      );
+    }
+
     default:
       console.warn(`⚠️ Unknown custom component: ${componentName}`);
-      console.warn('Available components: SenastSpeladeMatcher, TabellBlock, SenasteNyheter, LatestNewsBlock, HistoriaPostsComponent, KommandeMatcher, UpcomingMatchesBlock, HeroSlider, KontaktSection, StyrelseSection, PartnerSection, PartnersIAffarsnatverket, Partnerpaket, PartnernivaerComponent, PartnerpaketAffarsnatverk, PartnerpaketPrivatloge, PartnerpaketStigsvensson, PartnerpaketOsterisamhallet');
+      console.warn('Available components: SenastSpeladeMatcher, TabellBlock, SenasteNyheter, LatestNewsBlock, HistoriaPostsComponent, KommandeMatcher, UpcomingMatchesBlock, HeroSlider, KontaktSection, StyrelseSection, PartnerSection, PartnersIAffarsnatverket, Partnerpaket, PartnernivaerComponent, PartnerpaketAffarsnatverk, PartnerpaketPrivatloge, PartnerpaketStigsvensson, PartnerpaketOsterisamhallet, HuvudpartnerComponentFooter');
       return (
         <div
           className={`custom-component-block block-${blockId}`}
