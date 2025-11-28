@@ -419,11 +419,14 @@ export async function fetchPosts<T>(
       contentFilter: actualContentFilter,
     };
 
-    const data = await frontspaceGraphQLFetch<{ posts: T[] }>(query, variables, getPostTypeCacheTags(postType));
+    const data = await frontspaceGraphQLFetch<{ posts: any[] }>(query, variables, getPostTypeCacheTags(postType));
+
+    // Filter out drafts and scheduled posts - only show published posts
+    const publishedPosts = (data.posts || []).filter((post: any) => post.status === 'published');
 
     return {
-      posts: data.posts || [],
-      total: data.posts?.length || 0,
+      posts: publishedPosts as T[],
+      total: publishedPosts.length,
     };
   } catch (error) {
     console.error(`Error fetching ${postType}:`, error);
@@ -471,6 +474,12 @@ export async function fetchPostBySlug<T>(
       postTypeSlug: postType,
       slug
     }, getPostTypeCacheTags(postType));
+
+    // Only return published posts
+    if (data.post && data.post.status !== 'published') {
+      return null;
+    }
+
     return data.post || null;
   } catch (_error) {
     console.error(`Post not found: ${postType}/${slug}`);

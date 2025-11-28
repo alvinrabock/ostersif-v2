@@ -52,26 +52,34 @@ export default async function Page() {
 
                     {/* Right side: buttons */}
                     <div className="flex gap-3 shrink-0">
-                      <Link
-                        href={fileUrl || `/dokument/${doc.slug}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <Button variant="outline" className="whitespace-nowrap">
-                          Visa dokument
-                        </Button>
-                      </Link>
+                      {fileUrl ? (
+                        <>
+                          <Link
+                            href={fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <Button variant="outline" className="whitespace-nowrap">
+                              Visa dokument
+                            </Button>
+                          </Link>
 
-                      <Link
-                        href={fileUrl || `/dokument/${doc.slug}`}
-                        download={fileName}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <Button variant="secondary" className="whitespace-nowrap">
-                          Ladda ner
-                        </Button>
-                      </Link>
+                          <Link
+                            href={fileUrl}
+                            download={fileName}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <Button variant="secondary" className="whitespace-nowrap">
+                              Ladda ner
+                            </Button>
+                          </Link>
+                        </>
+                      ) : (
+                        <span className="text-white/50 text-sm italic">
+                          Fil saknas
+                        </span>
+                      )}
                     </div>
                   </div>
                 </li>
