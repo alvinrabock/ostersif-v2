@@ -261,20 +261,15 @@ export async function fetchAppPosts(limit = 50, page = 1): Promise<Post[]> {
 }
 
 /**
- * Search news posts
+ * Search news posts using the GraphQL search parameter
+ * Searches in title, slug, and content fields
  */
 export async function searchNyheter(
   searchTerm: string,
   limit = 10
 ): Promise<Post[]> {
   try {
-    const { posts } = await frontspace.nyheter.getAll({
-      limit,
-      filters: {
-        rubrik: { contains: searchTerm },
-      },
-      sort: '-publishedAt',
-    });
+    const { posts } = await frontspace.nyheter.search(searchTerm, limit);
 
     return posts.map(transformNyhetToPost);
   } catch (error) {

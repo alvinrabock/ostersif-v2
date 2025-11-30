@@ -11,9 +11,21 @@ import {
     DialogTrigger,
     DialogDescription,
 } from '../ui/dialog';
-import { searchNyheter } from '@/lib/frontspace/adapters/nyheter';
 import { Post } from '@/types';
 import MiniNyheterItem from '../Nyheter/miniNyheterItem';
+
+function SearchResultSkeleton() {
+    return (
+        <div className="grid grid-cols-3 gap-4 items-center animate-pulse">
+            <div className="aspect-video w-full bg-white/20 rounded-md" />
+            <div className="col-span-2 space-y-2">
+                <div className="h-4 bg-white/20 rounded w-full" />
+                <div className="h-4 bg-white/20 rounded w-3/4" />
+                <div className="h-3 bg-white/10 rounded w-1/4 mt-2" />
+            </div>
+        </div>
+    );
+}
 
 export function SearchDialog() {
     const [searchValue, setSearchValue] = useState('');
@@ -23,20 +35,29 @@ export function SearchDialog() {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+        // Set loading immediately when we have a valid search term
+        if (searchValue.length > 2) {
+            setLoading(true);
+            setError(null);
+        } else {
+            setData([]);
+            setLoading(false);
+            return;
+        }
+
         const searchPosts = async () => {
-            if (searchValue.length > 2) {
-                setLoading(true);
-                setError(null);
-                try {
-                    const results = await searchNyheter(searchValue, 50);
-                    setData(results);
-                } catch (err) {
-                    setError(err instanceof Error ? err.message : 'Search failed');
-                } finally {
-                    setLoading(false);
+            try {
+                // Use API route instead of direct server call
+                const response = await fetch(`/api/nyheter/search?q=${encodeURIComponent(searchValue)}&limit=50`);
+                const result = await response.json();
+                if (result.error) {
+                    throw new Error(result.error);
                 }
-            } else {
-                setData([]);
+                setData(result.posts || []);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'Search failed');
+            } finally {
+                setLoading(false);
             }
         };
 
@@ -56,7 +77,7 @@ export function SearchDialog() {
                 </Button>
             </DialogTrigger>
 
-            <DialogContent className="p-6 text-white w-screen md:max-w-7xl h-screen md:h-fit max-w-none max-h-none bg-custom_dark_red border-none flex flex-col">
+            <DialogContent className="p-6 text-white w-screen md:max-w-7xl h-screen md:h-fit max-w-none max-h-none bg-custom_dark_dark_red border-none flex flex-col">
                 <DialogHeader className="relative p-4 flex flex-row justify-between items-center p-0 py-2">
                     <DialogTitle className="text-white text-left sr-only">Sök</DialogTitle>
                     <DialogDescription className="sr-only">
@@ -92,10 +113,16 @@ export function SearchDialog() {
 
                 {/* Results */}
                 <div className="flex flex-col mt-6 overflow-y-auto gap-10 max-h-96">
-                    {loading && <p>Laddar...</p>}
+                    {loading && (
+                        <>
+                            <SearchResultSkeleton />
+                            <SearchResultSkeleton />
+                            <SearchResultSkeleton />
+                        </>
+                    )}
                     {error && <p className="text-red-500">Error: {error}</p>}
-                    {data.length === 0 && searchValue.length > 2 && !loading && <p>Inga resultat</p>}
-                    {data.map((post: Post) => (
+                    {!loading && !error && data.length === 0 && searchValue.length > 2 && <p>Inga resultat</p>}
+                    {!loading && data.map((post: Post) => (
                         <MiniNyheterItem key={post.id} post={post} closeDialog={() => setOpen(false)} />
                     ))}
                 </div>
