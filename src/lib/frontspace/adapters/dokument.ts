@@ -68,8 +68,8 @@ function extractFileUrl(fil: any): string | undefined {
 function transformDokument(doc: any): FrontspaceDokument {
   const content = doc.content || {};
 
-  // Resolve the file URL from the fil field
-  const fileUrl = extractFileUrl(content.fil);
+  // Resolve the file URL from the fil or dokument field (API may use either)
+  const fileUrl = extractFileUrl(content.fil) || extractFileUrl(content.dokument);
 
   return {
     id: doc.id,
