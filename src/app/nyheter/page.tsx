@@ -2,6 +2,10 @@ import { fetchAllNyhetskategorier } from '@/lib/frontspace/adapters/nyhetskatego
 import { fetchAllNyheter } from '@/lib/frontspace/adapters/nyheter';
 import NewsPageClient from './NyheterClient';
 
+// Mark page as dynamic to ensure fresh data on client navigation
+// The underlying fetch still uses cache tags for efficient on-demand revalidation
+export const revalidate = 0;
+
 export const metadata = {
   title: 'Nyheter - Östers IF',
   description: 'Håll dig uppdaterad med de senaste nyheterna från Östers IF. Läs om matcher, spelare, träningar och allt som händer i klubben.',
