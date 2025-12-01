@@ -1,8 +1,6 @@
-"use client";
-
 import React from "react";
-import KommandeMatcher from "@/app/components/KommandeMatcher";
+import KommandeMatcherServer from "@/app/components/KommandeMatcherServer";
 
 export default function KommandeMatcherBlock() {
-    return <KommandeMatcher maxMatches={3} />;
+    return <KommandeMatcherServer maxMatches={3} />;
 }

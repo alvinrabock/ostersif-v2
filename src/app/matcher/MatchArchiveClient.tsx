@@ -22,11 +22,12 @@ import { SortIcon } from '../components/Icons/SortIcon';
 
 interface MatchFiltersProps {
     seasons: SeasonGroup[];
+    initialMatches?: MatchCardData[];
 }
 
 const OSTERS_TEAM_ID = '01JVVHS4ESCV6K0GYXXB0K1NHS';
 
-const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons }) => {
+const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [] }) => {
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -37,8 +38,11 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons }) => {
     const dateToParam = searchParams.get('dateTo');
     const seasonFilter = searchParams.get('season');
 
-    const [matches, setMatches] = useState<MatchCardData[]>([]);
-    const [loading, setLoading] = useState(true);
+    // Use initial matches if no filters are applied, avoiding initial fetch
+    const hasFilters = isPlayedFilter || locationFilter || leagueFilter || dateFromParam || dateToParam || seasonFilter;
+    const [matches, setMatches] = useState<MatchCardData[]>(hasFilters ? [] : initialMatches);
+    const [loading, setLoading] = useState(hasFilters ? true : false);
+    const [hasUsedInitialMatches, setHasUsedInitialMatches] = useState(!hasFilters && initialMatches.length > 0);
     const [calendarOpen, setCalendarOpen] = useState(false);
     const [selectedRange, setSelectedRange] = useState<DateRange | undefined>(() => {
         if (dateFromParam && dateToParam) {
@@ -95,7 +99,23 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons }) => {
     useEffect(() => {
         let intervalId: NodeJS.Timeout | null = null;
 
-        const fetchMatches = async () => {
+        // Skip initial fetch if we have server-side pre-fetched matches and no filters
+        if (hasUsedInitialMatches && !hasFilters) {
+            setHasUsedInitialMatches(false); // Reset so future filter changes trigger fetches
+
+            // Still check for live matches to set up polling
+            const hasLiveMatch = initialMatches.some(match => match.status === 'In progress');
+            if (hasLiveMatch) {
+                intervalId = setInterval(() => {
+                    fetchMatchesInternal();
+                }, 60000);
+            }
+            return () => {
+                if (intervalId) clearInterval(intervalId);
+            };
+        }
+
+        const fetchMatchesInternal = async () => {
             setLoading(true);
 
             try {
@@ -225,11 +245,11 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons }) => {
         };
 
         // Initial fetch
-        fetchMatches().then(hasLiveMatch => {
+        fetchMatchesInternal().then(hasLiveMatch => {
             // OPTIMIZATION 2: Only set up polling if there are live matches
             if (hasLiveMatch) {
                 intervalId = setInterval(() => {
-                    fetchMatches();
+                    fetchMatchesInternal();
                 }, 60000);
             }
         });
@@ -240,7 +260,7 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons }) => {
                 clearInterval(intervalId);
             }
         };
-    }, [seasons, isPlayedFilter, locationFilter, leagueFilter, leagueIdsToFetch, selectedRange, dateFromParam, dateToParam, selectedSeason]);
+    }, [seasons, isPlayedFilter, locationFilter, leagueFilter, leagueIdsToFetch, selectedRange, dateFromParam, dateToParam, selectedSeason, hasFilters, hasUsedInitialMatches, initialMatches]);
 
 
     const updateQueryParam = (key: string, value?: string) => {

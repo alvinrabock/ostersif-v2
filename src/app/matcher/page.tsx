@@ -1,10 +1,12 @@
 // app/matcher/page.tsx
 import MaxWidthWrapper from "@/app/components/MaxWidthWrapper";
 import { Suspense } from "react";
-import { getLeaguesGroupedBySeason } from "@/lib/leagueCache";
+import { getLeaguesGroupedBySeason, getLeagueCache } from "@/lib/leagueCache";
+import { getMatches } from "@/lib/fetchMatches";
 import MatcherArchiveClient from "./MatchArchiveClient";
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { MatchCardData } from "@/types";
 
 export const metadata: Metadata = {
   title: 'Matcher - Östers IF',
@@ -27,7 +29,10 @@ export const metadata: Metadata = {
 
 export default async function Page() {
   // Get leagues grouped by season from automated discovery cache
-  const seasons = await getLeaguesGroupedBySeason();
+  const [seasons, leagueCache] = await Promise.all([
+    getLeaguesGroupedBySeason(),
+    getLeagueCache()
+  ]);
 
   // If cache is empty, show setup instructions
   if (!seasons || seasons.length === 0) {
@@ -60,11 +65,40 @@ export default async function Page() {
     );
   }
 
+  // Pre-fetch initial matches server-side for the current season
+  let initialMatches: MatchCardData[] = [];
+  try {
+    const currentYear = new Date().getFullYear().toString();
+    const currentSeasonLeagues = seasons.find(s => s.seasonYear === currentYear)?.tournaments || seasons[0]?.tournaments || [];
+    const leagueIds = currentSeasonLeagues.map(t => t.leagueId);
+    const teamId = leagueCache?.teamId;
+
+    if (leagueIds.length > 0 && teamId) {
+      const allMatches = await getMatches(leagueIds, teamId, teamId);
+
+      // Apply same sorting logic as client: upcoming first, then played (most recent first)
+      const upcoming = allMatches
+        .filter(match =>
+          match.status !== 'Over' &&
+          (new Date(match.kickoff ?? '').getTime() > Date.now() || match.status === 'In progress')
+        )
+        .sort((a, b) => new Date(a.kickoff ?? '').getTime() - new Date(b.kickoff ?? '').getTime());
+
+      const played = allMatches
+        .filter(match => match.status === 'Over')
+        .sort((a, b) => new Date(b.kickoff ?? '').getTime() - new Date(a.kickoff ?? '').getTime());
+
+      initialMatches = [...upcoming, ...played];
+    }
+  } catch (error) {
+    console.error('Error pre-fetching matches:', error);
+  }
+
   return (
     <div className="w-full pt-46 pb-36 bg-custom_dark_dark_red">
       <MaxWidthWrapper>
         <Suspense>
-          <MatcherArchiveClient seasons={seasons} />
+          <MatcherArchiveClient seasons={seasons} initialMatches={initialMatches} />
         </Suspense>
       </MaxWidthWrapper>
     </div>

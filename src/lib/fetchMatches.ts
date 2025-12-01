@@ -187,7 +187,7 @@ export async function getMatches(
         headers: {
           Authorization: `Basic ${process.env.EBILJETT_BASIC_AUTH}`,
         },
-        cache: "no-store",
+        next: { revalidate: 300 }, // Cache for 5 minutes
       }
     ),
     GetSelectedGames().catch(() => [] as SelectedTeamData[])
