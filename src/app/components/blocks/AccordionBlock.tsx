@@ -30,7 +30,7 @@ interface AccordionBlockProps {
 
 export default function AccordionBlock({ block, blockId }: AccordionBlockProps) {
   const [openItems, setOpenItems] = useState<Set<string>>(new Set());
-  const { content, styles = {} } = block;
+  const { content } = block;
 
   const toggleItem = (itemId: string) => {
     setOpenItems(prev => {
