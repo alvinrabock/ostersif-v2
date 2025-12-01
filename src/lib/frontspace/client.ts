@@ -423,6 +423,12 @@ export async function fetchPosts<T>(
             name
             slug
           }
+          kategori {
+            id
+            title
+            slug
+            content
+          }
         }
         totalCount
         hasMore
@@ -447,6 +453,12 @@ export async function fetchPosts<T>(
           id
           name
           slug
+        }
+        kategori {
+          id
+          title
+          slug
+          content
         }
       }
     }
