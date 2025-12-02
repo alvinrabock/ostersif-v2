@@ -62,163 +62,65 @@ export async function POST(request: NextRequest) {
     console.log(`🔔 Webhook received: postType="${rawPostType}" (normalized: "${postType}"), slug="${slug}"`);
     console.log(`📦 Full payload:`, JSON.stringify(payload, null, 2));
 
-    // Revalidate based on post type
-    switch (postType) {
-      case 'nyheter':
-        // Revalidate news listing and detail pages
-        revalidatePath('/nyheter');
-        if (slug) revalidatePath(`/nyhet/${slug}`);
-        revalidateTag('nyheter');
-        revalidateTag('posts-data'); // Apollo client uses this tag
-        console.log(`📰 Revalidated nyheter: ${slug || 'all'}`);
-        break;
+    // Tag mappings: Frontspace tags -> Apollo tags (for backwards compatibility)
+    // Pages with revalidate=0 will automatically get fresh data when tags are invalidated
+    const tagMappings: Record<string, string[]> = {
+      'nyheter': ['nyheter', 'posts-data'],
+      'nyhetskategorier': ['nyhetskategorier', 'nyheter', 'categories-data'],
+      'lag': ['lag', 'lag-data', 'frontspace'],
+      'personal': ['personal', 'personalavdelningar', 'personal-data'],
+      'personalavdelningar': ['personal', 'personalavdelningar', 'personal-data'],
+      'partners': ['partners', 'partners-data', 'partnernivaer-data'],
+      'partnernivaer': ['partners', 'partners-data', 'partnernivaer-data'],
+      'jobb': ['jobb', 'jobb-data'],
+      'dokument': ['dokument', 'documents-data'],
+      'foretagspaket': ['foretagspaket', 'foretagspaket-data'],
+      'partnerpaket': ['foretagspaket', 'foretagspaket-data'],
+      'foretagspaketkategorier': ['foretagspaketkategorier', 'foretagspaketkategorier-data', 'foretagspaket-data'],
+      'partnerpaket-kategorier': ['foretagspaketkategorier', 'foretagspaketkategorier-data', 'foretagspaket-data'],
+      'spelare': ['spelare', 'lag', 'lag-data'],
+      'stab': ['stab', 'lag', 'lag-data'],
+      'forms': ['forms'],
+      'menus': ['menus'],
+      'footer': ['footer'],
+      'pages': ['pages'],
+      'sidor': ['pages'],
+    };
 
-      case 'nyhetskategorier':
-        // Revalidate news categories
-        revalidatePath('/nyheter');
-        revalidateTag('nyhetskategorier');
-        revalidateTag('nyheter');
-        revalidateTag('categories-data'); // Apollo client uses this tag
-        console.log(`🏷️ Revalidated nyhetskategorier`);
-        break;
+    // Get tags to revalidate for this post type
+    const tagsToRevalidate = tagMappings[postType] || ['frontspace', postType];
 
-      case 'lag':
-        // Revalidate teams listing and detail pages
-        revalidatePath('/lag');
-        if (slug) revalidatePath(`/lag/${slug}`);
-        revalidateTag('lag');
-        revalidateTag('lag-data'); // Apollo client uses this tag
-        revalidateTag('frontspace');
-        console.log(`⚽ Revalidated lag: ${slug || 'all'}`);
-        break;
+    // Revalidate all relevant tags
+    for (const tag of tagsToRevalidate) {
+      revalidateTag(tag);
+    }
+    console.log(`🏷️ Revalidated tags: ${tagsToRevalidate.join(', ')}`);
 
-      case 'personal':
-        // Revalidate staff pages
-        revalidatePath('/om-oss/personal');
-        revalidatePath('/kontakt');
-        revalidateTag('personal');
-        revalidateTag('personal-data'); // Apollo client uses this tag
-        console.log(`👥 Revalidated personal`);
-        break;
+    // Special cases that need path revalidation (layout-level changes)
+    if (postType === 'menus' || postType === 'footer') {
+      revalidatePath('/', 'layout');
+      console.log(`📋 Revalidated layout`);
+    }
 
-      case 'personalavdelningar':
-        // Revalidate personal avdelningar (departments)
-        revalidatePath('/om-oss/personal');
-        revalidatePath('/kontakt');
-        revalidateTag('personal');
-        revalidateTag('personal-data'); // Apollo client uses this tag
-        console.log(`👥 Revalidated personalavdelningar`);
-        break;
+    // Revalidate specific page slug if provided for pages/sidor
+    if ((postType === 'pages' || postType === 'sidor') && slug) {
+      const pagePath = slug === 'home' ? '/' : `/${slug}`;
+      revalidatePath(pagePath);
+      console.log(`📄 Revalidated page path: ${pagePath}`);
+    }
 
-      case 'partners':
-        // Revalidate partners pages
-        revalidatePath('/partners');
-        if (slug) revalidatePath(`/partner/${slug}`);
-        revalidateTag('partners');
-        revalidateTag('partners-data'); // Apollo client uses this tag
-        revalidateTag('partnernivaer-data'); // Partner levels also use partners
-        console.log(`🤝 Revalidated partners: ${slug || 'all'}`);
-        break;
-
-      case 'partnernivaer':
-        // Revalidate partner levels
-        revalidatePath('/partners');
-        revalidateTag('partners');
-        revalidateTag('partners-data');
-        revalidateTag('partnernivaer-data'); // Apollo client uses this tag
-        console.log(`🏆 Revalidated partnernivaer`);
-        break;
-
-      case 'jobb':
-        // Revalidate jobs listing and detail pages
-        revalidatePath('/jobb');
-        if (slug) revalidatePath(`/jobb/${slug}`);
-        revalidateTag('jobb');
-        revalidateTag('jobb-data'); // Apollo client uses this tag
-        console.log(`💼 Revalidated jobb: ${slug || 'all'}`);
-        break;
-
-      case 'dokument':
-        // Revalidate documents
-        revalidatePath('/dokument');
-        revalidateTag('dokument');
-        revalidateTag('documents-data'); // Apollo client uses this tag
-        console.log(`📄 Revalidated dokument`);
-        break;
-
-      case 'foretagspaket':
-      case 'partnerpaket':
-        // Revalidate företagspaket/partnerpaket
-        revalidatePath('/partners');
-        revalidateTag('foretagspaket');
-        revalidateTag('foretagspaket-data'); // Apollo client uses this tag
-        console.log(`📦 Revalidated foretagspaket`);
-        break;
-
-      case 'foretagspaketkategorier':
-      case 'partnerpaket-kategorier':
-        // Revalidate företagspaket categories
-        revalidatePath('/partners');
-        revalidateTag('foretagspaketkategorier');
-        revalidateTag('foretagspaketkategorier-data'); // Apollo client uses this tag
-        revalidateTag('foretagspaket-data'); // Also invalidate paket since categories affect them
-        console.log(`🏷️ Revalidated foretagspaketkategorier`);
-        break;
-
-      case 'pages':
-      case 'sidor':
-        // Revalidate pages
-        if (slug) {
-          // Revalidate specific page
-          const pagePath = slug === 'home' ? '/' : `/${slug}`;
-          revalidatePath(pagePath);
-          console.log(`📄 Revalidated page: ${pagePath}`);
-        }
-        revalidateTag('pages');
-        break;
-
-      case 'menus':
-        // Revalidate menus (affects header/footer)
-        revalidateTag('menus');
-        revalidatePath('/', 'layout');
-        console.log(`📋 Revalidated menus`);
-        break;
-
-      case 'footer':
-        // Revalidate footer
-        revalidateTag('footer');
-        revalidatePath('/', 'layout');
-        console.log(`📋 Revalidated footer`);
-        break;
-
-      case 'spelare':
-        // Revalidate player data - affects team pages
-        revalidateTag('spelare');
-        revalidatePath('/lag');
-        revalidateTag('lag'); // Also revalidate lag since players are shown on team pages
-        console.log(`👤 Revalidated spelare`);
-        break;
-
-      case 'stab':
-        // Revalidate staff data - affects team pages
-        revalidateTag('stab');
-        revalidatePath('/lag');
-        revalidateTag('lag'); // Also revalidate lag since staff are shown on team pages
-        console.log(`👔 Revalidated stab`);
-        break;
-
-      case 'forms':
-        // Revalidate forms
-        revalidateTag('forms');
-        console.log(`📝 Revalidated forms`);
-        break;
-
-      default:
-        // Revalidate homepage and the general frontspace tag for other content types
-        revalidatePath('/');
-        revalidateTag('frontspace');
-        revalidateTag(postType); // Also revalidate the specific post type tag
-        console.log(`📄 Revalidated root path and tag for ${postType}`);
+    // Revalidate specific detail pages with known routes
+    if (slug) {
+      const detailRoutes: Record<string, string> = {
+        'nyheter': `/nyhet/${slug}`,
+        'lag': `/lag/${slug}`,
+        'jobb': `/jobb/${slug}`,
+        'partners': `/partner/${slug}`,
+      };
+      if (detailRoutes[postType]) {
+        revalidatePath(detailRoutes[postType]);
+        console.log(`📄 Revalidated detail page: ${detailRoutes[postType]}`);
+      }
     }
 
     // Also revalidate homepage if content is marked for homepage display

@@ -4,6 +4,10 @@ import { BlockRenderer } from '@/app/components/BlockRenderer';
 import { fetchAllPages } from '@/lib/frontspace/client';
 import { buildPagePaths, findPageByPath } from '@/utils/pageRouting';
 
+// Pages use dynamic data from CMS - rely on cache tags for revalidation
+// This ensures pages always check Data Cache (which is invalidated by tags)
+export const revalidate = 0;
+
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
