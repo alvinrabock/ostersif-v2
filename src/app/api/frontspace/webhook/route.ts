@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
         revalidatePath('/nyheter');
         if (slug) revalidatePath(`/nyhet/${slug}`);
         revalidateTag('nyheter');
+        revalidateTag('posts-data'); // Apollo client uses this tag
         console.log(`📰 Revalidated nyheter: ${slug || 'all'}`);
         break;
 
@@ -77,6 +78,7 @@ export async function POST(request: NextRequest) {
         revalidatePath('/nyheter');
         revalidateTag('nyhetskategorier');
         revalidateTag('nyheter');
+        revalidateTag('categories-data'); // Apollo client uses this tag
         console.log(`🏷️ Revalidated nyhetskategorier`);
         break;
 
@@ -85,15 +87,27 @@ export async function POST(request: NextRequest) {
         revalidatePath('/lag');
         if (slug) revalidatePath(`/lag/${slug}`);
         revalidateTag('lag');
-        revalidateTag('frontspace'); // Also revalidate the general frontspace tag
+        revalidateTag('lag-data'); // Apollo client uses this tag
+        revalidateTag('frontspace');
         console.log(`⚽ Revalidated lag: ${slug || 'all'}`);
         break;
 
       case 'personal':
         // Revalidate staff pages
         revalidatePath('/om-oss/personal');
+        revalidatePath('/kontakt');
         revalidateTag('personal');
+        revalidateTag('personal-data'); // Apollo client uses this tag
         console.log(`👥 Revalidated personal`);
+        break;
+
+      case 'personalavdelningar':
+        // Revalidate personal avdelningar (departments)
+        revalidatePath('/om-oss/personal');
+        revalidatePath('/kontakt');
+        revalidateTag('personal');
+        revalidateTag('personal-data'); // Apollo client uses this tag
+        console.log(`👥 Revalidated personalavdelningar`);
         break;
 
       case 'partners':
@@ -101,7 +115,18 @@ export async function POST(request: NextRequest) {
         revalidatePath('/partners');
         if (slug) revalidatePath(`/partner/${slug}`);
         revalidateTag('partners');
+        revalidateTag('partners-data'); // Apollo client uses this tag
+        revalidateTag('partnernivaer-data'); // Partner levels also use partners
         console.log(`🤝 Revalidated partners: ${slug || 'all'}`);
+        break;
+
+      case 'partnernivaer':
+        // Revalidate partner levels
+        revalidatePath('/partners');
+        revalidateTag('partners');
+        revalidateTag('partners-data');
+        revalidateTag('partnernivaer-data'); // Apollo client uses this tag
+        console.log(`🏆 Revalidated partnernivaer`);
         break;
 
       case 'jobb':
@@ -109,6 +134,7 @@ export async function POST(request: NextRequest) {
         revalidatePath('/jobb');
         if (slug) revalidatePath(`/jobb/${slug}`);
         revalidateTag('jobb');
+        revalidateTag('jobb-data'); // Apollo client uses this tag
         console.log(`💼 Revalidated jobb: ${slug || 'all'}`);
         break;
 
@@ -116,7 +142,27 @@ export async function POST(request: NextRequest) {
         // Revalidate documents
         revalidatePath('/dokument');
         revalidateTag('dokument');
+        revalidateTag('documents-data'); // Apollo client uses this tag
         console.log(`📄 Revalidated dokument`);
+        break;
+
+      case 'foretagspaket':
+      case 'partnerpaket':
+        // Revalidate företagspaket/partnerpaket
+        revalidatePath('/partners');
+        revalidateTag('foretagspaket');
+        revalidateTag('foretagspaket-data'); // Apollo client uses this tag
+        console.log(`📦 Revalidated foretagspaket`);
+        break;
+
+      case 'foretagspaketkategorier':
+      case 'partnerpaket-kategorier':
+        // Revalidate företagspaket categories
+        revalidatePath('/partners');
+        revalidateTag('foretagspaketkategorier');
+        revalidateTag('foretagspaketkategorier-data'); // Apollo client uses this tag
+        revalidateTag('foretagspaket-data'); // Also invalidate paket since categories affect them
+        console.log(`🏷️ Revalidated foretagspaketkategorier`);
         break;
 
       case 'pages':
