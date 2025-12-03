@@ -238,6 +238,23 @@ function renderNode(node: TiptapNode, index: number): React.ReactNode {
         />
       )
 
+    case 'iframeBlock':
+      // Iframe embed block for slideshows, maps, forms, etc.
+      if (!node.attrs?.src) return null
+      return (
+        <div key={key} className="iframe-block my-6">
+          <div className="aspect-video">
+            <iframe
+              src={node.attrs.src}
+              className="w-full h-full rounded-lg"
+              frameBorder="0"
+              allowFullScreen
+              loading="lazy"
+            />
+          </div>
+        </div>
+      )
+
     default:
       // For unknown node types, try to render content if it exists
       if (node.content) {
