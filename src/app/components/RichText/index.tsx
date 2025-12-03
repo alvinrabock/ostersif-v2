@@ -113,6 +113,22 @@ const RichText: React.FC<RichTextProps> = ({ data, className }) => {
         return <hr key={index} className="my-8 border-gray-300" />
       case 'br':
         return <br key={index} />
+      case 'iframeBlock':
+      case 'iframe-block':
+        // Iframe embed block for slideshows, maps, forms, etc.
+        if (!node.attrs?.src) return null
+        return (
+          <div key={index} className="iframe-block my-4">
+            <div className="aspect-video">
+              <iframe
+                src={node.attrs.src}
+                className="w-full h-full rounded-lg"
+                frameBorder="0"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        )
       default:
         // Default: render children in a div or return null
         return children ? <div key={index}>{children}</div> : null

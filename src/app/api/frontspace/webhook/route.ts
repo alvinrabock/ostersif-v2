@@ -145,20 +145,65 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Handle GET requests (for webhook verification)
+ * Handle GET requests (for webhook verification and manual testing)
+ *
+ * Test revalidation: GET /api/frontspace/webhook?secret=xxx&test=personal
+ * This will revalidate the 'personal' tags without needing the full webhook
  */
 export async function GET(request: NextRequest) {
   const secret = request.nextUrl.searchParams.get('secret');
+  const testPostType = request.nextUrl.searchParams.get('test');
 
-  if (secret === WEBHOOK_SECRET) {
+  if (secret !== WEBHOOK_SECRET) {
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: 401 }
+    );
+  }
+
+  // If test parameter provided, trigger revalidation for that post type
+  if (testPostType) {
+    const tagMappings: Record<string, string[]> = {
+      'nyheter': ['nyheter', 'posts-data'],
+      'nyhetskategorier': ['nyhetskategorier', 'nyheter', 'categories-data'],
+      'lag': ['lag', 'lag-data', 'frontspace'],
+      'personal': ['personal', 'personalavdelningar', 'personal-data'],
+      'personalavdelningar': ['personal', 'personalavdelningar', 'personal-data'],
+      'partners': ['partners', 'partners-data', 'partnernivaer-data'],
+      'partnernivaer': ['partners', 'partners-data', 'partnernivaer-data'],
+      'jobb': ['jobb', 'jobb-data'],
+      'dokument': ['dokument', 'documents-data'],
+      'foretagspaket': ['foretagspaket', 'foretagspaket-data'],
+      'partnerpaket': ['foretagspaket', 'foretagspaket-data'],
+      'foretagspaketkategorier': ['foretagspaketkategorier', 'foretagspaketkategorier-data', 'foretagspaket-data'],
+      'partnerpaket-kategorier': ['foretagspaketkategorier', 'foretagspaketkategorier-data', 'foretagspaket-data'],
+      'spelare': ['spelare', 'lag', 'lag-data'],
+      'stab': ['stab', 'lag', 'lag-data'],
+      'forms': ['forms'],
+      'menus': ['menus'],
+      'footer': ['footer'],
+      'pages': ['pages'],
+      'sidor': ['pages'],
+    };
+
+    const tagsToRevalidate = tagMappings[testPostType.toLowerCase()] || ['frontspace', testPostType];
+
+    for (const tag of tagsToRevalidate) {
+      revalidateTag(tag);
+    }
+
+    console.log(`🧪 TEST: Revalidated tags for ${testPostType}: ${tagsToRevalidate.join(', ')}`);
+
     return NextResponse.json({
-      message: 'Frontspace webhook endpoint active',
+      message: `Test revalidation complete for ${testPostType}`,
+      revalidatedTags: tagsToRevalidate,
       timestamp: new Date().toISOString(),
     });
   }
 
-  return NextResponse.json(
-    { error: 'Unauthorized' },
-    { status: 401 }
-  );
+  return NextResponse.json({
+    message: 'Frontspace webhook endpoint active',
+    timestamp: new Date().toISOString(),
+    usage: 'Add ?test=postType to test revalidation (e.g., ?test=personal)',
+  });
 }
