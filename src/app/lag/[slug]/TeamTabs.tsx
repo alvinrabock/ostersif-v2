@@ -250,21 +250,50 @@ export default function TeamTabs({
                                     {hasPlayers && (
                                         <div>
                                             <h2 className="text-3xl font-bold mb-8 text-white">Spelare</h2>
-                                            {Object.entries(playersByPosition)
-                                                .sort(([a], [b]) => getPositionOrder(a) - getPositionOrder(b))
-                                                .map(([position, positionPlayers]) => (
-                                                <div key={position} className="mb-10">
-                                                    <h3 className="text-xl font-semibold mb-6 text-white/80">{getPositionDisplayName(position)}</h3>
-                                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                                        {positionPlayers.map((player) => (
-                                                            <PlayerCardCMS
-                                                                key={player.id}
-                                                                person={transformToPlayerCard(player)}
-                                                            />
-                                                        ))}
-                                                    </div>
+                                            {/* Special list view for dam-a-lag (no images) */}
+                                            {slug === 'dam-a-lag' ? (
+                                                <div className="space-y-8">
+                                                    {Object.entries(playersByPosition)
+                                                        .sort(([a], [b]) => getPositionOrder(a) - getPositionOrder(b))
+                                                        .map(([position, positionPlayers]) => (
+                                                        <div key={position}>
+                                                            <h3 className="text-xl font-semibold mb-4 text-white/80">{getPositionDisplayName(position)}</h3>
+                                                            <ul className="space-y-2">
+                                                                {positionPlayers.map((player) => (
+                                                                    <li key={player.id} className="flex items-center gap-4 text-white py-2 border-b border-white/10">
+                                                                        {player.content.trojnummer && (
+                                                                            <span className="text-xl font-bold text-white/60 w-8 text-center">
+                                                                                {player.content.trojnummer}
+                                                                            </span>
+                                                                        )}
+                                                                        <span className="font-medium">{player.title}</span>
+                                                                        {player.content.land && (
+                                                                            <span className="text-white/60 text-sm">({player.content.land})</span>
+                                                                        )}
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                            ))}
+                                            ) : (
+                                                /* Default card view with images */
+                                                Object.entries(playersByPosition)
+                                                    .sort(([a], [b]) => getPositionOrder(a) - getPositionOrder(b))
+                                                    .map(([position, positionPlayers]) => (
+                                                    <div key={position} className="mb-10">
+                                                        <h3 className="text-xl font-semibold mb-6 text-white/80">{getPositionDisplayName(position)}</h3>
+                                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                                            {positionPlayers.map((player) => (
+                                                                <PlayerCardCMS
+                                                                    key={player.id}
+                                                                    person={transformToPlayerCard(player)}
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
                                         </div>
                                     )}
 
