@@ -9,17 +9,32 @@ export async function fetchStandings(leagueId: string) {
 
     const url = `https://smc-api.telenor.no/leagues/${leagueId}/standings`;
 
-    const res = await fetch(url, {
-      headers: {
-        Accept: "application/json",
-        "Authorization": apiSecret,
-      },
-    });
+    // Add timeout to prevent hanging during build
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
-    if (!res.ok) {
-      throw new Error("Failed to fetch standings");
+    try {
+      const res = await fetch(url, {
+        headers: {
+          Accept: "application/json",
+          "Authorization": apiSecret,
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        throw new Error("Failed to fetch standings");
+      }
+
+      return res.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error(`Timeout fetching standings for league ${leagueId}`);
+      }
+      throw error;
     }
-
-    return res.json();
   }
   

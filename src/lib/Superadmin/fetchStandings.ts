@@ -30,37 +30,52 @@ export interface MatchForm {
 
     console.log('fetchStandings: Fetching standings for', { league: leagueParam, season: seasonParam });
 
-    const res = await fetch(`https://api.sportomedia.se/v1/standings/${leagueParam}/${seasonParam}/total`, {
-      method: 'GET',
-      headers: {
-        Accept: 'application/json',
-        'x-api-key': process.env.SUPERADMIN_KEY || '', // must be public if client side
-      },
-      cache: 'no-store',
-    });
+    // Add timeout to prevent hanging during build
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
-    if (!res.ok) {
-      const errorMsg = `API error: ${res.status} ${res.statusText}`;
-      console.error('fetchStandings error:', errorMsg, { league: leagueParam, season: seasonParam });
-      throw new Error(errorMsg);
+    try {
+      const res = await fetch(`https://api.sportomedia.se/v1/standings/${leagueParam}/${seasonParam}/total`, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          'x-api-key': process.env.SUPERADMIN_KEY || '', // must be public if client side
+        },
+        cache: 'no-store',
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        const errorMsg = `API error: ${res.status} ${res.statusText}`;
+        console.error('fetchStandings error:', errorMsg, { league: leagueParam, season: seasonParam });
+        throw new Error(errorMsg);
+      }
+
+      const rawData = await res.json();
+      const teamsArray = Object.values(rawData) as TeamStats[];
+
+      const sortedTeams = teamsArray
+        .filter(
+          (team): team is TeamStats =>
+            !!team &&
+            typeof team.id === 'string' &&
+            typeof team.position === 'number' &&
+            !!team.displayName &&
+            Array.isArray(team.stats)
+        )
+        .sort((a, b) => a.position - b.position);
+
+      console.log('fetchStandings: Successfully fetched', sortedTeams.length, 'teams');
+
+      return sortedTeams;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error(`Timeout fetching standings for ${leagueParam}/${seasonParam}`);
+      }
+      throw error;
     }
-
-    const rawData = await res.json();
-    const teamsArray = Object.values(rawData) as TeamStats[];
-
-    const sortedTeams = teamsArray
-      .filter(
-        (team): team is TeamStats =>
-          !!team &&
-          typeof team.id === 'string' &&
-          typeof team.position === 'number' &&
-          !!team.displayName &&
-          Array.isArray(team.stats)
-      )
-      .sort((a, b) => a.position - b.position);
-
-    console.log('fetchStandings: Successfully fetched', sortedTeams.length, 'teams');
-
-    return sortedTeams;
   };
   

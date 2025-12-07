@@ -202,6 +202,10 @@ export async function getMatchTicketURL(matchId: number | string): Promise<strin
 
 // Function to fetch event data
 async function fetchEventData(): Promise<EventData[]> {
+    // Add timeout to prevent hanging during build
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
     try {
         const response = await fetch(
             "https://foundationapi-stage.ebiljett.nu/v1/247/events?FromDate=2025-04-08",
@@ -210,8 +214,11 @@ async function fetchEventData(): Promise<EventData[]> {
                     Authorization: `Basic ${process.env.EBILJETT_BASIC_AUTH}`,
                 },
                 cache: "no-store",
+                signal: controller.signal,
             }
         );
+
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
             console.warn('Failed to fetch event data:', response.statusText);
@@ -221,7 +228,12 @@ async function fetchEventData(): Promise<EventData[]> {
         const json = await response.json();
         return Array.isArray(json) ? json as EventData[] : [];
     } catch (error) {
-        console.error('Error fetching event data:', error);
+        clearTimeout(timeoutId);
+        if (error instanceof Error && error.name === 'AbortError') {
+            console.warn('Timeout fetching event data');
+        } else {
+            console.error('Error fetching event data:', error);
+        }
         return [];
     }
 }

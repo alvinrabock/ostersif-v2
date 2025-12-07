@@ -20,14 +20,24 @@ export const fetchTeamPlayers = async (
     'Accept': 'application/json',
   };
 
+  // Add timeout to prevent hanging during build
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
   try {
-    const response = await fetch(apiUrl, { method: 'GET', headers });
+    const response = await fetch(apiUrl, { method: 'GET', headers, signal: controller.signal });
+    clearTimeout(timeoutId);
     if (!response.ok) {
       throw new Error(`Error fetching team players: ${response.statusText}`);
     }
     return await response.json();
   } catch (error) {
-    console.error("Fetch error:", error);
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.error(`Timeout fetching players for team ${teamId}`);
+    } else {
+      console.error("Fetch error:", error);
+    }
     return null;
   }
 };
