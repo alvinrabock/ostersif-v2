@@ -15,7 +15,7 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "incremental": true,
     "plugins": [
       {
@@ -29,10 +29,12 @@
       "react": [
         "./node_modules/@types/react"
       ],
-      "@/*": ["src/*"],
-
-      "src/*": ["src/*"]
-
+      "@/*": [
+        "src/*"
+      ],
+      "src/*": [
+        "src/*"
+      ]
     },
     "target": "ES2017"
   },
@@ -41,7 +43,8 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/types/app/page.tsx"
+    ".next/types/app/page.tsx",
+    ".next/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
