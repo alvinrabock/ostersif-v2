@@ -18,10 +18,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 403 });
     }
 
-    revalidateTag(REVALIDATE_TAG);
+    await revalidateTag(REVALIDATE_TAG);
 
     if (slug) {
-      revalidatePath(`/categories/${slug}`);
+      await revalidatePath(`/categories/${slug}`);
     }
 
     return NextResponse.json({

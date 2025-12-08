@@ -92,20 +92,20 @@ export async function POST(request: NextRequest) {
 
     // Revalidate all relevant tags
     for (const tag of tagsToRevalidate) {
-      revalidateTag(tag);
+      await revalidateTag(tag);
     }
     console.log(`🏷️ Revalidated tags: ${tagsToRevalidate.join(', ')}`);
 
     // Special cases that need path revalidation (layout-level changes)
     if (postType === 'menus' || postType === 'footer') {
-      revalidatePath('/', 'layout');
+      await revalidatePath('/', 'layout');
       console.log(`📋 Revalidated layout`);
     }
 
     // Revalidate specific page slug if provided for pages/sidor
     if ((postType === 'pages' || postType === 'sidor') && slug) {
       const pagePath = slug === 'home' ? '/' : `/${slug}`;
-      revalidatePath(pagePath);
+      await revalidatePath(pagePath);
       console.log(`📄 Revalidated page path: ${pagePath}`);
     }
 
@@ -118,14 +118,14 @@ export async function POST(request: NextRequest) {
         'partners': `/partner/${slug}`,
       };
       if (detailRoutes[postType]) {
-        revalidatePath(detailRoutes[postType]);
+        await revalidatePath(detailRoutes[postType]);
         console.log(`📄 Revalidated detail page: ${detailRoutes[postType]}`);
       }
     }
 
     // Also revalidate homepage if content is marked for homepage display
     if (payload.visaPaHemsida) {
-      revalidatePath('/');
+      await revalidatePath('/');
       console.log('🏠 Revalidated homepage');
     }
 
@@ -189,7 +189,7 @@ export async function GET(request: NextRequest) {
     const tagsToRevalidate = tagMappings[testPostType.toLowerCase()] || ['frontspace', testPostType];
 
     for (const tag of tagsToRevalidate) {
-      revalidateTag(tag);
+      await revalidateTag(tag);
     }
 
     console.log(`🧪 TEST: Revalidated tags for ${testPostType}: ${tagsToRevalidate.join(', ')}`);

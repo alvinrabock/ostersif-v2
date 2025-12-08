@@ -22,25 +22,25 @@ export async function POST(req: Request) {
     }
 
     // Always revalidate the main posts tag
-    revalidateTag(REVALIDATE_TAG);
+    await revalidateTag(REVALIDATE_TAG);
 
     // Revalidate additional tags if provided
     if (tags && Array.isArray(tags)) {
-      tags.forEach(tag => {
-        revalidateTag(tag);
-      });
+      for (const tag of tags) {
+        await revalidateTag(tag);
+      }
     }
 
     // Revalidate specific post path if slug provided
     if (slug) {
-      revalidatePath(`/nyheter/${slug}`);
+      await revalidatePath(`/nyheter/${slug}`);
     }
 
     // Revalidate additional specific paths if provided
     if (paths && Array.isArray(paths)) {
-      paths.forEach(path => {
-        revalidatePath(path);
-      });
+      for (const path of paths) {
+        await revalidatePath(path);
+      }
     }
 
     // Revalidate common paths if flag is set
@@ -52,9 +52,9 @@ export async function POST(req: Request) {
         // Add other common paths that should be revalidated
       ];
 
-      commonPaths.forEach(path => {
-        revalidatePath(path);
-      });
+      for (const path of commonPaths) {
+        await revalidatePath(path);
+      }
     }
 
     const revalidatedItems = [];
