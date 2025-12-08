@@ -405,6 +405,7 @@ export async function fetchPosts<T>(
   }
 
   // Construct GraphQL query for fetching posts from Frontspace with search support
+  // Note: Relation fields like kategori are stored in the content JSON, not as separate fields
   const query = `
     query GetPosts($storeId: String!, $postTypeSlug: String, $limit: Int, $offset: Int, $contentFilter: JSON, $search: String, $sortBy: String, $sortDirection: String) {
       posts(storeId: $storeId, postTypeSlug: $postTypeSlug, limit: $limit, offset: $offset, contentFilter: $contentFilter, search: $search, sortBy: $sortBy, sortDirection: $sortDirection) {
@@ -422,12 +423,6 @@ export async function fetchPosts<T>(
             id
             name
             slug
-          }
-          kategori {
-            id
-            title
-            slug
-            content
           }
         }
         totalCount
@@ -483,6 +478,7 @@ export async function fetchPosts<T>(
 /**
  * Fetch a single post by slug
  * Uses the generic 'post' query with postTypeSlug parameter
+ * Note: Relation fields like kategori are stored in the content JSON, not as separate fields
  */
 export async function fetchPostBySlug<T>(
   postType: string,
@@ -503,12 +499,6 @@ export async function fetchPostBySlug<T>(
           id
           name
           slug
-        }
-        kategori {
-          id
-          title
-          slug
-          content
         }
       }
     }
@@ -563,7 +553,8 @@ async function fetchPartnersWithRelations(
 ): Promise<{ posts: any[]; total: number }> {
   const { limit = 100, offset = 0, contentFilter } = options || {};
 
-  // New query format with PostsResult
+  // Query format with PostsResult
+  // Note: Relation fields like partnerniva are stored in the content JSON, not as separate fields
   const query = `
     query GetPartnersWithRelations($storeId: String!, $limit: Int, $offset: Int, $contentFilter: JSON) {
       posts(storeId: $storeId, postTypeSlug: "partners", limit: $limit, offset: $offset, contentFilter: $contentFilter) {
@@ -577,12 +568,6 @@ async function fetchPartnersWithRelations(
           created_at
           updated_at
           published_at
-          partnerniva {
-            id
-            title
-            slug
-            content
-          }
           postType {
             id
             name
