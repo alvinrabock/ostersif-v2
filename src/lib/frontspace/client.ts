@@ -436,34 +436,6 @@ export async function fetchPosts<T>(
     }
   `;
 
-  // Fallback query for backwards compatibility (when API doesn't support PostsResult)
-  const fallbackQuery = `
-    query GetPosts($storeId: String!, $postTypeSlug: String, $limit: Int, $offset: Int, $contentFilter: JSON) {
-      posts(storeId: $storeId, postTypeSlug: $postTypeSlug, limit: $limit, offset: $offset, contentFilter: $contentFilter) {
-        id
-        title
-        slug
-        content
-        status
-        sort_order
-        created_at
-        updated_at
-        published_at
-        postType {
-          id
-          name
-          slug
-        }
-        kategori {
-          id
-          title
-          slug
-          content
-        }
-      }
-    }
-  `;
-
   try {
     const variables: Record<string, any> = {
       storeId: FRONTSPACE_STORE_ID,
@@ -484,48 +456,24 @@ export async function fetchPosts<T>(
       variables.sortDirection = actualSortDirection;
     }
 
-    // Try the new query with PostsResult first
-    try {
-      const data = await frontspaceGraphQLFetch<{ posts: { posts: any[]; totalCount: number; hasMore: boolean } }>(
-        query,
-        variables,
-        getPostTypeCacheTags(postType)
-      );
-
-      // New API returns PostsResult object
-      if (data.posts && Array.isArray(data.posts.posts)) {
-        const publishedPosts = data.posts.posts.filter((post: any) => post.status === 'published');
-        return {
-          posts: publishedPosts as T[],
-          total: data.posts.totalCount || publishedPosts.length,
-          hasMore: data.posts.hasMore,
-        };
-      }
-    } catch {
-      // If new query fails, fall back to old query (without search support)
-      console.log('Falling back to legacy posts query');
-    }
-
-    // Fallback to old query format
-    const fallbackData = await frontspaceGraphQLFetch<{ posts: any[] }>(
-      fallbackQuery,
-      {
-        storeId: FRONTSPACE_STORE_ID,
-        postTypeSlug: postType,
-        limit,
-        offset,
-        contentFilter: actualContentFilter,
-      },
+    const data = await frontspaceGraphQLFetch<{ posts: { posts: any[]; totalCount: number; hasMore: boolean } }>(
+      query,
+      variables,
       getPostTypeCacheTags(postType)
     );
 
-    // Filter out drafts and scheduled posts - only show published posts
-    const publishedPosts = (fallbackData.posts || []).filter((post: any) => post.status === 'published');
+    // API returns PostsResult object
+    if (data.posts && Array.isArray(data.posts.posts)) {
+      const publishedPosts = data.posts.posts.filter((post: any) => post.status === 'published');
+      return {
+        posts: publishedPosts as T[],
+        total: data.posts.totalCount || publishedPosts.length,
+        hasMore: data.posts.hasMore,
+      };
+    }
 
-    return {
-      posts: publishedPosts as T[],
-      total: publishedPosts.length,
-    };
+    // If posts is null or empty, return empty result
+    return { posts: [], total: 0 };
   } catch (error) {
     console.error(`Error fetching ${postType}:`, error);
     return { posts: [], total: 0 };
@@ -647,67 +595,23 @@ async function fetchPartnersWithRelations(
     }
   `;
 
-  // Fallback query for old API format
-  const fallbackQuery = `
-    query GetPartnersWithRelations($storeId: String!, $limit: Int, $offset: Int, $contentFilter: JSON) {
-      posts(storeId: $storeId, postTypeSlug: "partners", limit: $limit, offset: $offset, contentFilter: $contentFilter) {
-        id
-        title
-        slug
-        content
-        status
-        sort_order
-        created_at
-        updated_at
-        published_at
-        partnerniva {
-          id
-          title
-          slug
-          content
-        }
-        postType {
-          id
-          name
-          slug
-        }
-      }
-    }
-  `;
-
   try {
-    // Try new API format first
-    try {
-      const data = await frontspaceGraphQLFetch<{ posts: { posts: any[]; totalCount: number } }>(query, {
-        storeId: FRONTSPACE_STORE_ID,
-        limit,
-        offset,
-        contentFilter,
-      }, getPostTypeCacheTags('partners'));
-
-      if (data.posts && Array.isArray(data.posts.posts)) {
-        return {
-          posts: data.posts.posts || [],
-          total: data.posts.totalCount || data.posts.posts.length,
-        };
-      }
-    } catch {
-      // Fall back to old format
-      console.log('Falling back to legacy partners query');
-    }
-
-    // Fallback to old API format
-    const fallbackData = await frontspaceGraphQLFetch<{ posts: any[] }>(fallbackQuery, {
+    const data = await frontspaceGraphQLFetch<{ posts: { posts: any[]; totalCount: number } }>(query, {
       storeId: FRONTSPACE_STORE_ID,
       limit,
       offset,
       contentFilter,
     }, getPostTypeCacheTags('partners'));
 
-    return {
-      posts: fallbackData.posts || [],
-      total: fallbackData.posts?.length || 0,
-    };
+    if (data.posts && Array.isArray(data.posts.posts)) {
+      return {
+        posts: data.posts.posts || [],
+        total: data.posts.totalCount || data.posts.posts.length,
+      };
+    }
+
+    // If posts is null or empty, return empty result
+    return { posts: [], total: 0 };
   } catch (error) {
     console.error('Error fetching partners with relations:', error);
     return { posts: [], total: 0 };
