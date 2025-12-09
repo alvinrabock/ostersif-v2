@@ -61,6 +61,21 @@ export default async function RootLayout({
     <html lang="sv">
       <head>
         <meta name="robots" content="index" />
+        {/* Frontspace Cookie Consent Banner */}
+        <Script
+          id="frontspace-consent"
+          src="https://app.frontspace.se/embed/frontspace-consent.js"
+          strategy="beforeInteractive"
+          data-store-id={process.env.NEXT_PUBLIC_FRONTSPACE_STORE_ID}
+          data-api-base="https://app.frontspace.se"
+        />
+        {/* Frontspace Analytics Tracking */}
+        <Script
+          id="frontspace-track"
+          src="https://app.frontspace.se/embed/frontspace-track.js"
+          strategy="afterInteractive"
+          data-store-id={process.env.NEXT_PUBLIC_FRONTSPACE_STORE_ID}
+        />
         {/* SEF/EFD Top Bar Widget Script */}
         <Script
           id="league-top-bar-script"
