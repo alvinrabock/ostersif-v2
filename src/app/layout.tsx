@@ -64,18 +64,20 @@ export default async function RootLayout({
         {/* Frontspace Cookie Consent Banner */}
         <Script
           id="frontspace-consent"
-          src="https://app.frontspace.se/embed/frontspace-consent.js"
+          src={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://app.frontspace.se'}/embed/frontspace-consent.js`}
           strategy="beforeInteractive"
           data-store-id={process.env.NEXT_PUBLIC_FRONTSPACE_STORE_ID}
-          data-api-base="https://app.frontspace.se"
+          data-api-base={process.env.NEXT_PUBLIC_BACKEND_URL || 'https://app.frontspace.se'}
         />
-        {/* Frontspace Analytics Tracking */}
+        {/* Frontspace Analytics Tracking - DISABLED FOR NOW
         <Script
           id="frontspace-track"
-          src="https://app.frontspace.se/embed/frontspace-track.js"
+          src={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://app.frontspace.se'}/embed/frontspace-track.js`}
           strategy="afterInteractive"
           data-store-id={process.env.NEXT_PUBLIC_FRONTSPACE_STORE_ID}
+          data-api-base={process.env.NEXT_PUBLIC_BACKEND_URL || 'https://app.frontspace.se'}
         />
+        */}
         {/* SEF/EFD Top Bar Widget Script */}
         <Script
           id="league-top-bar-script"

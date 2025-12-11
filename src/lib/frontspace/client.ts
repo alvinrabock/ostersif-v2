@@ -357,7 +357,6 @@ function enrichMenuItemsWithPaths(menuItems: any[], pagesMap: Map<string, any>):
     // Build full path for internal pages
     if (item.link_type === 'internal' && item.page_id) {
       const fullPath = buildPagePath(item.page_id, pagesMap);
-      console.log(`[Menu] Enriching "${item.title}": ${item.url || item.slug} -> ${fullPath}`);
       enrichedItem.url = fullPath;
     }
 

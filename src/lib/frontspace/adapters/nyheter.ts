@@ -32,10 +32,15 @@ function transformNyhetToPost(nyhet: any): Post {
 
   // Transform categories from Frontspace format
   // Categories can be in kategori (for single post) or content.kategori (for list)
-  const kategorier = nyhet.kategori || content.kategori || [];
+  // kategori can be: undefined, a single string ID, a single object, or an array
+  const rawKategorier = nyhet.kategori || content.kategori;
 
-  // Ensure kategorier is an array
-  const kategorierArray = Array.isArray(kategorier) ? kategorier : [];
+  // Normalize to array - handle undefined, single values, and arrays
+  const kategorierArray = !rawKategorier
+    ? []
+    : Array.isArray(rawKategorier)
+      ? rawKategorier
+      : [rawKategorier];
 
   const categories = kategorierArray.map((kat: any) => {
     // If it's just a string ID, we can't do much with it
@@ -136,13 +141,59 @@ export async function fetchAllNyheter(
 
 /**
  * Fetch single news post by slug
+ * Also fetches and populates full category details for breadcrumbs
  */
 export async function fetchSingleNyhet(slug: string): Promise<Post | null> {
   try {
     const nyhet = await frontspace.nyheter.getBySlug(slug);
     if (!nyhet) return null;
 
-    return transformNyhetToPost(nyhet);
+    // Transform the basic nyhet
+    const post = transformNyhetToPost(nyhet);
+
+    // If we have categories that are just IDs (empty title/slug), fetch full details
+    if (post.categories && post.categories.length > 0) {
+      const needsPopulation = post.categories.some(cat =>
+        typeof cat !== 'string' && (!cat.title || !cat.slug)
+      );
+
+      if (needsPopulation) {
+        // Fetch all categories to populate details
+        const { posts: allCategories } = await frontspace.nyhetskategorier.getAll({ limit: 100 });
+        const categoryMap = new Map(
+          allCategories.map((cat: any) => [cat.id, cat])
+        );
+
+        // Replace categories with full details
+        post.categories = post.categories.map(cat => {
+          if (typeof cat === 'string') {
+            const fullCat = categoryMap.get(cat);
+            if (fullCat) {
+              return {
+                id: fullCat.id,
+                title: fullCat.title,
+                slug: fullCat.slug,
+                parent: fullCat.content?.parent || null,
+                updatedAt: fullCat.updated_at || new Date().toISOString(),
+                createdAt: fullCat.created_at || new Date().toISOString(),
+              };
+            }
+          } else if (!cat.title || !cat.slug) {
+            const fullCat = categoryMap.get(cat.id);
+            if (fullCat) {
+              return {
+                ...cat,
+                title: fullCat.title,
+                slug: fullCat.slug,
+              };
+            }
+          }
+          return cat;
+        });
+      }
+    }
+
+    return post;
   } catch (error) {
     console.error(`Error fetching nyhet ${slug} from Frontspace:`, error);
     return null;
@@ -298,8 +349,13 @@ export async function fetchNyheterByTeam(
 
     // Filter posts that have this team in their content.kopplade_lag array
     const filteredPosts = allPosts.filter((post: any) => {
-      const koppladelag = post.content?.kopplade_lag || [];
-      // kopplade_lag can be an array of IDs (strings) or an array of objects with id
+      const rawKoppladelag = post.content?.kopplade_lag;
+      // kopplade_lag can be: undefined, a single string ID, or an array of IDs/objects
+      if (!rawKoppladelag) return false;
+
+      // Normalize to array
+      const koppladelag = Array.isArray(rawKoppladelag) ? rawKoppladelag : [rawKoppladelag];
+
       return koppladelag.some((lag: any) => {
         if (typeof lag === 'string') {
           return lag === teamId;

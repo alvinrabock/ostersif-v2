@@ -63,11 +63,6 @@ export default function KommandeMatcher({ maxMatches = 3 }: KommandeMatcherProps
 
                 const data = await getMatches(leagueIds, homeTeamId, awayTeamId);
 
-                // Debug: Log all match statuses
-                console.log('📊 All matches:', data.length);
-                console.log('📊 Match statuses:', data.map(m => m.status));
-                console.log('📊 Upcoming matches:', data.filter(m => m.status === "Scheduled").length);
-
                 const now = new Date();
 
                 const filteredMatches = data
@@ -88,8 +83,6 @@ export default function KommandeMatcher({ maxMatches = 3 }: KommandeMatcherProps
                             new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime()
                     )
                     .slice(0, maxMatches);
-
-                console.log('✅ Filtered upcoming matches to show:', filteredMatches.length);
 
                 setMatches(filteredMatches);
             } catch (err) {
