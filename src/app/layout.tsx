@@ -8,6 +8,8 @@ import { UIProvider } from "@/providers/ui-context";
 import { getTopbarConfig } from "@/lib/leagueCache";
 import Script from "next/script";
 import { fetchFooter } from "@/lib/frontspace/client";
+import { Suspense } from "react";
+import { AnalyticsTracker } from "@/components/AnalyticsTracker";
 
 const oswald = localFont({
   src: [
@@ -61,23 +63,6 @@ export default async function RootLayout({
     <html lang="sv">
       <head>
         <meta name="robots" content="index" />
-        {/* Frontspace Cookie Consent Banner */}
-        <Script
-          id="frontspace-consent"
-          src={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://app.frontspace.se'}/embed/frontspace-consent.js`}
-          strategy="beforeInteractive"
-          data-store-id={process.env.NEXT_PUBLIC_FRONTSPACE_STORE_ID}
-          data-api-base={process.env.NEXT_PUBLIC_BACKEND_URL || 'https://app.frontspace.se'}
-        />
-        {/* Frontspace Analytics Tracking - DISABLED FOR NOW
-        <Script
-          id="frontspace-track"
-          src={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://app.frontspace.se'}/embed/frontspace-track.js`}
-          strategy="afterInteractive"
-          data-store-id={process.env.NEXT_PUBLIC_FRONTSPACE_STORE_ID}
-          data-api-base={process.env.NEXT_PUBLIC_BACKEND_URL || 'https://app.frontspace.se'}
-        />
-        */}
         {/* SEF/EFD Top Bar Widget Script */}
         <Script
           id="league-top-bar-script"
@@ -90,6 +75,9 @@ export default async function RootLayout({
         />
       </head>
       <body className={`${oswald.variable} ${poppins.variable} antialiased bg-custom_dark_dark_red`}>
+        <Suspense fallback={null}>
+          <AnalyticsTracker storeId={process.env.NEXT_PUBLIC_FRONTSPACE_STORE_ID || ''} />
+        </Suspense>
         <UIProvider>
           <div className="sef-topbar-widget"></div>
           <Header />
