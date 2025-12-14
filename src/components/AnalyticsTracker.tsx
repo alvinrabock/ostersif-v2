@@ -12,11 +12,20 @@ export function AnalyticsTracker({ storeId }: AnalyticsTrackerProps) {
   const searchParams = useSearchParams()
   const startTimeRef = useRef<number>(0)
   const urlRef = useRef<string>('')
+  const lastTrackedUrlRef = useRef<string>('')
+
+  // Stabilize searchParams to a string
+  const searchString = searchParams.toString()
 
   useEffect(() => {
     if (!storeId) return
 
-    const url = pathname + (searchParams.toString() ? `?${searchParams.toString()}` : '')
+    const url = pathname + (searchString ? `?${searchString}` : '')
+
+    // Prevent duplicate tracking for the same URL
+    if (url === lastTrackedUrlRef.current) return
+    lastTrackedUrlRef.current = url
+
     startTimeRef.current = Date.now()
     urlRef.current = url
 
@@ -32,6 +41,7 @@ export function AnalyticsTracker({ storeId }: AnalyticsTrackerProps) {
           hostname: window.location.hostname,
           referrer: document.referrer,
           language: navigator.language,
+          ua: navigator.userAgent,
           screen: `${screen.width}x${screen.height}`,
         },
       }),
@@ -78,7 +88,7 @@ export function AnalyticsTracker({ storeId }: AnalyticsTrackerProps) {
         }).catch(() => {})
       }
     }
-  }, [pathname, searchParams, storeId])
+  }, [pathname, searchString, storeId])
 
   return null
 }
