@@ -76,7 +76,7 @@ export default async function RootLayout({
       </head>
       <body className={`${oswald.variable} ${poppins.variable} antialiased bg-custom_dark_dark_red`}>
         <Suspense fallback={null}>
-          <AnalyticsTracker storeId={process.env.NEXT_PUBLIC_FRONTSPACE_STORE_ID || ''} />
+          <AnalyticsTracker storeId={process.env.FRONTSPACE_STORE_ID || ''} />
         </Suspense>
         <UIProvider>
           <div className="sef-topbar-widget"></div>
