@@ -10,13 +10,19 @@ export async function POST(request: NextRequest) {
     const realIp = request.headers.get('x-real-ip')
     const clientIp = forwardedFor?.split(',')[0]?.trim() || realIp || ''
 
+    // Inject IP into request body (required by Umami for location detection)
+    const bodyWithIp = {
+      ...body,
+      ip: clientIp,
+    }
+
     const response = await fetch(`${cmsApiUrl}/api/analytics`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...(clientIp && { 'X-Forwarded-For': clientIp }),
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(bodyWithIp),
     })
 
     if (!response.ok) {
