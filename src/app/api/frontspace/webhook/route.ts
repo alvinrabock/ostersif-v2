@@ -37,6 +37,7 @@ async function verifyWebhookSignature(request: NextRequest, payload: string): Pr
  * Handle POST requests from Frontspace webhooks
  */
 export async function POST(request: NextRequest) {
+  console.log('[Webhook] POST request received');
   try {
     // Get raw body for signature verification
     const rawBody = await request.text();
@@ -54,12 +55,36 @@ export async function POST(request: NextRequest) {
 
     // Parse the payload
     const payload = JSON.parse(rawBody);
-    const { postType: rawPostType, slug } = payload;
+
+    // Frontspace sends data in nested structure: { event, data: { slug, post_type_id, ... } }
+    const data = payload.data || payload;
+    const slug = data.slug || payload.slug;
+
+    // Try to get postType from various sources
+    let rawPostType = payload.postType || data.postType;
+
+    // If no direct postType, try to infer from post_type_id or content
+    // For now, we'll need to map known post_type_ids or use a default
+    if (!rawPostType && data.post_type_id) {
+      // TODO: Add mapping of post_type_ids to post types if needed
+      // For now, try to infer from content structure
+      const content = typeof data.content === 'string' ? JSON.parse(data.content || '{}') : (data.content || {});
+
+      if (content.kategori || content.kopplade_lag) {
+        rawPostType = 'nyheter';
+      } else if (content.partnerniva) {
+        rawPostType = 'partners';
+      } else if (content.avdelning) {
+        rawPostType = 'personal';
+      } else {
+        rawPostType = 'unknown';
+      }
+    }
 
     // Normalize postType to lowercase for consistent matching
     const postType = rawPostType?.toLowerCase?.() || rawPostType;
 
-    console.log(`🔔 Webhook received: postType="${rawPostType}" (normalized: "${postType}"), slug="${slug}"`);
+    console.log(`🔔 Webhook received: event="${payload.event}", postType="${postType}", slug="${slug}"`);
     console.log(`📦 Full payload:`, JSON.stringify(payload, null, 2));
 
     // Tag mappings: Frontspace tags -> Apollo tags (for backwards compatibility)
