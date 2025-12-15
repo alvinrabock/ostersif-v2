@@ -10,6 +10,15 @@ export async function POST(request: NextRequest) {
     const realIp = request.headers.get('x-real-ip')
     const clientIp = forwardedFor?.split(',')[0]?.trim() || realIp || ''
 
+    // Debug: log visitor location data
+    console.log('[Analytics] Visitor data:', {
+      ip: clientIp || '(no IP detected)',
+      forwardedFor,
+      realIp,
+      url: body.payload?.url,
+      hostname: body.payload?.hostname,
+    })
+
     // Inject IP into request body (required by Umami for location detection)
     const bodyWithIp = {
       ...body,
