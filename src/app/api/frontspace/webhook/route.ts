@@ -97,43 +97,56 @@ export async function POST(request: NextRequest) {
       'homepage'
     ];
 
+    // Track what we revalidate for logging
+    const revalidatedTags: string[] = [];
+    const revalidatedPaths: string[] = [];
+
     // Revalidate cache tags
     revalidateTag('frontspace');
+    revalidatedTags.push('frontspace');
+
     if (storeId) {
       revalidateTag(`frontspace-${storeId}`);
       revalidateTag(`frontspace-menu-${storeId}`);
       revalidateTag(`frontspace-data-${storeId}`);
+      revalidatedTags.push(`frontspace-${storeId}`, `frontspace-menu-${storeId}`, `frontspace-data-${storeId}`);
     }
+
     for (const type of allContentTypes) {
       revalidateTag(type);
+      revalidatedTags.push(type);
     }
+
+    console.log(`🏷️  Revalidated tags: ${revalidatedTags.join(', ')}`);
 
     // Handle PAGE events - revalidate specific page paths
     if (event.startsWith('page.')) {
       const pageSlug = data.slug || data.page_slug || slug;
       if (pageSlug) {
         revalidatePath(`/${pageSlug}`);
-        console.log(`📄 Page event: revalidated /${pageSlug}`);
+        revalidatedPaths.push(`/${pageSlug}`);
       }
-      // Always revalidate home for page changes
       revalidatePath('/');
+      revalidatedPaths.push('/');
+      console.log(`📄 PAGE event: revalidated paths: ${revalidatedPaths.join(', ')}`);
     }
 
     // Handle POST events - posts can appear on multiple pages (HeroSlider, etc.)
     if (event.startsWith('post.')) {
-      // Always revalidate home (HeroSlider shows posts)
       revalidatePath('/');
-      // Revalidate the post type listing page
+      revalidatedPaths.push('/');
       if (postType && postType !== 'unknown') {
         revalidatePath(`/${postType}`);
+        revalidatedPaths.push(`/${postType}`);
       }
-      console.log(`📝 Post event: revalidated / and /${postType}`);
+      console.log(`📝 POST event: revalidated paths: ${revalidatedPaths.join(', ')}`);
     }
 
     // Revalidate entire layout as fallback for all events
     revalidatePath('/', 'layout');
+    revalidatedPaths.push('/ (layout)');
 
-    console.log(`🔄 Revalidated: tags + paths for event "${event}"`);
+    console.log(`🔄 COMPLETE: event="${event}" | tags=${revalidatedTags.length} | paths=${revalidatedPaths.join(', ')}`);
 
     return NextResponse.json({
       success: true,
