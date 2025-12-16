@@ -91,9 +91,11 @@ export async function POST(request: NextRequest) {
 
     // All content types that might need revalidation
     // Since we can't always reliably detect postType from payload, revalidate all common types
+    // Also includes 'homepage' for HeroSlider and other homepage-specific content
     const allContentTypes = [
       'nyheter', 'lag', 'partners', 'personal', 'jobb', 'dokument',
-      'nyhetskategorier', 'spelare', 'stab', 'pages', 'menus', 'footer', 'forms'
+      'nyhetskategorier', 'spelare', 'stab', 'pages', 'menus', 'footer', 'forms',
+      'homepage'
     ];
 
     // Revalidate cache tags that match what the client uses:
@@ -112,11 +114,23 @@ export async function POST(request: NextRequest) {
       revalidateTag(type);
     }
 
-    // Revalidate entire site to ensure all pages refresh (layout + pages)
+    // Revalidate entire site to ensure all pages refresh
+    // Use 'layout' type to invalidate Full Route Cache for all pages under root layout
     revalidatePath('/', 'layout');
+
+    // Also revalidate specific dynamic route patterns to ensure catch-all routes are invalidated
+    // This ensures pages with custom blocks (like HeroSlider) get fresh data
+    revalidatePath('/[slug]', 'page');
+    revalidatePath('/[...slug]', 'page');
+    revalidatePath('/nyhet/[slug]', 'page');
+    revalidatePath('/nyheter', 'page');
+    revalidatePath('/nyheter/[...slug]', 'page');
+    revalidatePath('/lag', 'page');
+    revalidatePath('/lag/[slug]', 'page');
+    revalidatePath('/matcher', 'page');
     revalidatePath('/');
 
-    console.log(`🔄 Revalidated: all content types + frontspace-${storeId} + entire site`);
+    console.log(`🔄 Revalidated: all content types + frontspace-${storeId} + all page routes`);
 
     return NextResponse.json({
       success: true,
@@ -154,10 +168,11 @@ export async function GET(request: NextRequest) {
   if (testPostType) {
     const storeId = process.env.FRONTSPACE_STORE_ID || '';
 
-    // All content types
+    // All content types (including homepage for HeroSlider)
     const allContentTypes = [
       'nyheter', 'lag', 'partners', 'personal', 'jobb', 'dokument',
-      'nyhetskategorier', 'spelare', 'stab', 'pages', 'menus', 'footer', 'forms'
+      'nyhetskategorier', 'spelare', 'stab', 'pages', 'menus', 'footer', 'forms',
+      'homepage'
     ];
 
     // Revalidate all tags
@@ -171,11 +186,19 @@ export async function GET(request: NextRequest) {
       revalidateTag(type);
     }
 
-    // Revalidate entire site
+    // Revalidate entire site and all dynamic routes
     revalidatePath('/', 'layout');
+    revalidatePath('/[slug]', 'page');
+    revalidatePath('/[...slug]', 'page');
+    revalidatePath('/nyhet/[slug]', 'page');
+    revalidatePath('/nyheter', 'page');
+    revalidatePath('/nyheter/[...slug]', 'page');
+    revalidatePath('/lag', 'page');
+    revalidatePath('/lag/[slug]', 'page');
+    revalidatePath('/matcher', 'page');
     revalidatePath('/');
 
-    console.log(`🧪 TEST: Revalidated all content types + entire site`);
+    console.log(`🧪 TEST: Revalidated all content types + all page routes`);
 
     return NextResponse.json({
       message: `Test revalidation complete`,

@@ -7,7 +7,7 @@ interface HeroSliderProps {
 }
 
 export default async function HeroSlider({ maxPosts = 5 }: HeroSliderProps) {
-  // Fetch posts server-side
+  // Fetch posts server-side (uses cache tags for on-demand revalidation)
   const posts = await fetchHomepageNyheter(maxPosts);
 
   // Don't render if no posts
