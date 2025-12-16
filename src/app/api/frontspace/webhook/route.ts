@@ -84,75 +84,32 @@ export async function POST(request: NextRequest) {
     // Normalize postType to lowercase for consistent matching
     const postType = rawPostType?.toLowerCase?.() || rawPostType;
 
-    console.log(`🔔 Webhook received: event="${payload.event}", postType="${postType}", slug="${slug}"`);
-    console.log(`📦 Full payload:`, JSON.stringify(payload, null, 2));
+    // Get store ID from payload or environment
+    const storeId = payload.store_id || data.store_id || process.env.FRONTSPACE_STORE_ID || '';
 
-    // Tag mappings: Frontspace tags -> Apollo tags (for backwards compatibility)
-    // Pages with revalidate=0 will automatically get fresh data when tags are invalidated
-    const tagMappings: Record<string, string[]> = {
-      'nyheter': ['nyheter', 'posts-data'],
-      'nyhetskategorier': ['nyhetskategorier', 'nyheter', 'categories-data'],
-      'lag': ['lag', 'lag-data', 'frontspace'],
-      'personal': ['personal', 'personalavdelningar', 'personal-data'],
-      'personalavdelningar': ['personal', 'personalavdelningar', 'personal-data'],
-      'partners': ['partners', 'partners-data', 'partnernivaer-data'],
-      'partnernivaer': ['partners', 'partners-data', 'partnernivaer-data'],
-      'jobb': ['jobb', 'jobb-data'],
-      'dokument': ['dokument', 'documents-data'],
-      'foretagspaket': ['foretagspaket', 'foretagspaket-data'],
-      'partnerpaket': ['foretagspaket', 'foretagspaket-data'],
-      'foretagspaketkategorier': ['foretagspaketkategorier', 'foretagspaketkategorier-data', 'foretagspaket-data'],
-      'partnerpaket-kategorier': ['foretagspaketkategorier', 'foretagspaketkategorier-data', 'foretagspaket-data'],
-      'spelare': ['spelare', 'lag', 'lag-data'],
-      'stab': ['stab', 'lag', 'lag-data'],
-      'forms': ['forms'],
-      'menus': ['menus'],
-      'footer': ['footer'],
-      'pages': ['pages'],
-      'sidor': ['pages'],
-    };
+    console.log(`🔔 Webhook received: event="${payload.event}", postType="${postType}", slug="${slug}", storeId="${storeId}"`);
 
-    // Get tags to revalidate for this post type
-    const tagsToRevalidate = tagMappings[postType] || ['frontspace', postType];
+    // Revalidate cache tags that match what the client uses:
+    // 1. Global frontspace tag
+    revalidateTag('frontspace');
 
-    // Revalidate all relevant tags
-    for (const tag of tagsToRevalidate) {
-      await revalidateTag(tag);
-    }
-    console.log(`🏷️ Revalidated tags: ${tagsToRevalidate.join(', ')}`);
-
-    // Special cases that need path revalidation (layout-level changes)
-    if (postType === 'menus' || postType === 'footer') {
-      await revalidatePath('/', 'layout');
-      console.log(`📋 Revalidated layout`);
+    // 2. Store-specific tag (used by frontspace-client.ts)
+    if (storeId) {
+      revalidateTag(`frontspace-${storeId}`);
+      revalidateTag(`frontspace-menu-${storeId}`);
+      revalidateTag(`frontspace-data-${storeId}`);
     }
 
-    // Revalidate specific page slug if provided for pages/sidor
-    if ((postType === 'pages' || postType === 'sidor') && slug) {
-      const pagePath = slug === 'home' ? '/' : `/${slug}`;
-      await revalidatePath(pagePath);
-      console.log(`📄 Revalidated page path: ${pagePath}`);
+    // 3. Post type specific tags
+    if (postType && postType !== 'unknown') {
+      revalidateTag(postType);
+      revalidateTag(`${postType}-data`);
     }
 
-    // Revalidate specific detail pages with known routes
-    if (slug) {
-      const detailRoutes: Record<string, string> = {
-        'nyheter': `/nyhet/${slug}`,
-        'lag': `/lag/${slug}`,
-        'jobb': `/jobb/${slug}`,
-        'partners': `/partner/${slug}`,
-      };
-      if (detailRoutes[postType]) {
-        await revalidatePath(detailRoutes[postType]);
-        console.log(`📄 Revalidated detail page: ${detailRoutes[postType]}`);
-      }
-    }
+    // Revalidate entire site layout to ensure all pages refresh
+    revalidatePath('/', 'layout');
 
-    // Also revalidate homepage if content is marked for homepage display
-    if (payload.visaPaHemsida) {
-      await revalidatePath('/');
-      console.log('🏠 Revalidated homepage');
-    }
+    console.log(`🔄 Revalidated: frontspace, frontspace-${storeId}, ${postType || 'unknown'} + site layout`);
 
     return NextResponse.json({
       success: true,
@@ -186,41 +143,37 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // If test parameter provided, trigger revalidation for that post type
+  // If test parameter provided, trigger revalidation
   if (testPostType) {
-    const tagMappings: Record<string, string[]> = {
-      'nyheter': ['nyheter', 'posts-data'],
-      'nyhetskategorier': ['nyhetskategorier', 'nyheter', 'categories-data'],
-      'lag': ['lag', 'lag-data', 'frontspace'],
-      'personal': ['personal', 'personalavdelningar', 'personal-data'],
-      'personalavdelningar': ['personal', 'personalavdelningar', 'personal-data'],
-      'partners': ['partners', 'partners-data', 'partnernivaer-data'],
-      'partnernivaer': ['partners', 'partners-data', 'partnernivaer-data'],
-      'jobb': ['jobb', 'jobb-data'],
-      'dokument': ['dokument', 'documents-data'],
-      'foretagspaket': ['foretagspaket', 'foretagspaket-data'],
-      'partnerpaket': ['foretagspaket', 'foretagspaket-data'],
-      'foretagspaketkategorier': ['foretagspaketkategorier', 'foretagspaketkategorier-data', 'foretagspaket-data'],
-      'partnerpaket-kategorier': ['foretagspaketkategorier', 'foretagspaketkategorier-data', 'foretagspaket-data'],
-      'spelare': ['spelare', 'lag', 'lag-data'],
-      'stab': ['stab', 'lag', 'lag-data'],
-      'forms': ['forms'],
-      'menus': ['menus'],
-      'footer': ['footer'],
-      'pages': ['pages'],
-      'sidor': ['pages'],
-    };
+    const postType = testPostType.toLowerCase();
+    const storeId = process.env.FRONTSPACE_STORE_ID || '';
 
-    const tagsToRevalidate = tagMappings[testPostType.toLowerCase()] || ['frontspace', testPostType];
+    // Revalidate all relevant tags (matching the client's cache tags)
+    const tagsToRevalidate = [
+      'frontspace',
+      postType,
+      `${postType}-data`,
+    ];
 
-    for (const tag of tagsToRevalidate) {
-      await revalidateTag(tag);
+    if (storeId) {
+      tagsToRevalidate.push(
+        `frontspace-${storeId}`,
+        `frontspace-menu-${storeId}`,
+        `frontspace-data-${storeId}`
+      );
     }
 
-    console.log(`🧪 TEST: Revalidated tags for ${testPostType}: ${tagsToRevalidate.join(', ')}`);
+    for (const tag of tagsToRevalidate) {
+      revalidateTag(tag);
+    }
+
+    // Revalidate entire site
+    revalidatePath('/', 'layout');
+
+    console.log(`🧪 TEST: Revalidated ${tagsToRevalidate.join(', ')} + entire site`);
 
     return NextResponse.json({
-      message: `Test revalidation complete for ${testPostType}`,
+      message: `Test revalidation complete for ${postType}`,
       revalidatedTags: tagsToRevalidate,
       timestamp: new Date().toISOString(),
     });
