@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidateTag } from 'next/cache';
 
 const WEBHOOK_SECRET = process.env.FRONTSPACE_WEBHOOK_SECRET;
 
@@ -114,23 +114,10 @@ export async function POST(request: NextRequest) {
       revalidateTag(type);
     }
 
-    // Revalidate entire site to ensure all pages refresh
-    // Use 'layout' type to invalidate Full Route Cache for all pages under root layout
-    revalidatePath('/', 'layout');
+    // Pages use dynamic = 'force-dynamic', so they check Data Cache on every request
+    // No need to revalidatePath - tag invalidation is sufficient
 
-    // Also revalidate specific dynamic route patterns to ensure catch-all routes are invalidated
-    // This ensures pages with custom blocks (like HeroSlider) get fresh data
-    revalidatePath('/[slug]', 'page');
-    revalidatePath('/[...slug]', 'page');
-    revalidatePath('/nyhet/[slug]', 'page');
-    revalidatePath('/nyheter', 'page');
-    revalidatePath('/nyheter/[...slug]', 'page');
-    revalidatePath('/lag', 'page');
-    revalidatePath('/lag/[slug]', 'page');
-    revalidatePath('/matcher', 'page');
-    revalidatePath('/');
-
-    console.log(`🔄 Revalidated: all content types + frontspace-${storeId} + all page routes`);
+    console.log(`🔄 Revalidated tags: frontspace, frontspace-${storeId}, ${allContentTypes.join(', ')}`);
 
     return NextResponse.json({
       success: true,
@@ -186,19 +173,10 @@ export async function GET(request: NextRequest) {
       revalidateTag(type);
     }
 
-    // Revalidate entire site and all dynamic routes
-    revalidatePath('/', 'layout');
-    revalidatePath('/[slug]', 'page');
-    revalidatePath('/[...slug]', 'page');
-    revalidatePath('/nyhet/[slug]', 'page');
-    revalidatePath('/nyheter', 'page');
-    revalidatePath('/nyheter/[...slug]', 'page');
-    revalidatePath('/lag', 'page');
-    revalidatePath('/lag/[slug]', 'page');
-    revalidatePath('/matcher', 'page');
-    revalidatePath('/');
+    // Pages use dynamic = 'force-dynamic', so they check Data Cache on every request
+    // No need to revalidatePath - tag invalidation is sufficient
 
-    console.log(`🧪 TEST: Revalidated all content types + all page routes`);
+    console.log(`🧪 TEST: Revalidated tags: frontspace, frontspace-${storeId}, ${allContentTypes.join(', ')}`);
 
     return NextResponse.json({
       message: `Test revalidation complete`,

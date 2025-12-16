@@ -4,9 +4,9 @@ import { BlockRenderer } from '@/app/components/BlockRenderer';
 import { fetchAllPages } from '@/lib/frontspace/client';
 import { buildPagePaths, findPageByPath } from '@/utils/pageRouting';
 
-// Pages use dynamic data from CMS - rely on cache tags for revalidation
-// This ensures pages always check Data Cache (which is invalidated by tags)
-export const revalidate = 0;
+// Force dynamic rendering - page content comes from CMS and custom blocks fetch their own data
+// Data is still cached via fetch cache tags, invalidated by webhook
+export const dynamic = 'force-dynamic';
 
 type PageProps = {
   params: Promise<{ slug: string }>;
