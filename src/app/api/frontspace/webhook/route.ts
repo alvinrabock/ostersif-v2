@@ -87,37 +87,53 @@ export async function POST(request: NextRequest) {
     // Get store ID from payload or environment
     const storeId = payload.store_id || data.store_id || process.env.FRONTSPACE_STORE_ID || '';
 
-    console.log(`🔔 Webhook received: event="${payload.event}", postType="${postType}", slug="${slug}", storeId="${storeId}"`);
+    const event = payload.event || '';
+    console.log(`🔔 Webhook received: event="${event}", postType="${postType}", slug="${slug}", storeId="${storeId}"`);
 
     // All content types that might need revalidation
-    // Since we can't always reliably detect postType from payload, revalidate all common types
-    // Also includes 'homepage' for HeroSlider and other homepage-specific content
     const allContentTypes = [
       'nyheter', 'lag', 'partners', 'personal', 'jobb', 'dokument',
       'nyhetskategorier', 'spelare', 'stab', 'pages', 'menus', 'footer', 'forms',
       'homepage'
     ];
 
-    // Revalidate cache tags that match what the client uses:
-    // 1. Global frontspace tag
+    // Revalidate cache tags
     revalidateTag('frontspace');
-
-    // 2. Store-specific tags (used by frontspace-client.ts)
     if (storeId) {
       revalidateTag(`frontspace-${storeId}`);
       revalidateTag(`frontspace-menu-${storeId}`);
       revalidateTag(`frontspace-data-${storeId}`);
     }
-
-    // 3. All content type tags (to ensure nothing is missed)
     for (const type of allContentTypes) {
       revalidateTag(type);
     }
 
-    // Revalidate Full Route Cache - invalidates all statically generated pages
+    // Handle PAGE events - revalidate specific page paths
+    if (event.startsWith('page.')) {
+      const pageSlug = data.slug || data.page_slug || slug;
+      if (pageSlug) {
+        revalidatePath(`/${pageSlug}`);
+        console.log(`📄 Page event: revalidated /${pageSlug}`);
+      }
+      // Always revalidate home for page changes
+      revalidatePath('/');
+    }
+
+    // Handle POST events - posts can appear on multiple pages (HeroSlider, etc.)
+    if (event.startsWith('post.')) {
+      // Always revalidate home (HeroSlider shows posts)
+      revalidatePath('/');
+      // Revalidate the post type listing page
+      if (postType && postType !== 'unknown') {
+        revalidatePath(`/${postType}`);
+      }
+      console.log(`📝 Post event: revalidated / and /${postType}`);
+    }
+
+    // Revalidate entire layout as fallback for all events
     revalidatePath('/', 'layout');
 
-    console.log(`🔄 Revalidated: tags + all pages via layout`);
+    console.log(`🔄 Revalidated: tags + paths for event "${event}"`);
 
     return NextResponse.json({
       success: true,
