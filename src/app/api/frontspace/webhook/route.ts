@@ -89,27 +89,34 @@ export async function POST(request: NextRequest) {
 
     console.log(`🔔 Webhook received: event="${payload.event}", postType="${postType}", slug="${slug}", storeId="${storeId}"`);
 
+    // All content types that might need revalidation
+    // Since we can't always reliably detect postType from payload, revalidate all common types
+    const allContentTypes = [
+      'nyheter', 'lag', 'partners', 'personal', 'jobb', 'dokument',
+      'nyhetskategorier', 'spelare', 'stab', 'pages', 'menus', 'footer', 'forms'
+    ];
+
     // Revalidate cache tags that match what the client uses:
     // 1. Global frontspace tag
     revalidateTag('frontspace');
 
-    // 2. Store-specific tag (used by frontspace-client.ts)
+    // 2. Store-specific tags (used by frontspace-client.ts)
     if (storeId) {
       revalidateTag(`frontspace-${storeId}`);
       revalidateTag(`frontspace-menu-${storeId}`);
       revalidateTag(`frontspace-data-${storeId}`);
     }
 
-    // 3. Post type specific tags
-    if (postType && postType !== 'unknown') {
-      revalidateTag(postType);
-      revalidateTag(`${postType}-data`);
+    // 3. All content type tags (to ensure nothing is missed)
+    for (const type of allContentTypes) {
+      revalidateTag(type);
     }
 
-    // Revalidate entire site layout to ensure all pages refresh
+    // Revalidate entire site to ensure all pages refresh (layout + pages)
     revalidatePath('/', 'layout');
+    revalidatePath('/');
 
-    console.log(`🔄 Revalidated: frontspace, frontspace-${storeId}, ${postType || 'unknown'} + site layout`);
+    console.log(`🔄 Revalidated: all content types + frontspace-${storeId} + entire site`);
 
     return NextResponse.json({
       success: true,
@@ -145,36 +152,34 @@ export async function GET(request: NextRequest) {
 
   // If test parameter provided, trigger revalidation
   if (testPostType) {
-    const postType = testPostType.toLowerCase();
     const storeId = process.env.FRONTSPACE_STORE_ID || '';
 
-    // Revalidate all relevant tags (matching the client's cache tags)
-    const tagsToRevalidate = [
-      'frontspace',
-      postType,
-      `${postType}-data`,
+    // All content types
+    const allContentTypes = [
+      'nyheter', 'lag', 'partners', 'personal', 'jobb', 'dokument',
+      'nyhetskategorier', 'spelare', 'stab', 'pages', 'menus', 'footer', 'forms'
     ];
 
+    // Revalidate all tags
+    revalidateTag('frontspace');
     if (storeId) {
-      tagsToRevalidate.push(
-        `frontspace-${storeId}`,
-        `frontspace-menu-${storeId}`,
-        `frontspace-data-${storeId}`
-      );
+      revalidateTag(`frontspace-${storeId}`);
+      revalidateTag(`frontspace-menu-${storeId}`);
+      revalidateTag(`frontspace-data-${storeId}`);
     }
-
-    for (const tag of tagsToRevalidate) {
-      revalidateTag(tag);
+    for (const type of allContentTypes) {
+      revalidateTag(type);
     }
 
     // Revalidate entire site
     revalidatePath('/', 'layout');
+    revalidatePath('/');
 
-    console.log(`🧪 TEST: Revalidated ${tagsToRevalidate.join(', ')} + entire site`);
+    console.log(`🧪 TEST: Revalidated all content types + entire site`);
 
     return NextResponse.json({
-      message: `Test revalidation complete for ${postType}`,
-      revalidatedTags: tagsToRevalidate,
+      message: `Test revalidation complete`,
+      revalidatedTags: ['frontspace', ...allContentTypes, `frontspace-${storeId}`],
       timestamp: new Date().toISOString(),
     });
   }
