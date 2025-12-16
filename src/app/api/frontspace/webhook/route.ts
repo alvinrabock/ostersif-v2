@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { revalidateTag, revalidatePath } from 'next/cache';
 
 const WEBHOOK_SECRET = process.env.FRONTSPACE_WEBHOOK_SECRET;
 
@@ -114,10 +114,10 @@ export async function POST(request: NextRequest) {
       revalidateTag(type);
     }
 
-    // Pages use dynamic = 'force-dynamic', so they check Data Cache on every request
-    // No need to revalidatePath - tag invalidation is sufficient
+    // Revalidate Full Route Cache - invalidates all statically generated pages
+    revalidatePath('/', 'layout');
 
-    console.log(`🔄 Revalidated tags: frontspace, frontspace-${storeId}, ${allContentTypes.join(', ')}`);
+    console.log(`🔄 Revalidated: tags + all pages via layout`);
 
     return NextResponse.json({
       success: true,
@@ -173,10 +173,10 @@ export async function GET(request: NextRequest) {
       revalidateTag(type);
     }
 
-    // Pages use dynamic = 'force-dynamic', so they check Data Cache on every request
-    // No need to revalidatePath - tag invalidation is sufficient
+    // Revalidate Full Route Cache - invalidates all statically generated pages
+    revalidatePath('/', 'layout');
 
-    console.log(`🧪 TEST: Revalidated tags: frontspace, frontspace-${storeId}, ${allContentTypes.join(', ')}`);
+    console.log(`🧪 TEST: Revalidated tags + all pages via layout`);
 
     return NextResponse.json({
       message: `Test revalidation complete`,

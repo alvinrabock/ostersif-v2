@@ -4,9 +4,8 @@ import { BlockRenderer } from '@/app/components/BlockRenderer';
 import { fetchAllPages } from '@/lib/frontspace/client';
 import { buildPagePaths, findPageByPath } from '@/utils/pageRouting';
 
-// Force dynamic rendering - page content comes from CMS and custom blocks fetch their own data
-// Data is still cached via fetch cache tags, invalidated by webhook
-export const dynamic = 'force-dynamic';
+// Static generation with on-demand revalidation via webhook
+// Pages are cached until webhook calls revalidatePath/revalidateTag
 
 type PageProps = {
   params: Promise<{ slug: string[] }>;
