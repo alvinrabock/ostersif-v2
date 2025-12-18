@@ -48,19 +48,6 @@ export default function HeroSliderClient({ posts }: HeroSliderClientProps) {
         <ArrowRight className="w-3 h-3 sm:w-5 sm:h-5 text-gray-700" />
       </button>
 
-      {/* Alternative: Bottom navigation dots for mobile */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-30 flex space-x-2 sm:hidden">
-        {posts.map((_, index) => (
-          <button
-            key={index}
-            className={`swiper-pagination-bullet w-3 h-3 rounded-full transition-all ${
-              index === 0 ? 'bg-white' : 'bg-white/50'
-            }`}
-            aria-label={`Go to slide ${index + 1}`}
-          />
-        ))}
-      </div>
-
       <Swiper
         modules={[Navigation, Pagination, Autoplay, EffectFade]}
         loop
