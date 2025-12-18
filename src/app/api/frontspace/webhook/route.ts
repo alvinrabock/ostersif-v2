@@ -81,13 +81,19 @@ export async function POST(request: NextRequest) {
     const slug = data.slug || payload.slug;
 
     // Try to get postType from various sources
-    let rawPostType = payload.postType || data.postType;
+    // postType can be an object like { id, name, slug } or a string
+    const postTypeData = payload.postType || data.postType;
+    let rawPostType: string | undefined;
+
+    if (postTypeData && typeof postTypeData === 'object') {
+      // Extract slug from postType object (preferred) or name as fallback
+      rawPostType = postTypeData.slug || postTypeData.name;
+    } else if (typeof postTypeData === 'string') {
+      rawPostType = postTypeData;
+    }
 
     // If no direct postType, try to infer from post_type_id or content
-    // For now, we'll need to map known post_type_ids or use a default
     if (!rawPostType && data.post_type_id) {
-      // TODO: Add mapping of post_type_ids to post types if needed
-      // For now, try to infer from content structure
       const content = typeof data.content === 'string' ? JSON.parse(data.content || '{}') : (data.content || {});
 
       if (content.kategori || content.kopplade_lag) {
@@ -102,7 +108,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Normalize postType to lowercase for consistent matching
-    const postType = rawPostType?.toLowerCase?.() || rawPostType;
+    const postType = rawPostType?.toLowerCase() || 'unknown';
 
     // Get store ID from payload or environment
     const storeId = payload.store_id || data.store_id || process.env.FRONTSPACE_STORE_ID || '';
