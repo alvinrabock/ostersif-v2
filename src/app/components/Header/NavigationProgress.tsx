@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { usePathname } from "next/navigation";
 
 /**
@@ -11,18 +11,37 @@ export function NavigationProgress() {
     const pathname = usePathname();
     const [isLoading, setIsLoading] = useState(false);
     const [progress, setProgress] = useState(0);
+    const startPathRef = useRef<string | null>(null);
 
     // Complete the progress bar when pathname changes (navigation done)
     useEffect(() => {
-        if (isLoading) {
+        // Only complete if we were loading AND pathname actually changed
+        if (isLoading && startPathRef.current && pathname !== startPathRef.current) {
             setProgress(100);
             const timer = setTimeout(() => {
                 setIsLoading(false);
                 setProgress(0);
+                startPathRef.current = null;
             }, 300);
             return () => clearTimeout(timer);
         }
-    }, [pathname]);
+    }, [pathname, isLoading]);
+
+    // Safety timeout - auto-complete after 5 seconds max to prevent stuck state
+    useEffect(() => {
+        if (isLoading) {
+            const safetyTimer = setTimeout(() => {
+                setProgress(100);
+                setTimeout(() => {
+                    setIsLoading(false);
+                    setProgress(0);
+                    startPathRef.current = null;
+                }, 300);
+            }, 5000);
+
+            return () => clearTimeout(safetyTimer);
+        }
+    }, [isLoading]);
 
     // Start loading when a link is clicked
     const handleClick = useCallback((e: MouseEvent) => {
@@ -47,7 +66,8 @@ export function NavigationProgress() {
             // Don't show loader for same page
             if (href === pathname) return;
 
-            // Start loading
+            // Track starting path and start loading
+            startPathRef.current = pathname;
             setIsLoading(true);
             setProgress(20);
 
