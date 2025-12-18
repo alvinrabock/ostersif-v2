@@ -8,6 +8,13 @@ import { revalidateTag, revalidatePath } from 'next/cache';
 
 const WEBHOOK_SECRET = process.env.FRONTSPACE_WEBHOOK_SECRET;
 
+// Map known post_type_id UUIDs to their slugs
+// These are the Frontspace post type IDs for this store
+const POST_TYPE_ID_MAP: Record<string, string> = {
+  '1d062e33-6965-4084-b3f2-981cb57e9790': 'nyheter',
+  // Add other post type IDs as needed
+};
+
 /**
  * Verify webhook signature using HMAC
  */
@@ -92,18 +99,22 @@ export async function POST(request: NextRequest) {
       rawPostType = postTypeData;
     }
 
-    // If no direct postType, try to infer from post_type_id or content
+    // If no direct postType, try to get from post_type_id map
     if (!rawPostType && data.post_type_id) {
-      const content = typeof data.content === 'string' ? JSON.parse(data.content || '{}') : (data.content || {});
+      // First try the UUID map
+      rawPostType = POST_TYPE_ID_MAP[data.post_type_id];
 
-      if (content.kategori || content.kopplade_lag) {
-        rawPostType = 'nyheter';
-      } else if (content.partnerniva) {
-        rawPostType = 'partners';
-      } else if (content.avdelning) {
-        rawPostType = 'personal';
-      } else {
-        rawPostType = 'unknown';
+      // If not in map, try to infer from content structure
+      if (!rawPostType) {
+        const content = typeof data.content === 'string' ? JSON.parse(data.content || '{}') : (data.content || {});
+
+        if (content.kategori || content.kopplade_lag) {
+          rawPostType = 'nyheter';
+        } else if (content.partnerniva) {
+          rawPostType = 'partners';
+        } else if (content.avdelning) {
+          rawPostType = 'personal';
+        }
       }
     }
 
