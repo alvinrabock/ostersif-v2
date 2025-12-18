@@ -34,21 +34,18 @@ export function NavigationProgress() {
 
     // Complete the loading animation
     const completeLoading = useCallback(() => {
-        console.log('[NavProgress] Completing loading');
         clearAllTimers();
         setProgress(100);
         completeTimerRef.current = setTimeout(() => {
             setIsLoading(false);
             setProgress(0);
             startPathRef.current = null;
-            console.log('[NavProgress] Reset complete');
         }, 300);
     }, [clearAllTimers]);
 
     // When pathname changes, complete loading if we were navigating
     useEffect(() => {
         if (isLoading && startPathRef.current && pathname !== startPathRef.current) {
-            console.log('[NavProgress] Pathname changed:', startPathRef.current, '->', pathname);
             completeLoading();
         }
     }, [pathname, isLoading, completeLoading]);
@@ -85,7 +82,6 @@ export function NavigationProgress() {
             clearAllTimers();
 
             // Track starting path and start loading
-            console.log('[NavProgress] Started loading:', pathname, '->', href);
             startPathRef.current = pathname;
             setIsLoading(true);
             setProgress(20);
@@ -99,7 +95,6 @@ export function NavigationProgress() {
 
             // Safety timeout - ALWAYS complete after 3 seconds
             safetyTimerRef.current = setTimeout(() => {
-                console.log('[NavProgress] Safety timeout triggered (3s)');
                 completeLoading();
             }, 3000);
         }
