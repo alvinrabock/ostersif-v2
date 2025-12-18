@@ -4,8 +4,7 @@ import { BlockRenderer } from '@/app/components/BlockRenderer';
 import { fetchAllPages } from '@/lib/frontspace/client';
 import { buildPagePaths, findPageByPath } from '@/utils/pageRouting';
 
-// Cache pages for 60 seconds, revalidated on-demand via webhook
-export const revalidate = 60;
+// On-demand revalidation only via webhook - no time-based polling
 
 type PageProps = {
   params: Promise<{ slug: string[] }>;

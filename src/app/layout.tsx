@@ -7,7 +7,7 @@ import { Footer } from "@/app/components/Footer";
 import { UIProvider } from "@/providers/ui-context";
 import { getTopbarConfig } from "@/lib/leagueCache";
 import Script from "next/script";
-import { fetchFooter } from "@/lib/frontspace/client";
+import { fetchFooterCached } from "@/lib/frontspace/client";
 import { Suspense } from "react";
 import { AnalyticsTracker } from "@/components/AnalyticsTracker";
 
@@ -56,8 +56,8 @@ export default async function RootLayout({
   // Get topbar configuration based on current season
   const topbarConfig = await getTopbarConfig();
 
-  // Fetch footer from Frontspace CMS
-  const footer = await fetchFooter();
+  // Fetch footer from Frontspace CMS (cached, invalidated by webhook)
+  const footer = await fetchFooterCached();
 
   return (
     <html lang="sv">

@@ -2,8 +2,7 @@ import { fetchAllNyhetskategorier } from '@/lib/frontspace/adapters/nyhetskatego
 import { fetchAllNyheter } from '@/lib/frontspace/adapters/nyheter';
 import NewsPageClient from './NyheterClient';
 
-// Cache page for 60 seconds, revalidated on-demand via webhook
-export const revalidate = 60;
+// On-demand revalidation only via webhook - no time-based polling
 
 export const metadata = {
   title: 'Nyheter - Östers IF',

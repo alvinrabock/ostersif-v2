@@ -7,6 +7,7 @@ import Script from 'next/script';
 import Link from 'next/link';
 import { Partner } from '@/types';
 import MobileNav from './MobileNav';
+import { NavigationProgress } from './NavigationProgress';
 
 
 interface FrontspaceMenuItem {
@@ -50,6 +51,9 @@ export const HeaderClient: React.FC<HeaderClientProps> = ({ menuItems, socialMed
 
     return (
         <>
+            {/* Navigation Loading Indicator */}
+            <NavigationProgress />
+
             {/* Partner Header */}
             {huvudpartners && huvudpartners.length > 0 && (
                 <div className="bg-custom_dark_red sticky top-0 z-40 overflow-hidden">

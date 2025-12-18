@@ -3,6 +3,8 @@
  * Replaces Payload CMS with Frontspace headless CMS
  */
 
+import { unstable_cache } from 'next/cache';
+
 const FRONTSPACE_ENDPOINT = process.env.FRONTSPACE_ENDPOINT || 'http://localhost:3000/api/graphql';
 const FRONTSPACE_STORE_ID = process.env.FRONTSPACE_STORE_ID || '';
 const FRONTSPACE_API_KEY = process.env.FRONTSPACE_API_KEY;
@@ -765,3 +767,38 @@ export async function fetchFormById(formId: string): Promise<Form | null> {
     return null;
   }
 }
+
+// ============================================================================
+// CACHED WRAPPERS - On-demand revalidation only (no time-based polling)
+// These are invalidated by webhook calling revalidateTag()
+// ============================================================================
+
+/**
+ * Cached version of fetchFooter
+ * Invalidated by webhook via 'footer' and 'frontspace' tags
+ */
+export const fetchFooterCached = unstable_cache(
+  fetchFooter,
+  ['footer-data'],
+  { tags: [CACHE_TAGS.FOOTER, CACHE_TAGS.FRONTSPACE] }
+);
+
+/**
+ * Cached version of fetchHuvudmeny
+ * Invalidated by webhook via 'menus' and 'frontspace' tags
+ */
+export const fetchHuvudmenyCached = unstable_cache(
+  fetchHuvudmeny,
+  ['huvudmeny-data'],
+  { tags: [CACHE_TAGS.MENUS, CACHE_TAGS.FRONTSPACE, CACHE_TAGS.PAGES] }
+);
+
+/**
+ * Cached version of fetchAllPages
+ * Invalidated by webhook via 'pages' and 'frontspace' tags
+ */
+export const fetchAllPagesCached = unstable_cache(
+  async (options?: { limit?: number }) => fetchAllPages(options),
+  ['all-pages-data'],
+  { tags: [CACHE_TAGS.PAGES, CACHE_TAGS.FRONTSPACE] }
+);

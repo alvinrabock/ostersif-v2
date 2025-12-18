@@ -1,7 +1,6 @@
 import PageTemplate, { generateMetadata } from './[slug]/page'
 
-// Cache homepage for 60 seconds, revalidated on-demand via webhook
-export const revalidate = 60;
+// On-demand revalidation only via webhook - no time-based polling
 
 export default PageTemplate
 
