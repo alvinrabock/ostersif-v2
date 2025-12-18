@@ -172,7 +172,7 @@ export async function fetchPartnersInAffarsnatverket(): Promise<Partner[]> {
         med_i_osternatverket: true,
       },
       sort: 'title',
-      limit: 500,
+      limit: 150, // Reduced from 500 to prevent memory issues
     });
 
     return posts.map(transformPartner);

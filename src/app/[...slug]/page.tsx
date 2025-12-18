@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { BlockRenderer } from '@/app/components/BlockRenderer';
-import { fetchAllPages } from '@/lib/frontspace/client';
+import { fetchAllPagesCached, fetchAllPages } from '@/lib/frontspace/client';
 import { buildPagePaths, findPageByPath } from '@/utils/pageRouting';
 
 // On-demand revalidation only via webhook - no time-based polling
@@ -13,8 +13,8 @@ type PageProps = {
 export default async function Page({ params }: PageProps) {
   const resolvedParams = await params;
 
-  // Fetch all published pages
-  const pages = await fetchAllPages();
+  // Fetch all published pages (cached for performance)
+  const pages = await fetchAllPagesCached();
   const pagesWithPaths = buildPagePaths(pages);
 
   // Construct full path from URL segments
@@ -58,8 +58,8 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const resolvedParams = await params;
 
-  // Fetch all published pages
-  const pages = await fetchAllPages();
+  // Fetch all published pages (cached for performance)
+  const pages = await fetchAllPagesCached();
   const pagesWithPaths = buildPagePaths(pages);
 
   // Construct full path from URL segments

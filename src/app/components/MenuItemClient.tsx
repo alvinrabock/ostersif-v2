@@ -7,7 +7,18 @@
 
 import { useState, useCallback } from 'react'
 import Link from 'next/link'
-import { MenuItem as MenuItemType } from '@/lib/frontspace-client'
+
+// Menu item type from new Frontspace client
+interface MenuItemType {
+  id: string
+  title: string
+  link_type: string
+  url?: string
+  slug?: string
+  page_id?: string
+  target?: string
+  children?: MenuItemType[]
+}
 
 interface MenuItemProps {
   item: MenuItemType
@@ -17,14 +28,6 @@ interface MenuItemProps {
 export function MenuItemClient({ item, textColor }: MenuItemProps) {
   const [isOpen, setIsOpen] = useState(false)
   const hasChildren = item.children && item.children.length > 0
-
-  // Debug logging
-  console.log('MenuItemClient:', {
-    label: item.label,
-    type: item.type,
-    url: item.url,
-    pageSlug: item.pageSlug
-  })
 
   // Memoize handlers to prevent memory leaks
   const handleMouseEnter = useCallback(() => {
@@ -44,20 +47,21 @@ export function MenuItemClient({ item, textColor }: MenuItemProps) {
   // - 'external': Use full URL (e.g., https://test.se)
   // - 'none': Use '#' (just a dropdown trigger)
   let href = '#'
-  if (item.type === 'internal' && item.url) {
+  if (item.link_type === 'internal' && item.url) {
     // Use the full nested path built by the resolver
     href = item.url
-  } else if (item.type === 'external' && item.url) {
+  } else if (item.link_type === 'external' && item.url) {
     href = item.url
   } else if (item.url) {
     // Fallback: if user entered a URL directly
     href = item.url
   }
 
+  const openInNewWindow = item.target === '_blank'
   const linkProps = {
     href,
-    target: item.openInNewWindow ? '_blank' : '_self',
-    rel: item.openInNewWindow ? 'noopener noreferrer' : undefined,
+    target: openInNewWindow ? '_blank' : '_self',
+    rel: openInNewWindow ? 'noopener noreferrer' : undefined,
     style: {
       textDecoration: 'none',
       color: textColor || 'inherit',
@@ -83,15 +87,15 @@ export function MenuItemClient({ item, textColor }: MenuItemProps) {
             cursor: 'pointer',
           }}
         >
-          {item.label}
+          {item.title}
         </span>
-      ) : item.type === 'internal' ? (
+      ) : item.link_type === 'internal' ? (
         <Link {...linkProps}>
-          {item.label}
+          {item.title}
         </Link>
       ) : (
         <a {...linkProps}>
-          {item.label}
+          {item.title}
         </a>
       )}
 
@@ -112,7 +116,7 @@ export function MenuItemClient({ item, textColor }: MenuItemProps) {
             borderRadius: '0.5rem',
             overflow: 'hidden',
           }}
-          data-menu-label={item.label}
+          data-menu-label={item.title}
           data-is-open={isOpen}
         >
           {item.children!.map((child) => (
@@ -122,19 +126,20 @@ export function MenuItemClient({ item, textColor }: MenuItemProps) {
               {(() => {
                 // Determine child URL based on link_type
                 let childHref = '#'
-                if (child.type === 'internal' && child.url) {
+                if (child.link_type === 'internal' && child.url) {
                   // Use the full nested path built by the resolver
                   childHref = child.url
-                } else if (child.type === 'external' && child.url) {
+                } else if (child.link_type === 'external' && child.url) {
                   childHref = child.url
                 } else if (child.url) {
                   childHref = child.url
                 }
 
+                const childOpenInNewWindow = child.target === '_blank'
                 const childLinkProps = {
                   href: childHref,
-                  target: child.openInNewWindow ? '_blank' : '_self',
-                  rel: child.openInNewWindow ? 'noopener noreferrer' : undefined,
+                  target: childOpenInNewWindow ? '_blank' : '_self',
+                  rel: childOpenInNewWindow ? 'noopener noreferrer' : undefined,
                   className: 'submenu-item',
                   style: {
                     textDecoration: 'none',
@@ -145,13 +150,13 @@ export function MenuItemClient({ item, textColor }: MenuItemProps) {
                 }
 
                 // Use Link for internal pages, <a> for external
-                return child.type === 'internal' ? (
+                return child.link_type === 'internal' ? (
                   <Link {...childLinkProps}>
-                    {child.label}
+                    {child.title}
                   </Link>
                 ) : (
                   <a {...childLinkProps}>
-                    {child.label}
+                    {child.title}
                   </a>
                 )
               })()}

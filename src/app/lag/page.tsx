@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import MaxWidthWrapper from '@/app/components/MaxWidthWrapper';
 import { fetchAllLag, type FrontspaceLag } from '@/lib/frontspace/adapters/lag';
 import Link from 'next/link';
@@ -17,7 +18,32 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function TeamsArchivePage() {
+// Skeleton for loading state
+function TeamsPageSkeleton() {
+  return (
+    <main className="pt-32 pb-20 bg-custom_dark_dark_red text-white">
+      <MaxWidthWrapper>
+        <h1 className="text-6xl font-bold mb-10 uppercase">Våra lag</h1>
+        <ul className="grid grid-cols-2 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <li
+              key={i}
+              className="col-span-2 border border-white/20 rounded-lg p-6 h-[60vh] min-h-[400px] relative overflow-hidden animate-pulse"
+            >
+              <div className="absolute inset-0 bg-white/5 rounded-lg" />
+              <div className="absolute bottom-6 left-6">
+                <div className="h-12 w-48 bg-white/10 rounded" />
+              </div>
+            </li>
+          ))}
+        </ul>
+      </MaxWidthWrapper>
+    </main>
+  );
+}
+
+// Server component that fetches and renders teams
+async function TeamsContent() {
   const teams: FrontspaceLag[] = await fetchAllLag();
 
   // Sort teams by sorteringsordning (ascending), teams without sort order go to the end
@@ -124,5 +150,13 @@ export default async function TeamsArchivePage() {
         </ul>
       </MaxWidthWrapper>
     </main>
+  );
+}
+
+export default function TeamsArchivePage() {
+  return (
+    <Suspense fallback={<TeamsPageSkeleton />}>
+      <TeamsContent />
+    </Suspense>
   );
 }

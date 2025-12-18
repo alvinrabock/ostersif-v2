@@ -66,8 +66,8 @@ export async function fetchAllSpelare(limit = 100): Promise<FrontspaceSpelare[]>
  */
 export async function fetchSpelareByTeam(teamId: string): Promise<FrontspaceSpelare[]> {
   try {
-    // Fetch all players and filter by team
-    const { posts: allPlayers } = await fetchPosts<any>('spelare', { limit: 500 });
+    // Fetch all players and filter by team (reduced from 500 to prevent memory issues)
+    const { posts: allPlayers } = await fetchPosts<any>('spelare', { limit: 150 });
 
     // Filter players that belong to this team
     const filteredPlayers = allPlayers.filter((player: any) => {

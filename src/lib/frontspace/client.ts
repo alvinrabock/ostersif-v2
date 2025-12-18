@@ -290,7 +290,7 @@ export async function fetchPageBySlug(slug: string): Promise<any> {
 export async function fetchAllPages(options?: {
   limit?: number;
 }): Promise<any[]> {
-  const { limit = 1000 } = options || {};
+  const { limit = 200 } = options || {}; // Reduced from 1000 to prevent memory issues
 
   const query = `
     query GetAllPages($storeId: String!, $limit: Int) {

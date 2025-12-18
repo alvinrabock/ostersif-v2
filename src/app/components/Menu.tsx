@@ -3,8 +3,20 @@
  * Server component that fetches and renders navigation menus
  */
 
-import client from '@/lib/frontspace-client'
+import { fetchMenuBySlug } from '@/lib/frontspace/client'
 import { MenuItemClient } from './MenuItemClient'
+
+// Menu item type matching the new Frontspace client response
+interface MenuItem {
+  id: string
+  title: string
+  link_type: string
+  url?: string
+  slug?: string
+  page_id?: string
+  target?: string
+  children?: MenuItem[]
+}
 
 interface MenuProps {
   menuId: string
@@ -15,8 +27,8 @@ interface MenuProps {
 }
 
 export async function Menu({ menuId, orientation = 'horizontal', alignment = 'left', textColor, className = '' }: MenuProps) {
-  // Fetch menu data from Frontspace API
-  const menu = await client.getMenu(menuId)
+  // Fetch menu data from Frontspace API (using new client with proper cache tags)
+  const menu = await fetchMenuBySlug(menuId)
 
   if (!menu || !menu.items || menu.items.length === 0) {
     return null
@@ -39,7 +51,7 @@ export async function Menu({ menuId, orientation = 'horizontal', alignment = 'le
           position: 'relative',
         }}
       >
-        {menu.items.map((item) => (
+        {menu.items.map((item: MenuItem) => (
           <MenuItemClient key={item.id} item={item} textColor={textColor} />
         ))}
       </ul>
