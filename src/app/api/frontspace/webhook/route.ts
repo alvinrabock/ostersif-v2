@@ -127,6 +127,13 @@ export async function POST(request: NextRequest) {
     const event = payload.event || '';
     console.log(`🔔 Webhook received: event="${event}", postType="${postType}", slug="${slug}", storeId="${storeId}"`);
 
+    // For publish/delete events, wait a moment for the database transaction to commit
+    // Updates are immediate, but create/delete may have a slight delay
+    if (event === 'post.published' || event === 'post.deleted' || event === 'post.created') {
+      console.log(`⏳ Waiting 1.5s for database transaction to commit...`);
+      await new Promise(resolve => setTimeout(resolve, 1500));
+    }
+
     // All content types that might need revalidation
     const allContentTypes = [
       'nyheter', 'lag', 'partners', 'personal', 'jobb', 'dokument',
