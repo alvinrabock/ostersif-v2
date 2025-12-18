@@ -155,10 +155,22 @@ export async function POST(request: NextRequest) {
     if (event.startsWith('post.')) {
       revalidatePath('/');
       revalidatedPaths.push('/');
+
       if (postType && postType !== 'unknown') {
         revalidatePath(`/${postType}`);
         revalidatedPaths.push(`/${postType}`);
       }
+
+      // For delete events or unknown postType, revalidate all common post type paths
+      // This ensures deleted content is removed from archive pages
+      if (event === 'post.deleted' || postType === 'unknown') {
+        const commonPostTypePaths = ['/nyheter', '/lag', '/partners', '/personal', '/jobb'];
+        for (const path of commonPostTypePaths) {
+          revalidatePath(path);
+          revalidatedPaths.push(path);
+        }
+      }
+
       console.log(`📝 POST event: revalidated paths: ${revalidatedPaths.join(', ')}`);
     }
 
