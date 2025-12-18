@@ -11,37 +11,52 @@ export function NavigationProgress() {
     const pathname = usePathname();
     const [isLoading, setIsLoading] = useState(false);
     const [progress, setProgress] = useState(0);
+
+    // Use refs for timers to avoid stale closure issues
+    const safetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const completeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const progressTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
     const startPathRef = useRef<string | null>(null);
 
-    // Complete the progress bar when pathname changes (navigation done)
+    // Cleanup all timers
+    const clearAllTimers = useCallback(() => {
+        if (safetyTimerRef.current) {
+            clearTimeout(safetyTimerRef.current);
+            safetyTimerRef.current = null;
+        }
+        if (completeTimerRef.current) {
+            clearTimeout(completeTimerRef.current);
+            completeTimerRef.current = null;
+        }
+        progressTimersRef.current.forEach(t => clearTimeout(t));
+        progressTimersRef.current = [];
+    }, []);
+
+    // Complete the loading animation
+    const completeLoading = useCallback(() => {
+        console.log('[NavProgress] Completing loading');
+        clearAllTimers();
+        setProgress(100);
+        completeTimerRef.current = setTimeout(() => {
+            setIsLoading(false);
+            setProgress(0);
+            startPathRef.current = null;
+            console.log('[NavProgress] Reset complete');
+        }, 300);
+    }, [clearAllTimers]);
+
+    // When pathname changes, complete loading if we were navigating
     useEffect(() => {
-        // Only complete if we were loading AND pathname actually changed
         if (isLoading && startPathRef.current && pathname !== startPathRef.current) {
-            setProgress(100);
-            const timer = setTimeout(() => {
-                setIsLoading(false);
-                setProgress(0);
-                startPathRef.current = null;
-            }, 300);
-            return () => clearTimeout(timer);
+            console.log('[NavProgress] Pathname changed:', startPathRef.current, '->', pathname);
+            completeLoading();
         }
-    }, [pathname, isLoading]);
+    }, [pathname, isLoading, completeLoading]);
 
-    // Safety timeout - auto-complete after 5 seconds max to prevent stuck state
+    // Cleanup on unmount
     useEffect(() => {
-        if (isLoading) {
-            const safetyTimer = setTimeout(() => {
-                setProgress(100);
-                setTimeout(() => {
-                    setIsLoading(false);
-                    setProgress(0);
-                    startPathRef.current = null;
-                }, 300);
-            }, 5000);
-
-            return () => clearTimeout(safetyTimer);
-        }
-    }, [isLoading]);
+        return () => clearAllTimers();
+    }, [clearAllTimers]);
 
     // Start loading when a link is clicked
     const handleClick = useCallback((e: MouseEvent) => {
@@ -63,20 +78,32 @@ export function NavigationProgress() {
             !e.metaKey &&
             !e.shiftKey
         ) {
-            // Don't show loader for same page
-            if (href === pathname) return;
+            // Don't show loader for same page or hash links
+            if (href === pathname || href.startsWith("#")) return;
+
+            // Clear any existing timers first
+            clearAllTimers();
 
             // Track starting path and start loading
+            console.log('[NavProgress] Started loading:', pathname, '->', href);
             startPathRef.current = pathname;
             setIsLoading(true);
             setProgress(20);
 
             // Animate progress
-            setTimeout(() => setProgress(50), 100);
-            setTimeout(() => setProgress(70), 300);
-            setTimeout(() => setProgress(85), 600);
+            progressTimersRef.current = [
+                setTimeout(() => setProgress(50), 100),
+                setTimeout(() => setProgress(70), 300),
+                setTimeout(() => setProgress(85), 600),
+            ];
+
+            // Safety timeout - ALWAYS complete after 3 seconds
+            safetyTimerRef.current = setTimeout(() => {
+                console.log('[NavProgress] Safety timeout triggered (3s)');
+                completeLoading();
+            }, 3000);
         }
-    }, [pathname]);
+    }, [pathname, clearAllTimers, completeLoading]);
 
     useEffect(() => {
         document.addEventListener("click", handleClick, true);

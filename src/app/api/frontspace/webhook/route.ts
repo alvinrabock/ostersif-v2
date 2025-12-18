@@ -20,7 +20,16 @@ async function verifyWebhookSignature(request: NextRequest, payload: string): Pr
   const receivedSignature = request.headers.get('x-webhook-signature') ||
                            request.headers.get('x-frontspace-signature');
 
+  // Debug logging
+  console.log('[Webhook] Signature check:', {
+    hasSecret: !!WEBHOOK_SECRET,
+    secretLength: WEBHOOK_SECRET?.length,
+    receivedSignature: receivedSignature?.substring(0, 20) + '...',
+    headers: Object.fromEntries(request.headers.entries()),
+  });
+
   if (!receivedSignature) {
+    console.warn('[Webhook] No signature header found');
     return false;
   }
 
@@ -30,7 +39,15 @@ async function verifyWebhookSignature(request: NextRequest, payload: string): Pr
     .update(payload)
     .digest('hex');
 
-  return receivedSignature === expectedSignature;
+  const isValid = receivedSignature === expectedSignature;
+  if (!isValid) {
+    console.warn('[Webhook] Signature mismatch:', {
+      received: receivedSignature?.substring(0, 20) + '...',
+      expected: expectedSignature?.substring(0, 20) + '...',
+    });
+  }
+
+  return isValid;
 }
 
 /**
@@ -55,6 +72,9 @@ export async function POST(request: NextRequest) {
 
     // Parse the payload
     const payload = JSON.parse(rawBody);
+
+    // Log full payload for debugging (remove in production once working)
+    console.log('[Webhook] Full payload:', JSON.stringify(payload, null, 2));
 
     // Frontspace sends data in nested structure: { event, data: { slug, post_type_id, ... } }
     const data = payload.data || payload;
