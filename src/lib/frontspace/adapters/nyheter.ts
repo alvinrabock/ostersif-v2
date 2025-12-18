@@ -224,9 +224,10 @@ export async function fetchNyheterByCategory(
     // The kategori field is nested in content.kategori and is an array of UUIDs
     const offset = (page - 1) * limit;
 
-    // Fetch all posts and filter client-side since contentFilter on nested arrays might not work
+    // Fetch posts and filter client-side since contentFilter on nested arrays might not work
+    // Limited to 100 to prevent memory issues under high traffic
     const { posts: allPosts } = await frontspace.nyheter.getAll({
-      limit: 1000, // Fetch more to ensure we have enough after filtering
+      limit: 100,
       sort: '-publishedAt',
     });
 
@@ -341,9 +342,10 @@ export async function fetchNyheterByTeam(
   try {
     const offset = (page - 1) * limit;
 
-    // Fetch all posts and filter client-side by team ID in kopplade_lag
+    // Fetch posts and filter client-side by team ID in kopplade_lag
+    // Limited to 100 to prevent memory issues under high traffic
     const { posts: allPosts } = await frontspace.nyheter.getAll({
-      limit: 1000,
+      limit: 100,
       sort: '-publishedAt',
     });
 

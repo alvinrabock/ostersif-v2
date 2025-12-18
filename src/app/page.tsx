@@ -1,7 +1,7 @@
 import PageTemplate, { generateMetadata } from './[slug]/page'
 
-// Force dynamic rendering for homepage
-export const dynamic = 'force-dynamic';
+// Cache homepage for 60 seconds, revalidated on-demand via webhook
+export const revalidate = 60;
 
 export default PageTemplate
 

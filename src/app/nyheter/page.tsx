@@ -2,9 +2,8 @@ import { fetchAllNyhetskategorier } from '@/lib/frontspace/adapters/nyhetskatego
 import { fetchAllNyheter } from '@/lib/frontspace/adapters/nyheter';
 import NewsPageClient from './NyheterClient';
 
-// Mark page as dynamic to ensure fresh data on client navigation
-// The underlying fetch still uses cache tags for efficient on-demand revalidation
-export const revalidate = 0;
+// Cache page for 60 seconds, revalidated on-demand via webhook
+export const revalidate = 60;
 
 export const metadata = {
   title: 'Nyheter - Östers IF',

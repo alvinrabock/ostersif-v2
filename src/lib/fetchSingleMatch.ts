@@ -3,9 +3,57 @@
 import { Match, Player, Referee } from "@/types";
 import { GetSelectedGames } from "./apollo/fetchTeam/GetSelectedGamesAction";
 
-// Add server-side caching
-const serverCache = new Map();
+// LRU Cache with bounded size to prevent memory leaks
+const MAX_CACHE_SIZE = 100;
 const CACHE_TTL = 300000; // 5 minutes
+
+class LRUCache<T> {
+  private cache = new Map<string, { data: T; timestamp: number }>();
+  private maxSize: number;
+
+  constructor(maxSize: number) {
+    this.maxSize = maxSize;
+  }
+
+  get(key: string): T | undefined {
+    const entry = this.cache.get(key);
+    if (!entry) return undefined;
+
+    // Check TTL
+    if (Date.now() - entry.timestamp > CACHE_TTL) {
+      this.cache.delete(key);
+      return undefined;
+    }
+
+    // Move to end (most recently used)
+    this.cache.delete(key);
+    this.cache.set(key, entry);
+    return entry.data;
+  }
+
+  set(key: string, data: T): void {
+    // Delete if exists to update position
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    }
+
+    // Evict oldest entry if at capacity
+    if (this.cache.size >= this.maxSize) {
+      const oldestKey = this.cache.keys().next().value;
+      if (oldestKey) {
+        this.cache.delete(oldestKey);
+      }
+    }
+
+    this.cache.set(key, { data, timestamp: Date.now() });
+  }
+
+  has(key: string): boolean {
+    return this.get(key) !== undefined;
+  }
+}
+
+const serverCache = new LRUCache<any>(MAX_CACHE_SIZE);
 
 // Updated type definition for selected match data
 interface SelectedMatchData {
@@ -34,9 +82,9 @@ export async function getSingleMatch(leagueId: string, matchId: string): Promise
     // Check cache first
     const cacheKey = `match_${leagueId}_${matchId}`;
     const cached = serverCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    if (cached) {
         console.log('🎯 Cache hit for match:', cacheKey);
-        return cached.data;
+        return cached;
     }
 
     // Fetch match details, ticket data, and event data in parallel
@@ -124,7 +172,7 @@ export async function getSingleMatch(leagueId: string, matchId: string): Promise
     };
 
     // Cache the result
-    serverCache.set(cacheKey, { data: match, timestamp: Date.now() });
+    serverCache.set(cacheKey, match);
     console.log('💾 Cached match:', cacheKey);
 
     return match;
@@ -140,8 +188,8 @@ export async function getMatchTicketData(matchId: number | string): Promise<{
 }> {
     const cacheKey = `ticketdata_${matchId}`;
     const cached = serverCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-        return cached.data;
+    if (cached) {
+        return cached;
     }
 
     try {
@@ -180,7 +228,7 @@ export async function getMatchTicketData(matchId: number | string): Promise<{
             maxTickets: undefined
         };
 
-        serverCache.set(cacheKey, { data: ticketData, timestamp: Date.now() });
+        serverCache.set(cacheKey, ticketData);
         return ticketData;
     } catch (error) {
         console.warn('Failed to fetch ticket data:', error);

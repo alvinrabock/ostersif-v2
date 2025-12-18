@@ -4,6 +4,55 @@ import { MatchCardData, MatchEventData } from "@/types";
 import { GetSelectedGames } from "./apollo/fetchTeam/GetSelectedGamesAction";
 import { getLeagueCache } from "./leagueCache";
 
+// Simple rate limiter to prevent overwhelming external APIs
+const MAX_CONCURRENT_REQUESTS = 5;
+const REQUEST_TIMEOUT_MS = 10000; // 10 second timeout
+
+class RateLimiter {
+  private running = 0;
+  private queue: Array<() => void> = [];
+
+  async acquire(): Promise<void> {
+    if (this.running < MAX_CONCURRENT_REQUESTS) {
+      this.running++;
+      return;
+    }
+    return new Promise<void>((resolve) => {
+      this.queue.push(resolve);
+    });
+  }
+
+  release(): void {
+    this.running--;
+    const next = this.queue.shift();
+    if (next) {
+      this.running++;
+      next();
+    }
+  }
+}
+
+const rateLimiter = new RateLimiter();
+
+// Fetch with timeout and rate limiting
+async function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
+  await rateLimiter.acquire();
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+    rateLimiter.release();
+  }
+}
+
 // Define the raw match data structure from the API
 interface RawMatchData {
   "match-id": number;
@@ -143,7 +192,7 @@ export async function getMatches(
 
     const fetchPromises = urlConfigs.map(async ({ url, leagueId }) => {
       try {
-        const response = await fetch(url, { method: "GET", headers });
+        const response = await fetchWithTimeout(url, { method: "GET", headers });
         if (!response.ok) {
           console.warn(`⚠️  Failed to fetch matches for league ${leagueId}: ${response.status} ${response.statusText}`);
           return []; // Return empty array instead of throwing
@@ -158,7 +207,11 @@ export async function getMatches(
 
         return data as RawMatchData[];
       } catch (error) {
-        console.error(`❌ Error fetching league ${leagueId}:`, error);
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.warn(`⏱️  Timeout fetching league ${leagueId}`);
+        } else {
+          console.error(`❌ Error fetching league ${leagueId}:`, error);
+        }
         return []; // Return empty array on error
       }
     });
@@ -370,7 +423,7 @@ for (const team of selectedMatches) {
     const batchPromises = batch.map(async (match) => {
       try {
         const liveStatsUrl = `https://smc-api.telenor.no/leagues/${match["league-id"]}/matches/${match["match-id"]}/live-stats`;
-        const response = await fetch(liveStatsUrl, { method: "GET", headers });
+        const response = await fetchWithTimeout(liveStatsUrl, { method: "GET", headers });
 
         if (!response.ok) {
           console.warn(`Failed to fetch live stats for match ${match["match-id"]}: ${response.statusText}`);
@@ -391,7 +444,11 @@ for (const team of selectedMatches) {
 
         return processMatch(match, formattedLiveStats);
       } catch (error) {
-        console.error(`Error fetching live stats for match ${match["match-id"]}:`, error);
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.warn(`⏱️  Timeout fetching live stats for match ${match["match-id"]}`);
+        } else {
+          console.error(`Error fetching live stats for match ${match["match-id"]}:`, error);
+        }
         return processMatch(match);
       }
     });

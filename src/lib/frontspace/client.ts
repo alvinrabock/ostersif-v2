@@ -7,6 +7,9 @@ const FRONTSPACE_ENDPOINT = process.env.FRONTSPACE_ENDPOINT || 'http://localhost
 const FRONTSPACE_STORE_ID = process.env.FRONTSPACE_STORE_ID || '';
 const FRONTSPACE_API_KEY = process.env.FRONTSPACE_API_KEY;
 
+// Request timeout for GraphQL requests (10 seconds)
+const REQUEST_TIMEOUT_MS = 10000;
+
 if (!FRONTSPACE_ENDPOINT) {
   console.warn('⚠️  Frontspace endpoint not configured. Set FRONTSPACE_ENDPOINT in .env');
 }
@@ -54,6 +57,10 @@ async function frontspaceGraphQLFetch<T>(
   variables?: Record<string, any>,
   tags?: string[]
 ): Promise<T> {
+  // Create abort controller for timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
   try {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -71,10 +78,13 @@ async function frontspaceGraphQLFetch<T>(
         query,
         variables,
       }),
+      signal: controller.signal,
       next: {
         tags: tags || ['frontspace'], // Cache indefinitely, revalidate only via webhook
       },
     });
+
+    clearTimeout(timeoutId);
 
     const result = await response.json();
 
@@ -90,6 +100,11 @@ async function frontspaceGraphQLFetch<T>(
 
     return result.data as T;
   } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.error(`⏱️ Timeout fetching from Frontspace GraphQL after ${REQUEST_TIMEOUT_MS}ms`);
+      throw new Error(`Frontspace GraphQL timeout after ${REQUEST_TIMEOUT_MS}ms`);
+    }
     console.error(`❌ Error fetching from Frontspace GraphQL:`, error);
     throw error;
   }
