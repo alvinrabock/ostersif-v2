@@ -130,8 +130,31 @@ export async function POST(request: NextRequest) {
     // For publish/delete events, wait a moment for the database transaction to commit
     // Updates are immediate, but create/delete may have a slight delay
     if (event === 'post.published' || event === 'post.deleted' || event === 'post.created') {
-      console.log(`⏳ Waiting 1.5s for database transaction to commit...`);
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      console.log(`⏳ Waiting 2s for database transaction to commit...`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Debug: Verify the change is visible in Frontspace API (bypass cache)
+      try {
+        const FRONTSPACE_ENDPOINT = process.env.FRONTSPACE_ENDPOINT || 'http://localhost:3000/api/graphql';
+        const debugResponse = await fetch(FRONTSPACE_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': process.env.FRONTSPACE_API_KEY || '',
+          },
+          body: JSON.stringify({
+            query: `query { posts(storeId: "${storeId}", postTypeSlug: "nyheter", limit: 5) { posts { id slug title status } totalCount } }`,
+          }),
+          cache: 'no-store', // Bypass cache for debug
+        });
+        const debugData = await debugResponse.json();
+        console.log(`🔍 DEBUG: Fresh API data (no cache):`, JSON.stringify({
+          totalCount: debugData.data?.posts?.totalCount,
+          firstPosts: debugData.data?.posts?.posts?.slice(0, 3).map((p: any) => ({ slug: p.slug, status: p.status })),
+        }));
+      } catch (debugError) {
+        console.log(`🔍 DEBUG: Could not fetch fresh data:`, debugError);
+      }
     }
 
     // All content types that might need revalidation
@@ -270,9 +293,58 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  // Debug mode: fetch fresh data to compare
+  const debug = request.nextUrl.searchParams.get('debug');
+  if (debug === 'cache') {
+    const FRONTSPACE_ENDPOINT = process.env.FRONTSPACE_ENDPOINT || 'http://localhost:3000/api/graphql';
+    const storeId = process.env.FRONTSPACE_STORE_ID || '';
+
+    // Fetch with cache (how Next.js normally fetches)
+    const cachedResponse = await fetch(FRONTSPACE_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.FRONTSPACE_API_KEY || '',
+      },
+      body: JSON.stringify({
+        query: `query { posts(storeId: "${storeId}", postTypeSlug: "nyheter", limit: 5) { posts { slug title } totalCount } }`,
+      }),
+      next: { tags: ['nyheter'] },
+    });
+
+    // Fetch without cache (fresh from API)
+    const freshResponse = await fetch(FRONTSPACE_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.FRONTSPACE_API_KEY || '',
+      },
+      body: JSON.stringify({
+        query: `query { posts(storeId: "${storeId}", postTypeSlug: "nyheter", limit: 5) { posts { slug title } totalCount } }`,
+      }),
+      cache: 'no-store',
+    });
+
+    const cachedData = await cachedResponse.json();
+    const freshData = await freshResponse.json();
+
+    return NextResponse.json({
+      message: 'Cache debug',
+      cached: {
+        totalCount: cachedData.data?.posts?.totalCount,
+        posts: cachedData.data?.posts?.posts?.map((p: any) => p.slug),
+      },
+      fresh: {
+        totalCount: freshData.data?.posts?.totalCount,
+        posts: freshData.data?.posts?.posts?.map((p: any) => p.slug),
+      },
+      match: JSON.stringify(cachedData.data?.posts?.posts) === JSON.stringify(freshData.data?.posts?.posts),
+    });
+  }
+
   return NextResponse.json({
     message: 'Frontspace webhook endpoint active',
     timestamp: new Date().toISOString(),
-    usage: 'Add ?test=postType to test revalidation (e.g., ?test=personal)',
+    usage: 'Add ?test=postType to test revalidation, ?debug=cache to compare cached vs fresh data',
   });
 }

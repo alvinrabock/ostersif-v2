@@ -1,6 +1,7 @@
 import MaxWidthWrapper from "@/app/components/MaxWidthWrapper";
 import MiniNyhetertItem from "@/app/components/Nyheter/miniNyheterItem";
 import RichTextContent from "@/app/components/RichTextContent";
+import YouTubeEmbed from "@/app/components/YouTubeEmbed";
 import { fetchSingleNyhet, fetchNyheterByCategory, fetchAllNyheter } from "@/lib/frontspace/adapters/nyheter";
 import { Category, Media as MediaType } from "@/types";
 import { notFound } from "next/navigation";
@@ -215,20 +216,7 @@ export default async function Page({ params }: PageProps) {
           <div className="lg:col-span-2">
             {/* Hero Image or YouTube Video */}
             {youtubeVideoId ? (
-              <div className="relative pb-[56.25%] w-full mb-6">
-                <iframe
-                  width="100%"
-                  height="100%"
-                  src={`https://www.youtube.com/embed/${youtubeVideoId}`}
-                  title="YouTube video"
-                  frameBorder="0"
-                  loading="lazy"
-                  rel="0"
-                  allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="absolute top-0 left-0 w-full h-full rounded-lg"
-                />
-              </div>
+              <YouTubeEmbed videoId={youtubeVideoId} />
             ) : post.heroImage && typeof post.heroImage !== 'string' && post.heroImage.url ? (
               <div className="w-full mb-6">
                 <img

@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { GalleryBlock } from '../GalleryBlock'
+import { YouTubeEmbed } from '../YouTubeEmbed'
 
 interface TiptapMark {
   type: string
@@ -211,19 +212,7 @@ function renderNode(node: TiptapNode, index: number): React.ReactNode {
     case 'videoBlock':
       const videoId = getYouTubeVideoId(node.attrs?.url || '')
       if (videoId) {
-        return (
-          <div key={key} className="relative pb-[56.25%] w-full mb-6">
-            <iframe
-              src={`https://www.youtube.com/embed/${videoId}`}
-              title="YouTube video"
-              frameBorder="0"
-              loading="lazy"
-              allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="absolute top-0 left-0 w-full h-full rounded-lg"
-            />
-          </div>
-        )
+        return <YouTubeEmbed key={key} videoId={videoId} />
       }
       return null
 
