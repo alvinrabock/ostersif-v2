@@ -73,6 +73,11 @@ async function frontspaceGraphQLFetch<T>(
       headers['Authorization'] = `Bearer ${FRONTSPACE_API_KEY}`;
     }
 
+    // Debug: Log if store ID is missing
+    if (!FRONTSPACE_STORE_ID) {
+      console.error('❌ FRONTSPACE_STORE_ID is empty! Check .env file');
+    }
+
     const response = await fetch(FRONTSPACE_ENDPOINT, {
       method: 'POST',
       headers,

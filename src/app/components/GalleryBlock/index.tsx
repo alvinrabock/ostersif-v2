@@ -26,7 +26,7 @@ export function GalleryBlock({ images, displayMode, className }: GalleryBlockPro
   // Grid Mode
   if (displayMode === 'grid') {
     return (
-      <div className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 my-4 ${className || ''}`}>
+      <div className={`grid grid-cols-3 gap-2 my-4 ${className || ''}`}>
         {images.map((img, index) => (
           <div key={img.id || index} className="aspect-square overflow-hidden rounded-lg">
             <img

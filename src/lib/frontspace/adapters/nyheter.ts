@@ -218,8 +218,6 @@ export async function fetchNyheterByCategory(
       return [];
     }
 
-    console.log(`[fetchNyheterByCategory] Found category ${categorySlug} with ID: ${category.id}`);
-
     // Step 2: Fetch posts filtered by category UUID
     // The kategori field is nested in content.kategori and is an array of UUIDs
     const offset = (page - 1) * limit;
@@ -239,8 +237,6 @@ export async function fetchNyheterByCategory(
 
     // Apply pagination after filtering
     const posts = filteredPosts.slice(offset, offset + limit);
-
-    console.log(`[fetchNyheterByCategory] Found ${filteredPosts.length} total posts for category: ${categorySlug}, returning ${posts.length} for page ${page}`);
 
     // Transform and return
     return posts.map(transformNyhetToPost);

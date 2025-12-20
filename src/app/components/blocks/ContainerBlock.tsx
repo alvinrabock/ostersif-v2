@@ -8,9 +8,9 @@
  */
 
 import React from 'react'
-import Link from 'next/link'
 import { BlockRenderer } from '@/app/components/BlockRenderer'
 import { resolveInternalLinkUrl } from '@/lib/block-utils'
+import { ClickableContainer } from './ClickableContainer'
 
 export interface Block {
   id: string
@@ -261,38 +261,22 @@ export default async function ContainerBlock({ block, blockId }: ContainerBlockP
     )
   }
 
-  // Render clickable container
+  // Render clickable container using ClickableContainer client component
+  // This avoids nested <a> issues by using onClick instead of wrapping in <a>
   const isInternal = content.link.type === 'internal'
 
-  if (isInternal) {
-    // Use Next.js Link for internal navigation
-    return (
-      <>
-        {backgroundCSS && <style dangerouslySetInnerHTML={{ __html: backgroundCSS }} />}
-        <Link
-          href={containerUrl}
-          {...commonProps}
-          style={{ textDecoration: 'none', color: 'inherit' }}
-        >
-          {containerContent}
-        </Link>
-      </>
-    )
-  }
-
-  // External link - use regular <a> tag
   return (
     <>
       {backgroundCSS && <style dangerouslySetInnerHTML={{ __html: backgroundCSS }} />}
-      <a
+      <ClickableContainer
         href={containerUrl}
+        isInternal={isInternal}
         target={linkAttributes.target}
         rel={linkAttributes.rel}
         {...commonProps}
-        style={{ textDecoration: 'none', color: 'inherit' }}
       >
         {containerContent}
-      </a>
+      </ClickableContainer>
     </>
   )
 }

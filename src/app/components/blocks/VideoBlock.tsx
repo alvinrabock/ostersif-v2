@@ -41,9 +41,6 @@ function convertToEmbedUrl(url: string): string {
 }
 
 export default function VideoBlock({ block, blockId }: VideoBlockProps) {
-  console.log('VideoBlock received:', { block, blockId })
-  console.log('VideoBlock content:', JSON.stringify(block.content, null, 2))
-
   // Try different possible field names for the video URL
   const {
     iframeUrl,
@@ -65,15 +62,11 @@ export default function VideoBlock({ block, blockId }: VideoBlockProps) {
   const rawVideoSrc = iframeUrl || embedUrl || externalUrl || src || url || videoUrl
 
   if (!rawVideoSrc) {
-    console.warn('VideoBlock: No video URL found in content. Available fields:', Object.keys(block.content))
     return null
   }
 
   // Convert to embed URL if needed
   const videoSrc = convertToEmbedUrl(rawVideoSrc)
-
-  console.log('VideoBlock: Raw URL:', rawVideoSrc)
-  console.log('VideoBlock: Embed URL:', videoSrc)
 
   // Add URL parameters for YouTube/Vimeo if needed
   let finalVideoSrc = videoSrc

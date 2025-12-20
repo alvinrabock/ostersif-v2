@@ -32,7 +32,18 @@ export default function HeroSliderClient({ posts }: HeroSliderClientProps) {
   }, [setIsHeroVisible]);
 
   return (
-    <div className="relative w-full h-[85svh] min-h-[700px]">
+    <div className="relative w-full h-[85svh] min-h-[700px] hero-slider">
+      {/* Custom styles for white pagination dots */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        .hero-slider .swiper-pagination-bullet {
+          background: white;
+          opacity: 0.5;
+        }
+        .hero-slider .swiper-pagination-bullet-active {
+          background: white;
+          opacity: 1;
+        }
+      `}} />
       {/* Custom navigation buttons - positioned to avoid text overlap */}
       <button
         className="swiper-hero-button-prev absolute top-1/3 sm:top-1/2 left-2 sm:left-4 z-30 -translate-y-1/2 bg-white/80 hover:bg-white transition rounded-full w-6 h-6 sm:w-10 sm:h-10 flex items-center justify-center shadow-md"
