@@ -32,7 +32,7 @@ export default function HeroSliderClient({ posts }: HeroSliderClientProps) {
   }, [setIsHeroVisible]);
 
   return (
-    <div className="relative w-full h-[85svh] min-h-[700px] hero-slider">
+    <div className="relative w-full h-[85svh] min-h-[500px] hero-slider">
       {/* Custom styles for white pagination dots */}
       <style dangerouslySetInnerHTML={{ __html: `
         .hero-slider .swiper-pagination-bullet {
@@ -89,7 +89,7 @@ export default function HeroSliderClient({ posts }: HeroSliderClientProps) {
 
           return (
             <SwiperSlide key={post.id}>
-              <div className="relative w-full h-[90svh] min-h-[700px] bg-cover bg-center">
+              <div className="relative w-full h-[90svh] min-h-[500px] bg-cover bg-center">
                 {/* Background image */}
                 <div className="absolute inset-0 z-0">
                   <img
@@ -103,7 +103,7 @@ export default function HeroSliderClient({ posts }: HeroSliderClientProps) {
                 <div className="absolute inset-0 z-10 bg-gradient-to-t from-custom_dark_dark_red via-custom_dark_dark_red/70 to-custom_dark_dark_red/50 pointer-events-none" />
 
                 {/* Hero content with better mobile spacing */}
-                <div className="absolute inset-0 z-60 flex items-end justify-center min-h-[700px] pb-60">
+                <div className="absolute inset-0 z-60 flex items-end justify-center min-h-[500px] pb-60">
                   <div className="w-full max-w-[1500px] mx-auto px-4">
                     <div className="flex flex-col text-center w-full relative z-50 justify-center items-center gap-6 sm:gap-8">
                       <h1 className="text-white text-2xl sm:text-4xl lg:text-5xl font-bold leading-tight sm:leading-tight lg:leading-[1.2] drop-shadow-md">
