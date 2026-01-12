@@ -182,6 +182,15 @@ export default function MatchHero({
         // Check if match is scheduled using the status field
         const isScheduled = matchDetails.status === "Scheduled" || matchDetails.statusId === 1;
 
+        // Check if match is finished using matchDetails.status (works without liveStats!)
+        const isFinishedByStatus = matchDetails.status === "Over" ||
+                                   matchDetails.status === "Finished" ||
+                                   matchDetails.status?.toLowerCase() === "slutspelad";
+
+        // Check if match has goals (indicates it has started/finished)
+        const hasGoals = (matchDetails.goalsHome !== undefined && matchDetails.goalsHome !== null) ||
+                        (matchDetails.goalsAway !== undefined && matchDetails.goalsAway !== null);
+
         // Check if match has ACTUALLY started (only check after we have liveStats or failed to get them)
         const matchHasStarted = !isScheduled && (
             hasStartPhase ||
@@ -193,15 +202,15 @@ export default function MatchHero({
             (matchDetails.goalsHome > 0 || matchDetails.goalsAway > 0)
         );
 
-        // Check if match is finished
-        const matchIsFinished = liveStats?.["match-phase"] === "finished" ||
+        // Check if match is finished (use liveStats OR matchDetails.status)
+        const matchIsFinished = isFinishedByStatus ||
+            liveStats?.["match-phase"] === "finished" ||
             (liveStats?.["actual-end-of-second-half"] &&
                 new Date(liveStats["actual-end-of-second-half"]) <= new Date());
 
         // If match has started OR is finished, ALWAYS show score (never date/time in center)
         if (matchHasStarted || matchIsFinished) {
-            // Only use live stats scores if available, otherwise check if match is finished to use matchDetails
-            // Don't show matchDetails scores for ongoing matches without live data
+            // Only use live stats scores if available, otherwise use matchDetails
             const hasLiveScoreData = liveStats?.["home-team-score"] !== undefined &&
                                      liveStats?.["home-team-score"] !== null &&
                                      liveStats?.["away-team-score"] !== undefined &&
@@ -210,10 +219,10 @@ export default function MatchHero({
             const homeScore = liveStats?.["home-team-score"];
             const awayScore = liveStats?.["away-team-score"];
 
-            // Only show scores if we have live data OR if match is finished (then use matchDetails as fallback)
-            const shouldShowScore = hasLiveScoreData || matchIsFinished;
-            const displayHomeScore = hasLiveScoreData ? homeScore : matchDetails.goalsHome;
-            const displayAwayScore = hasLiveScoreData ? awayScore : matchDetails.goalsAway;
+            // Show scores if we have live data OR match is finished OR we have goal data from matchDetails
+            const shouldShowScore = hasLiveScoreData || matchIsFinished || hasGoals;
+            const displayHomeScore = hasLiveScoreData ? homeScore : (matchDetails.goalsHome ?? 0);
+            const displayAwayScore = hasLiveScoreData ? awayScore : (matchDetails.goalsAway ?? 0);
 
             // Show score for started/finished matches only if we have score data
             return (
@@ -276,6 +285,12 @@ export default function MatchHero({
         if (isLoadingLiveData) return false;
 
         const isScheduled = matchDetails.status === "Scheduled" || matchDetails.statusId === 1;
+
+        // Check if match is finished using matchDetails.status (works without liveStats!)
+        const isFinishedByStatus = matchDetails.status === "Over" ||
+                                   matchDetails.status === "Finished" ||
+                                   matchDetails.status?.toLowerCase() === "slutspelad";
+
         const matchHasStarted = !isScheduled && (
             hasStartPhase ||
             (liveStats && liveStats["actual-start-of-first-half"]) ||
@@ -285,7 +300,8 @@ export default function MatchHero({
             // Fallback: if we have goals data, match has likely started
             (matchDetails.goalsHome > 0 || matchDetails.goalsAway > 0)
         );
-        const matchIsFinished = liveStats?.["match-phase"] === "finished" ||
+        const matchIsFinished = isFinishedByStatus ||
+            liveStats?.["match-phase"] === "finished" ||
             (liveStats?.["actual-end-of-second-half"] &&
                 new Date(liveStats["actual-end-of-second-half"]) <= new Date());
 

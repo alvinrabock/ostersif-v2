@@ -21,6 +21,13 @@ import LiveStatsSkeleton from "@/app/components/Skeletons/LiveStatsSkeleton";
 import { LineupIcon } from '@/app/components/Icons/LineupIcon';
 import { FootballIcon } from '@/app/components/Icons/FootballIcon';
 import StatisticIcon from '@/app/components/Icons/StatisticIcon';
+import { Match, MatchLineup } from '@/types';
+
+// Props interface for server-side data
+interface MatchClientProps {
+    initialMatchDetails?: Match | null;
+    initialLineupData?: MatchLineup | null;
+}
 
 // Valid tab values
 const VALID_TABS = ['lineups', 'live', 'statistics', 'standings', 'videos'] as const;
@@ -66,7 +73,7 @@ const ErrorDisplay = React.memo(({ message }: { message: string }) => (
 ));
 ErrorDisplay.displayName = "ErrorDisplay";
 
-function MatchClient() {
+function MatchClient({ initialMatchDetails, initialLineupData }: MatchClientProps) {
     const { leagueID, id } = useParams();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -111,9 +118,10 @@ function MatchClient() {
     }, [updateUrlTab]);
 
     // Use your existing optimized hook with better polling settings
+    // Pass initialMatchDetails and initialLineupData so the hook starts with server data (instant rendering)
     const {
-        matchDetails,
-        lineupData,
+        matchDetails: hookMatchDetails,
+        lineupData: hookLineupData,
         liveStats,
         matchPhaseData,
         events,
@@ -126,7 +134,14 @@ function MatchClient() {
         enablePolling: true,
         pollingInterval: 15000, // Will be adjusted dynamically in the hook based on match status
         enableCache: true,
+        initialMatchDetails, // Pass server-side data to hook for instant rendering
+        initialLineupData, // Pass server-side lineup data for instant first tab
     });
+
+    // CRITICAL: Use initial data as fallback during hydration
+    // React hydration may cause useState to miss the initial prop value
+    const matchDetails = hookMatchDetails || initialMatchDetails || null;
+    const lineupData = hookLineupData || initialLineupData || null;
 
     // Fetch Sportomedia match data for enhanced Liverapportering
     const {

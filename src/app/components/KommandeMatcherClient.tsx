@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { MatchCardData } from "@/types";
 import MatchCard from "@/app/components/Match/MatchCard";
 
@@ -14,51 +14,51 @@ interface KommandeMatcherClientProps {
  */
 export default function KommandeMatcherClient({ initialMatches }: KommandeMatcherClientProps) {
     const [matches, setMatches] = useState<MatchCardData[]>(initialMatches);
+    const matchesRef = useRef(matches);
+    matchesRef.current = matches;
 
     // Check if any matches are live
     const hasLiveMatches = matches.some(m => m.status === "In progress");
-
-    // Fetch live stats for in-progress matches
-    const refreshLiveMatches = useCallback(async () => {
-        const liveMatches = matches.filter(m => m.status === "In progress");
-        if (liveMatches.length === 0) return;
-
-        try {
-            // Fetch live stats for each live match
-            const updatedMatches = await Promise.all(
-                liveMatches.map(async (match) => {
-                    try {
-                        const response = await fetch(`/api/match-live-stats?matchId=${match.matchId}&leagueId=${match.leagueId}`);
-                        if (!response.ok) return match;
-
-                        const liveStats = await response.json();
-                        return { ...match, liveStats };
-                    } catch {
-                        return match;
-                    }
-                })
-            );
-
-            // Merge updated live matches with scheduled matches
-            setMatches(prev => {
-                const liveMatchIds = new Set(updatedMatches.map(m => m.matchId));
-                const scheduledMatches = prev.filter(m => !liveMatchIds.has(m.matchId));
-                return [...updatedMatches, ...scheduledMatches].sort(
-                    (a, b) => new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime()
-                );
-            });
-        } catch (error) {
-            console.error("Error refreshing live matches:", error);
-        }
-    }, [matches]);
 
     // Poll for live match updates every 30 seconds
     useEffect(() => {
         if (!hasLiveMatches) return;
 
+        const refreshLiveMatches = async () => {
+            const currentMatches = matchesRef.current;
+            const liveMatches = currentMatches.filter(m => m.status === "In progress");
+            if (liveMatches.length === 0) return;
+
+            try {
+                const updatedMatches = await Promise.all(
+                    liveMatches.map(async (match) => {
+                        try {
+                            const response = await fetch(`/api/match-live-stats?matchId=${match.matchId}&leagueId=${match.leagueId}`);
+                            if (!response.ok) return match;
+
+                            const liveStats = await response.json();
+                            return { ...match, liveStats };
+                        } catch {
+                            return match;
+                        }
+                    })
+                );
+
+                setMatches(prev => {
+                    const liveMatchIds = new Set(updatedMatches.map(m => m.matchId));
+                    const scheduledMatches = prev.filter(m => !liveMatchIds.has(m.matchId));
+                    return [...updatedMatches, ...scheduledMatches].sort(
+                        (a, b) => new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime()
+                    );
+                });
+            } catch (error) {
+                console.error("Error refreshing live matches:", error);
+            }
+        };
+
         const interval = setInterval(refreshLiveMatches, 30000);
         return () => clearInterval(interval);
-    }, [hasLiveMatches, refreshLiveMatches]);
+    }, [hasLiveMatches]);
 
     if (matches.length === 0) {
         return null;

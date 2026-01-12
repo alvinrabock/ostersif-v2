@@ -1,15 +1,44 @@
 // app/matcher/[leagueID]/[id]/page.tsx
-import { getSingleMatch } from "@/lib/fetchSingleMatch";
+import {
+    getSingleMatch,
+    getFinishedMatchCached,
+    getUpcomingMatchCached,
+    getMatchStatusCategory
+} from "@/lib/matchCache";
+import { fetchtLineupData } from "@/lib/Superadmin/fetchLineup";
 import type { Metadata } from 'next';
 import MatchClient from "./MatchClient";
 import { cache } from 'react';
+import { MatchLineup } from '@/types';
+
+// Use dynamic rendering to support tiered caching
+// Finished matches: cached forever | Upcoming: 5 min cache | Live: always fresh
+export const dynamic = 'force-dynamic';
 
 type PageProps = {
     params: Promise<{ leagueID: string; id: string }>;
 };
 
-// Cache the getSingleMatch function for better performance
+// Cache the initial fetch within a single request
 const getCachedMatch = cache(getSingleMatch);
+
+// Get match with appropriate cache tier
+async function getMatchWithCache(leagueId: string, matchId: string) {
+    // First fetch to determine status
+    const match = await getCachedMatch(leagueId, matchId);
+    const category = getMatchStatusCategory(match);
+
+    // For finished matches, ensure we use the forever-cached version
+    if (category === 'finished') {
+        return getFinishedMatchCached(leagueId, matchId);
+    }
+    // For upcoming, use 5 min cache
+    if (category === 'upcoming') {
+        return getUpcomingMatchCached(leagueId, matchId);
+    }
+    // Live matches - return the fresh data we already have
+    return match;
+}
 
 // Generate dynamic metadata
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -25,7 +54,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
 
     try {
-        const matchDetails = await getCachedMatch(leagueID, id);
+        // Use tiered caching: finished (forever), upcoming (5 min), live (fresh)
+        const matchDetails = await getMatchWithCache(leagueID, id);
 
         if (!matchDetails) {
             return {
@@ -133,7 +163,36 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
 }
 
-// Server component wrapper
-export default function Page() {
-    return <MatchClient />;
+// Server component wrapper - fetch data and pass to client
+export default async function Page({ params }: PageProps) {
+    const resolvedParams = await params;
+    const { leagueID, id } = resolvedParams;
+
+    // Pre-fetch match data server-side to avoid client waterfall
+    let initialMatchDetails = null;
+    let initialLineupData: MatchLineup | null = null;
+
+    try {
+        if (leagueID && id) {
+            initialMatchDetails = await getMatchWithCache(leagueID, id);
+
+            // Pre-fetch lineup data if we have the required fields
+            if (initialMatchDetails?.leagueName && initialMatchDetails?.season && initialMatchDetails?.extMatchId) {
+                try {
+                    initialLineupData = await fetchtLineupData({
+                        league: initialMatchDetails.leagueName,
+                        season: initialMatchDetails.season,
+                        extMatchId: initialMatchDetails.extMatchId,
+                    });
+                } catch (lineupError) {
+                    // Lineup fetch can fail silently - it's not critical
+                    console.warn('Error pre-fetching lineup:', lineupError);
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error pre-fetching match:', error);
+    }
+
+    return <MatchClient initialMatchDetails={initialMatchDetails} initialLineupData={initialLineupData} />;
 }

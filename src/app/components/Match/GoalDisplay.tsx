@@ -25,19 +25,28 @@ const GoalDisplay: React.FC<OptimizedGoalDisplayProps> = ({
     if (loading) {
         return <div className="skeleton-loader w-full mt-6" />;
     }
-    
+
     if (error) {
         return <div className="text-red-500 text-center mt-4">Error: {error}</div>;
     }
-    
+
     if (goals.length === 0) {
         return null;
     }
 
     return (
         <div className="flex flex-col w-full mt-6">
-            {goals.map((goal) => (
-                <div key={goal.id} className="flex flex-col items-center mb-2 text-white w-full">
+            {goals.map((goal, index) => (
+                <div
+                    key={goal.id}
+                    className="flex flex-col items-center mb-2 text-white w-full
+                        md:animate-fade-up md:opacity-0 md:[animation-fill-mode:forwards]
+                        motion-reduce:animate-none motion-reduce:opacity-100"
+                    style={{
+                        // Stagger animation delay - only applied on desktop via CSS
+                        animationDelay: `${index * 100}ms`
+                    }}
+                >
                     <div className="flex flex-row items-center justify-between w-full gap-2.5 text-xs md:text-sm">
                         {/* Home team time (left side) */}
                         {goal.isHomeTeam ? (

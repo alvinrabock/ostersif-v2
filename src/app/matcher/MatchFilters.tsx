@@ -89,13 +89,11 @@ const MatchFilter: React.FC<MatchFilterProps> = ({
               <SelectValue placeholder="Välj säsong" />
             </SelectTrigger>
             <SelectContent>
-              {sortedSeasons
-                .filter((season) => season.seasonYear === '2025') // Only show 2025 for now
-                .map((season) => (
-                  <SelectItem key={season.seasonYear} value={season.seasonYear}>
-                    Säsong {season.seasonYear}
-                  </SelectItem>
-                ))}
+              {sortedSeasons.map((season) => (
+                <SelectItem key={season.seasonYear} value={season.seasonYear}>
+                  Säsong {season.seasonYear}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

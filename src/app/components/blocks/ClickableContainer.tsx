@@ -22,8 +22,8 @@ interface ClickableContainerProps {
 export function ClickableContainer({
   href,
   isInternal,
-  target,
-  rel,
+  target: _target,
+  rel: _rel,
   className,
   id,
   style,

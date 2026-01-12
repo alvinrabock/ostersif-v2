@@ -90,6 +90,8 @@ interface UseMatchDataOptions {
     enableCache?: boolean;
     skipLineup?: boolean; // New option to skip lineup data entirely
     skipEvents?: boolean; // New option to skip event data
+    initialMatchDetails?: Match | null; // Server-side pre-fetched match data
+    initialLineupData?: MatchLineup | null; // Server-side pre-fetched lineup data
 }
 
 export function useOptimizedMatchData(
@@ -100,17 +102,21 @@ export function useOptimizedMatchData(
 ) {
     console.log('🔧 Hook called with:', { parsedLeagueId, parsedMatchId, validParams });
 
+    // Use server-provided initial data if available - this makes the score show instantly
+    const hasInitialData = !!options.initialMatchDetails;
+    const hasInitialLineup = !!options.initialLineupData;
+
     const [state, setState] = useState<MatchDataState>({
-        matchDetails: null,
-        lineupData: null,
+        matchDetails: options.initialMatchDetails ?? null,
+        lineupData: options.initialLineupData ?? null,
         liveStats: null,
         matchPhaseData: null,
         events: null,
         goals: null,
         processedGoals: [],
         event: undefined,
-        loading: true,
-        isLoadingLiveData: true, // Start with true to show skeleton first
+        loading: !hasInitialData, // If we have initial data, don't show loading state
+        isLoadingLiveData: true, // Still need to load live data
         errors: {
             matchDetails: null,
             lineup: null,
@@ -124,7 +130,7 @@ export function useOptimizedMatchData(
 
     // Use refs to track current request and prevent stale updates
     const currentRequestRef = useRef<number>(0);
-    const { isMatchLive, loading, matchDetails } = state;
+    const { isMatchLive: _isMatchLive, loading, matchDetails } = state;
 
     // Memoized goal processing function with caching
     const processGoals = useCallback((goals: GoalEvent[], matchDetails: Match, playerMap?: Map<string, string>): ProcessedGoal[] => {
@@ -209,34 +215,50 @@ export function useOptimizedMatchData(
 
             try {
                 // PHASE 1: Critical path - Match details only (fastest possible)
-                console.log('📡 Phase 1: Loading critical match data...');
-                const matchDetails = await getSingleMatch(String(parsedLeagueId), String(parsedMatchId));
+                // Skip if we already have server-provided initial data
+                let matchDetails: Match | null = options.initialMatchDetails ?? null;
 
-                if (currentRequestRef.current !== requestId) return;
+                if (matchDetails) {
+                    console.log('⚡ Phase 1 SKIPPED - using server-provided initial data');
+                } else {
+                    console.log('📡 Phase 1: Loading critical match data...');
+                    matchDetails = await getSingleMatch(String(parsedLeagueId), String(parsedMatchId));
 
-                if (!matchDetails) {
-                    throw new Error('Match not found');
+                    if (currentRequestRef.current !== requestId) return;
+
+                    if (!matchDetails) {
+                        throw new Error('Match not found');
+                    }
+
+                    // Update UI immediately with basic match info
+                    setState(prev => ({
+                        ...prev,
+                        matchDetails,
+                        loading: false, // Set to false to show basic UI
+                        // Keep isLoadingLiveData: true to show skeleton while we determine what to display
+                    }));
+
+                    console.log(`⚡ Phase 1 complete in ${(performance.now() - startTime).toFixed(0)}ms`);
                 }
 
-                // Update UI immediately with basic match info
-                setState(prev => ({
-                    ...prev,
-                    matchDetails,
-                    loading: false, // Set to false to show basic UI
-                    // Keep isLoadingLiveData: true to show skeleton while we determine what to display
-                }));
 
-                console.log(`⚡ Phase 1 complete in ${(performance.now() - startTime).toFixed(0)}ms`);
+                // Check match status to skip unnecessary API calls
+                const isFinished = matchDetails.status === "Over" ||
+                    matchDetails.status === "Finished";
+                const isScheduled = matchDetails.status === "Scheduled";
+                const isLive = matchDetails.status === "In progress" ||
+                    matchDetails.status === "Live";
 
+                // Only fetch live data if match is live OR recently started (kickoff passed)
+                const kickoffPassed = new Date(matchDetails.kickoff) <= new Date();
+                const needsLiveData = isLive || (!isFinished && !isScheduled && kickoffPassed);
 
-                // Quick check if match might be live
-                const isLikelyLive = matchDetails.status === "In progress" ||
-                    matchDetails.status === "Live" ||
-                    new Date(matchDetails.kickoff) <= new Date();
+                // Need goals for finished matches too (just not live stats/polling)
+                const needsGoalData = isFinished || needsLiveData;
 
-                // PHASE 2: Essential live data (if needed)
-                if (isLikelyLive) {
-                    console.log('📡 Phase 2: Loading live data...');
+                // PHASE 2: Essential live/goal data (for live AND finished matches)
+                if (needsGoalData) {
+                    console.log('📡 Phase 2: Loading', isFinished ? 'goal data (finished match)...' : 'live data...');
                     try {
                         // Fetch player data for this league to create ULID -> name mapping
                         console.log('🔍 Fetching player map for league:', parsedLeagueId);
@@ -254,11 +276,13 @@ export function useOptimizedMatchData(
                             canUseFogisContext
                         });
 
+                        // For finished matches, only fetch goals (skip live stats and match phase)
+                        // For live matches, fetch everything
                         const smcData = await fetchMatchDataBulk(parsedLeagueId, parsedMatchId, {
-                            includeLiveStats: true,
+                            includeLiveStats: !isFinished, // Skip for finished matches
                             includeEvents: false, // Skip events initially
-                            includeGoals: true,
-                            includeMatchPhase: true,
+                            includeGoals: true, // Always need goals
+                            includeMatchPhase: !isFinished, // Skip for finished matches
                             includePlayerStats: false,
                             useFogisContext: canUseFogisContext,
                             extLeagueId: fogisLeagueId || undefined,
@@ -303,15 +327,26 @@ export function useOptimizedMatchData(
                     setState(prev => ({ ...prev, isLoadingLiveData: false }));
                 }
 
-                // PHASE 3: Non-critical data (background loading)
-                if (!options.skipLineup && !options.skipEvents) {
-                    console.log('📡 Phase 3: Loading background data...');
-                    setTimeout(async () => {
+                // PHASE 3: Non-critical data (no delay - start immediately)
+                // Skip lineup if we already have server-provided data
+                // Skip events fetch if match has event data from server OR is finished
+                const shouldSkipLineup = options.skipLineup || hasInitialLineup;
+                const shouldSkipEvents = options.skipEvents || !!matchDetails.event;
+
+                if (!shouldSkipLineup || !shouldSkipEvents) {
+                    console.log('📡 Phase 3: Loading background data...', {
+                        hasInitialLineup,
+                        skipLineup: shouldSkipLineup,
+                        skipEvents: shouldSkipEvents
+                    });
+
+                    // Start immediately - no artificial delay
+                    (async () => {
                         try {
                             const kickoffDateOnly = new Date(matchDetails.kickoff).toISOString().split("T")[0];
                             const [eventResult, lineupResult, eventsResult] = await Promise.allSettled([
-                                options.skipEvents ? Promise.resolve(undefined) : fetchEventForDate(kickoffDateOnly),
-                                options.skipLineup ? Promise.resolve(null) : (
+                                shouldSkipEvents ? Promise.resolve(undefined) : fetchEventForDate(kickoffDateOnly),
+                                shouldSkipLineup ? Promise.resolve(options.initialLineupData) : (
                                     matchDetails.leagueName && matchDetails.season && matchDetails.extMatchId
                                         ? fetchtLineupData({
                                             league: matchDetails.leagueName,
@@ -339,7 +374,7 @@ export function useOptimizedMatchData(
                                 ...prev,
                                 event,
                                 lineupData,
-                                events: eventsData || null, // Ensure null instead of undefined
+                                events: eventsData || null,
                                 matchDetails: prev.matchDetails ? {
                                     ...prev.matchDetails,
                                     ...(event && {
@@ -361,14 +396,14 @@ export function useOptimizedMatchData(
                                     events: eventsResult.status === 'rejected'
                                         ? 'Misslyckades att ladda händelser. Antingen finns ingen data tillgänglig eller så har ingen data publicerats än.'
                                         : null,
-                                }                                
+                                }
                             }));
 
                             console.log(`⚡ Phase 3 complete in ${(performance.now() - startTime).toFixed(0)}ms`);
                         } catch (error) {
                             console.warn('Phase 3 failed:', error);
                         }
-                    }, 100); // Delay background loading slightly
+                    })();
                 }
 
             } catch (error) {
@@ -387,12 +422,18 @@ export function useOptimizedMatchData(
         };
 
         loadData();
-    }, [validParams, parsedLeagueId, parsedMatchId, processGoals, options.skipLineup, options.skipEvents]);
+    }, [validParams, parsedLeagueId, parsedMatchId, processGoals, options.skipLineup, options.skipEvents, hasInitialLineup]);
 
-    // Optimized polling effect with reduced frequency
+    // Optimized polling effect - ONLY for live matches
+    // Completely disabled for finished/scheduled matches to reduce API load
     useEffect(() => {
-        if (!options.enablePolling || !isMatchLive || !validParams || loading || !matchDetails) {
-            return;
+        // Direct status check - more reliable than isMatchLive state
+        const isLive = matchDetails?.status === "In progress" ||
+                       matchDetails?.status === "Live";
+
+        // Disable polling completely for non-live matches
+        if (!options.enablePolling || !isLive || !validParams || loading || !matchDetails) {
+            return; // No polling for finished/scheduled matches
         }
 
         const interval = setInterval(async () => {
@@ -441,7 +482,7 @@ export function useOptimizedMatchData(
             console.log('⏹️ Stopping polling');
             clearInterval(interval);
         };
-    }, [isMatchLive, validParams, loading, matchDetails, options.enablePolling, options.pollingInterval, parsedLeagueId, parsedMatchId, processGoals]);
+    }, [matchDetails?.status, validParams, loading, matchDetails, options.enablePolling, options.pollingInterval, parsedLeagueId, parsedMatchId, processGoals]);
 
     const refreshData = useCallback(() => {
         console.log('🔄 Manual refresh called');

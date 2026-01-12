@@ -163,6 +163,23 @@
   }
 }
 
+/* SEF Topbar Widget - Fix mobile overflow */
+.sef-topbar-widget {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Hide scrollbar but keep functionality */
+.sef-topbar-widget::-webkit-scrollbar {
+  display: none;
+}
+
+.sef-topbar-widget {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 h1,
 h2,
 h3,

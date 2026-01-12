@@ -261,13 +261,26 @@ export const fetchEvents = async (
   }
 };
 
-// FETCH LEAGUE PLAYERS TO GET PLAYER NAMES BY ULID
+// Cache for player maps - players don't change during a match
+const playerMapCache = new Map<string, { data: Map<string, string>; timestamp: number }>();
+const PLAYER_CACHE_TTL = 600000; // 10 minutes - players don't change often
+
+// FETCH LEAGUE PLAYERS TO GET PLAYER NAMES BY ULID (with caching)
 export const fetchLeaguePlayers = async (
   leagueId: string | number
 ): Promise<Map<string, string>> => {
   if (!leagueId) {
     console.error("Invalid leagueId provided");
     return new Map();
+  }
+
+  const cacheKey = String(leagueId);
+
+  // Check cache first
+  const cached = playerMapCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < PLAYER_CACHE_TTL) {
+    console.log('🎯 Player map cache hit for league:', leagueId);
+    return cached.data;
   }
 
   try {
@@ -299,7 +312,9 @@ export const fetchLeaguePlayers = async (
       }
     });
 
-    console.log(`✅ Created player map with ${playerMap.size} players from league data`);
+    // Cache the result
+    playerMapCache.set(cacheKey, { data: playerMap, timestamp: Date.now() });
+    console.log(`✅ Created and cached player map with ${playerMap.size} players`);
     return playerMap;
   } catch (error) {
     console.error("Error fetching league players:", error);

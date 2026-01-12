@@ -7,7 +7,7 @@ import NyheterItem from "@/app/components/Nyheter/nyheterItem";
 import MiniNyheterItem from "@/app/components/Nyheter/miniNyheterItem";
 import { PlayerCardCMS } from "@/app/components/Player/PlayerCardCMS";
 import { StaffSection } from "@/app/components/Player/StaffSection";
-import type { Post, TruppPlayers, SuperAdminTeamStats } from "@/types";
+import type { Post, TruppPlayers, SuperAdminTeamStats, MatchCardData } from "@/types";
 import { Newspaper, Clock, Users, Calendar, BarChart3, Trophy } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
 import type { FrontspaceSpelare } from "@/lib/frontspace/adapters/spelare";
@@ -62,6 +62,9 @@ interface TeamTabsProps {
     // Stats data from SMC API
     squad?: TruppPlayers[];
     teamStats?: SuperAdminTeamStats | null;
+    // Pre-fetched match data from server
+    upcomingMatches?: MatchCardData[];
+    playedMatches?: MatchCardData[];
 }
 
 // Tab trigger class for consistency
@@ -91,6 +94,8 @@ export default function TeamTabs({
     smcTeamId,
     squad = [],
     teamStats,
+    upcomingMatches = [],
+    playedMatches = [],
 }: TeamTabsProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -367,7 +372,7 @@ export default function TeamTabs({
                             <div className="pt-10 pb-20">
                                 <h2 className="text-3xl font-bold mb-8 text-white">Kommande matcher</h2>
                                 <Suspense fallback={<TabContentSkeleton />}>
-                                    <KommandeMatcher maxMatches={5} />
+                                    <KommandeMatcher maxMatches={5} initialMatches={upcomingMatches} />
                                 </Suspense>
                             </div>
                         </MaxWidthWrapper>
@@ -386,7 +391,7 @@ export default function TeamTabs({
                                 )}
                                 <div className="col-span-3 sm:col-span-1 lg:col-span-2 text-white">
                                     <Suspense fallback={<TabContentSkeleton />}>
-                                        <LagSenastSpeladeMatcher />
+                                        <LagSenastSpeladeMatcher initialMatches={playedMatches} />
                                     </Suspense>
                                 </div>
                             </div>

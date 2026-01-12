@@ -10,6 +10,10 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
+  // Ignore local admin files (not tracked in git)
+  {
+    ignores: ["src/app/admin/**/*"]
+  },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     rules: {

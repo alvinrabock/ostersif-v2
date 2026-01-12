@@ -9,18 +9,24 @@ import { useLeagueData } from "@/lib/hooks/useLeagueData";
 
 interface KommandeMatcherProps {
     maxMatches?: number;
+    initialMatches?: MatchCardData[];
 }
 
-export default function KommandeMatcher({ maxMatches = 3 }: KommandeMatcherProps) {
-    const [matches, setMatches] = useState<MatchCardData[]>([]);
+export default function KommandeMatcher({ maxMatches = 3, initialMatches }: KommandeMatcherProps) {
+    const [matches, setMatches] = useState<MatchCardData[]>(initialMatches || []);
     const [matchError, setMatchError] = useState<string | null>(null);
-    const [isLoadingMatches, setIsLoadingMatches] = useState(false);
+    const [isLoadingMatches, setIsLoadingMatches] = useState(!initialMatches);
 
     // Use shared league data hook
     const { data: leagueData, loading: leagueLoading, error: leagueError } = useLeagueData();
 
     useEffect(() => {
         async function fetchData() {
+            // Skip fetching if we have initial data from server
+            if (initialMatches && initialMatches.length > 0) {
+                return;
+            }
+
             // Wait for league data to load
             if (leagueLoading || !leagueData) {
                 return;
@@ -95,10 +101,10 @@ export default function KommandeMatcher({ maxMatches = 3 }: KommandeMatcherProps
         }
 
         fetchData();
-    }, [maxMatches, leagueLoading, leagueData]);
+    }, [maxMatches, leagueLoading, leagueData, initialMatches]);
 
-    // Show skeletons while loading league data or matches
-    if (leagueLoading || isLoadingMatches) {
+    // Show skeletons while loading (skip if we have initial data)
+    if (!initialMatches && (leagueLoading || isLoadingMatches)) {
         return (
             <div className="w-full flex flex-col gap-4 z-20 relative">
                 <h2 className="text-2xl font-bold text-white text-center mb-2 sr-only">
