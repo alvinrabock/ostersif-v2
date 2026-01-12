@@ -42,7 +42,6 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [
     const hasFilters = isPlayedFilter || locationFilter || leagueFilter || dateFromParam || dateToParam || seasonFilter;
     const [matches, setMatches] = useState<MatchCardData[]>(hasFilters ? [] : initialMatches);
     const [loading, setLoading] = useState(hasFilters ? true : false);
-    const [hasUsedInitialMatches, setHasUsedInitialMatches] = useState(!hasFilters && initialMatches.length > 0);
     const [calendarOpen, setCalendarOpen] = useState(false);
     const [selectedRange, setSelectedRange] = useState<DateRange | undefined>(() => {
         if (dateFromParam && dateToParam) {
@@ -75,6 +74,12 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [
 
     // OPTIMIZATION 1: Only fetch specific league when filtered
     const leagueIdsToFetch = useMemo(() => {
+        // If a specific league is filtered, only fetch that league
+        if (leagueFilter) {
+            console.log(`🎯 Fetching specific league: ${leagueFilter}`);
+            return [leagueFilter];
+        }
+
         const selectedSeasonData = seasons.find(s => s.seasonYear === selectedSeason);
 
         console.log('🔍 Debug:', {
@@ -83,12 +88,6 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [
             tournamentsCount: selectedSeasonData?.tournaments.length,
             leagueFilter
         });
-
-        // If a specific league is filtered, only fetch that league
-        if (leagueFilter) {
-            console.log(`🎯 Fetching specific league: ${leagueFilter}`);
-            return [leagueFilter];
-        }
 
         // Fetch all leagues for the selected season
         const allLeagueIds = selectedSeasonData?.tournaments.map(t => t.leagueId) || [];
@@ -99,16 +98,35 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [
     useEffect(() => {
         let intervalId: NodeJS.Timeout | null = null;
 
-        // Skip initial fetch if we have server-side pre-fetched matches and no filters
-        if (hasUsedInitialMatches && !hasFilters) {
-            setHasUsedInitialMatches(false); // Reset so future filter changes trigger fetches
+        // Skip fetch if we already have matches (from server or previous state) and no filters
+        // This handles both initial load AND navigation back
+        const alreadyHaveData = matches.length > 0 || initialMatches.length > 0;
+
+        if (alreadyHaveData && !hasFilters) {
+            // Use initialMatches if matches state is empty (happens on navigation back)
+            if (matches.length === 0 && initialMatches.length > 0) {
+                setMatches(initialMatches);
+            }
 
             // Still check for live matches to set up polling
-            const hasLiveMatch = initialMatches.some(match => match.status === 'In progress');
+            const dataToCheck = matches.length > 0 ? matches : initialMatches;
+            const hasLiveMatch = dataToCheck.some(match => match.status === 'In progress');
             if (hasLiveMatch) {
-                intervalId = setInterval(() => {
-                    fetchMatchesInternal();
-                }, 60000);
+                const fetchMatchesForPolling = async () => {
+                    try {
+                        const allMatches = await getMatches(
+                            leagueIdsToFetch,
+                            OSTERS_TEAM_ID,
+                            undefined,
+                            undefined,
+                            locationFilter as "home" | "away" | undefined
+                        );
+                        setMatches(allMatches);
+                    } catch (error) {
+                        console.error('Error polling matches:', error);
+                    }
+                };
+                intervalId = setInterval(fetchMatchesForPolling, 60000);
             }
             return () => {
                 if (intervalId) clearInterval(intervalId);
@@ -116,7 +134,10 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [
         }
 
         const fetchMatchesInternal = async () => {
-            setLoading(true);
+            // Only show loading skeleton if we have NO data at all
+            if (!alreadyHaveData) {
+                setLoading(true);
+            }
 
             try {
                 // Fetch matches using optimized league IDs and Östers IF team filter
@@ -260,7 +281,7 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [
                 clearInterval(intervalId);
             }
         };
-    }, [seasons, isPlayedFilter, locationFilter, leagueFilter, leagueIdsToFetch, selectedRange, dateFromParam, dateToParam, selectedSeason, hasFilters, hasUsedInitialMatches, initialMatches]);
+    }, [seasons, isPlayedFilter, locationFilter, leagueFilter, leagueIdsToFetch, selectedRange, dateFromParam, dateToParam, selectedSeason, hasFilters, initialMatches]);
 
 
     const updateQueryParam = (key: string, value?: string) => {

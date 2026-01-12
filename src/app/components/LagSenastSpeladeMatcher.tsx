@@ -9,19 +9,34 @@ import { useLeagueData } from "@/lib/hooks/useLeagueData";
 import { Button } from "./ui/Button";
 import Link from "next/link";
 
-export default function LagSenastSpeladeMatcher() {
-    const [matches, setMatches] = useState<MatchCardData[]>([]);
+interface LagSenastSpeladeMatcherProps {
+    initialMatches?: MatchCardData[];
+}
+
+export default function LagSenastSpeladeMatcher({ initialMatches }: LagSenastSpeladeMatcherProps) {
+    // Only use initialMatches if it has data, otherwise treat as needing to fetch
+    const hasInitialData = initialMatches && initialMatches.length > 0;
+    const [matches, setMatches] = useState<MatchCardData[]>(hasInitialData ? initialMatches : []);
     const [error, setError] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(!hasInitialData);
 
     // Use shared league data hook
     const { data: leagueData, loading: leagueLoading, error: leagueError } = useLeagueData();
 
     useEffect(() => {
         async function fetchData() {
+            // Skip fetching if we have initial data from server
+            if (hasInitialData) {
+                setIsLoading(false);
+                return;
+            }
+
             // Wait for league data to load
             if (leagueLoading || !leagueData) {
                 return;
             }
+
+            setIsLoading(true);
 
             try {
                 const { teamId, leagues } = leagueData;
@@ -64,11 +79,13 @@ export default function LagSenastSpeladeMatcher() {
                 console.error("Error fetching played matches:", err);
                 setError("Kunde inte ladda matcher.");
                 setMatches([]);
+            } finally {
+                setIsLoading(false);
             }
         }
 
         fetchData();
-    }, [leagueLoading, leagueData]);
+    }, [leagueLoading, leagueData, hasInitialData]);
 
     // Memoized 4 latest played matches
     const latestPlayedMatches = useMemo(() => {
@@ -79,7 +96,7 @@ export default function LagSenastSpeladeMatcher() {
         <div className="flex flex-col gap-4 w-full rounded-md">
             <h2 className="text-3xl font-bold mb-4 text-left text-white">Senast spelade matcher</h2>
 
-            {(matches.length === 0 && !error && !leagueError) ? (
+            {isLoading ? (
                 <div className="flex flex-col gap-4">
                     {[...Array(4)].map((_, i) => (
                         <MatchCardSkeleton key={i} />
@@ -87,6 +104,8 @@ export default function LagSenastSpeladeMatcher() {
                 </div>
             ) : (error || leagueError) ? (
                 <div className="bg-red-500 text-white p-4 rounded-md text-center">{error || leagueError}</div>
+            ) : latestPlayedMatches.length === 0 ? (
+                <div className="text-white/70 text-center py-8">Inga spelade matcher hittades.</div>
             ) : (
                 <div className="flex flex-col gap-4">
                     {latestPlayedMatches.map((match) => (

@@ -5,7 +5,9 @@
  * Add new custom components to the switch statement below
  */
 
-import React from 'react';
+import React, { Suspense } from 'react';
+import { MatchCardSkeleton } from '@/app/components/Skeletons/MatchCardSkeleton';
+import MiniMatchCardSkeleton from '@/app/components/Skeletons/MiniMatchCardSkeleton';
 
 export interface Block {
   id: string;
@@ -31,16 +33,24 @@ export default async function CustomComponentBlock({
   // Handle different component types
   switch (componentName) {
     case 'SenastSpeladeMatcher': {
-
-      // Dynamically import the component (client component)
-      const { default: SenastSpeladeMatcher } = await import('@/app/components/SenastSpeladeMatcher');
+      // Use streaming server component for non-blocking render (grid layout)
+      const { default: SenastSpeladeMatcherServer } = await import('@/app/components/SenastSpeladeMatcherServer');
 
       return (
         <div
           className={`custom-component-block senast-spelade-matcher block-${blockId}`}
           data-block-id={blockId}
         >
-          <SenastSpeladeMatcher />
+          <Suspense fallback={
+            <div className="flex flex-col gap-4 w-full rounded-md">
+              <h2 className="text-3xl font-bold mb-4 text-left text-white">Senast spelade matcher</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[...Array(4)].map((_, i) => <MiniMatchCardSkeleton key={i} />)}
+              </div>
+            </div>
+          }>
+            <SenastSpeladeMatcherServer maxMatches={props.maxMatches || 4} />
+          </Suspense>
         </div>
       );
     }
@@ -76,15 +86,21 @@ export default async function CustomComponentBlock({
 
     case 'KommandeMatcher':
     case 'UpcomingMatchesBlock': {
-      // Dynamically import the component (client component)
-      const { default: KommandeMatcher } = await import('@/app/components/KommandeMatcher');
+      // Use streaming server component for non-blocking render
+      const { default: KommandeMatcherServer } = await import('@/app/components/KommandeMatcherServer');
 
       return (
         <div
           className={`custom-component-block kommande-matcher block-${blockId}`}
           data-block-id={blockId}
         >
-          <KommandeMatcher maxMatches={props.maxMatches || 3} />
+          <Suspense fallback={
+            <div className="flex flex-col gap-4">
+              {[...Array(3)].map((_, i) => <MatchCardSkeleton key={i} />)}
+            </div>
+          }>
+            <KommandeMatcherServer maxMatches={props.maxMatches || 3} />
+          </Suspense>
         </div>
       );
     }

@@ -5,11 +5,72 @@ import { fetchSpelareByTeam } from "@/lib/frontspace/adapters/spelare";
 import { fetchStabByTeam } from "@/lib/frontspace/adapters/stab";
 import { fetchSquadData } from "@/lib/Superadmin/fetchSquad";
 import { fetchTeamStats } from "@/lib/Superadmin/fetchTeamStats";
+import { getLeagueCache } from "@/lib/leagueCache";
+import { getAllMatchesWithTieredCache } from "@/lib/matchCache";
 import { notFound } from "next/navigation";
+import type { MatchCardData } from "@/types";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/app/components/ui/Button";
 import TeamTabs from "./TeamTabs";
 import type { Metadata } from 'next';
+
+// Helper function to fetch team matches server-side using tiered cache
+// Finished matches: cached indefinitely | Upcoming: 60s cache | Live: fresh
+async function fetchTeamMatches(): Promise<{ upcoming: MatchCardData[]; played: MatchCardData[] }> {
+    try {
+        const leagueData = await getLeagueCache();
+        if (!leagueData) return { upcoming: [], played: [] };
+
+        const { teamId, leagues } = leagueData;
+        const currentYear = new Date().getFullYear().toString();
+
+        // Get leagues from current season or most recent (for upcoming matches)
+        const latestSeasonLeagues = leagues.filter((l) => l.seasonYear === currentYear);
+        const seasonsAvailable = [...new Set(leagues.map((l) => l.seasonYear))].sort((a, b) => Number(b) - Number(a));
+        const targetSeason = latestSeasonLeagues.length > 0 ? currentYear : seasonsAvailable[0];
+        const targetLeagues = leagues.filter((l) => l.seasonYear === targetSeason);
+
+        if (targetLeagues.length === 0) return { upcoming: [], played: [] };
+
+        const currentSeasonLeagueIds = targetLeagues.map((l) => String(l.leagueId));
+        const smcTeamId = targetLeagues[0]?.ostersTeamId || teamId;
+
+        if (!smcTeamId) return { upcoming: [], played: [] };
+
+        // For played matches, fetch from ALL seasons to show historical data
+        const allLeagueIds = leagues.map((l) => String(l.leagueId));
+
+        // Fetch upcoming from current season, played from all seasons
+        const [currentSeasonData, allSeasonsData] = await Promise.all([
+            getAllMatchesWithTieredCache(currentSeasonLeagueIds, smcTeamId),
+            getAllMatchesWithTieredCache(allLeagueIds, smcTeamId),
+        ]);
+
+        const now = new Date();
+
+        // Filter upcoming matches from current season (include live matches, filter future scheduled)
+        const upcoming = [...currentSeasonData.live, ...currentSeasonData.upcoming]
+            .filter((match) => {
+                if (match.status === "In progress") return true;
+                if (match.status === "Scheduled") {
+                    return new Date(match.kickoff) > now;
+                }
+                return false;
+            })
+            .sort((a, b) => new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime())
+            .slice(0, 5);
+
+        // Get played matches from ALL seasons (sort by most recent first, then slice)
+        const played = allSeasonsData.finished
+            .sort((a, b) => new Date(b.kickoff).getTime() - new Date(a.kickoff).getTime())
+            .slice(0, 4);
+
+        return { upcoming, played };
+    } catch (error) {
+        console.error("Error fetching team matches:", error);
+        return { upcoming: [], played: [] };
+    }
+}
 
 // Helper function to format training sessions
 function formatTrainingSessions(sessions: TrainingSession[] | undefined) {
@@ -111,13 +172,15 @@ export default async function Page({ params, searchParams }: PageProps) {
     const fogisTeamSlug = teamData.content.fogis_teamslug;
 
     // Fetch data in parallel
-    const [teamNews, players, staff, squad, teamStats] = await Promise.all([
+    const [teamNews, players, staff, squad, teamStats, teamMatches] = await Promise.all([
         fetchNyheterByTeam(teamData.id, 6),
         fetchSpelareByTeam(teamData.id),
         fetchStabByTeam(teamData.id),
         // Only fetch SMC data for SEF teams
         isSEFTeam ? fetchSquadData().catch(() => []) : Promise.resolve([]),
         isSEFTeam ? fetchTeamStats().catch(() => null) : Promise.resolve(null),
+        // Pre-fetch matches for SEF teams (server-side, non-blocking)
+        isSEFTeam ? fetchTeamMatches() : Promise.resolve({ upcoming: [], played: [] }),
     ]);
 
     // Get upcoming training sessions
@@ -174,6 +237,8 @@ export default async function Page({ params, searchParams }: PageProps) {
                 fogisTeamSlug={fogisTeamSlug}
                 squad={squad}
                 teamStats={teamStats}
+                upcomingMatches={teamMatches.upcoming}
+                playedMatches={teamMatches.played}
             />
 
             {/* Sportadmin Link Section */}

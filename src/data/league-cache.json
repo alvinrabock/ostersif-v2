@@ -1,8 +1,17 @@
 {
   "teamId": "01JVVHS4ESCV6K0GYXXB0K1NHS",
   "teamName": "Östers IF",
-  "lastUpdated": "2025-11-21T06:43:39.182Z",
+  "lastUpdated": "2026-01-12T08:47:25.050Z",
   "leagues": [
+    {
+      "leagueId": "01KEEZWQD7WE6Y59RTPS8GNW96",
+      "leagueName": "Träningsmatcher Elit, herr",
+      "startDate": "2026-01-01",
+      "endDate": "2026-12-31",
+      "tournamentId": 131350,
+      "seasonYear": "2026",
+      "ostersTeamId": "01KEEZX187S065Y4CQ5CD3DPHX"
+    },
     {
       "leagueId": "01JR052JATX2RRWKD0GN4D2WT1",
       "leagueName": "Allsvenskan",
