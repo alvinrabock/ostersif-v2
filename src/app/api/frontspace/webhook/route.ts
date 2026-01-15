@@ -127,11 +127,13 @@ export async function POST(request: NextRequest) {
     const event = payload.event || '';
     console.log(`🔔 Webhook received: event="${event}", postType="${postType}", slug="${slug}", storeId="${storeId}"`);
 
-    // For publish/delete events, wait a moment for the database transaction to commit
+    // For publish/delete events, wait for the database transaction to commit
     // Updates are immediate, but create/delete may have a slight delay
+    // Note: revalidateTag() is fire-and-forget, so this delay helps ensure
+    // the fresh data is available when cache is regenerated
     if (event === 'post.published' || event === 'post.deleted' || event === 'post.created') {
-      console.log(`⏳ Waiting 2s for database transaction to commit...`);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log(`⏳ Waiting 3s for database transaction to commit...`);
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
       // Debug: Verify the change is visible in Frontspace API (bypass cache)
       try {

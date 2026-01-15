@@ -9,8 +9,8 @@ const FRONTSPACE_ENDPOINT = process.env.FRONTSPACE_ENDPOINT || 'http://localhost
 const FRONTSPACE_STORE_ID = process.env.FRONTSPACE_STORE_ID || '';
 const FRONTSPACE_API_KEY = process.env.FRONTSPACE_API_KEY;
 
-// Request timeout for GraphQL requests (10 seconds)
-const REQUEST_TIMEOUT_MS = 10000;
+// Request timeout for GraphQL requests (15 seconds - allows for slow API responses)
+const REQUEST_TIMEOUT_MS = 15000;
 
 if (!FRONTSPACE_ENDPOINT) {
   console.warn('⚠️  Frontspace endpoint not configured. Set FRONTSPACE_ENDPOINT in .env');

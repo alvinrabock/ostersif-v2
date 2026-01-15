@@ -69,7 +69,18 @@ export default function NewsPageClient({
     currentCategory,
 }: NewsPageClientProps) {
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
-    const [posts, setPosts] = useState(initialPosts);
+
+    // Deduplicate initial posts to prevent key conflicts
+    const deduplicatedInitialPosts = useMemo(() => {
+        const seen = new Set<string>();
+        return initialPosts.filter(post => {
+            if (seen.has(post.id)) return false;
+            seen.add(post.id);
+            return true;
+        });
+    }, [initialPosts]);
+
+    const [posts, setPosts] = useState(deduplicatedInitialPosts);
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(initialPosts.length === 10);
     const [currentPage, setCurrentPage] = useState(1);
@@ -82,10 +93,10 @@ export default function NewsPageClient({
 
     // Reset posts and pagination when category changes
     useEffect(() => {
-        setPosts(initialPosts);
+        setPosts(deduplicatedInitialPosts);
         setCurrentPage(1);
-        setHasMore(initialPosts.length === 10);
-    }, [initialPosts, currentCategory]);
+        setHasMore(deduplicatedInitialPosts.length === 10);
+    }, [deduplicatedInitialPosts, currentCategory]);
 
     // Memoize parent ID finding logic
     const parentIds = useMemo(() => {
