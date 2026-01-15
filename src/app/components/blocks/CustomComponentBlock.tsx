@@ -30,7 +30,17 @@ export default async function CustomComponentBlock({
   const componentName = content.componentName;
   const props = content.props || {};
 
-  // Handle different component types
+  try {
+    // Handle different component types
+    return await renderCustomComponent(componentName, props, blockId);
+  } catch (error) {
+    console.error(`[CustomComponentBlock] Error rendering ${componentName}:`, error);
+    // Return null instead of crashing - the block just won't render
+    return null;
+  }
+}
+
+async function renderCustomComponent(componentName: string, props: any, blockId: string) {
   switch (componentName) {
     case 'SenastSpeladeMatcher': {
       // Use streaming server component for non-blocking render (grid layout)

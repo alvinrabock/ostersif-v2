@@ -22,15 +22,30 @@ interface BlockRendererProps {
 
 /**
  * Main renderer component - renders an array of blocks
+ * Uses Promise.allSettled to prevent one failing block from crashing all blocks
  */
 export async function BlockRenderer({ blocks }: BlockRendererProps) {
   if (!blocks || blocks.length === 0) return null
 
+  // Use allSettled so one failing block doesn't crash all others
+  const results = await Promise.allSettled(
+    blocks.map(async (block) => ({
+      id: block.id,
+      element: await BlockComponent({ block })
+    }))
+  )
+
   return (
     <>
-      {await Promise.all(blocks.map(async (block) => (
-        <BlockComponent key={block.id} block={block} />
-      )))}
+      {results.map((result, index) => {
+        if (result.status === 'fulfilled') {
+          return <React.Fragment key={result.value.id}>{result.value.element}</React.Fragment>
+        } else {
+          // Log error but don't crash - render nothing for this block
+          console.error(`[BlockRenderer] Block ${blocks[index]?.id} failed:`, result.reason)
+          return null
+        }
+      })}
     </>
   )
 }
