@@ -23,10 +23,10 @@ export function trackEvent(
 
   // Use sendBeacon (non-blocking, survives navigation)
   if (navigator.sendBeacon) {
-    navigator.sendBeacon('/api/analytics', payload)
+    navigator.sendBeacon('/v1/analytics', payload)
   } else {
     // Fallback for older browsers
-    fetch('/api/analytics', {
+    fetch('/v1/analytics', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: payload,

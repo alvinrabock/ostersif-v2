@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+const ANALYTICS_ENDPOINT = process.env.FRONTSPACE_ANALYTICS_ENDPOINT || 'https://api.coolify.frontspace.se/v1/analytics'
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const cmsApiUrl = process.env.CMS_API_URL || 'https://app.frontspace.se'
 
     // Get client IP for location detection
     const forwardedFor = request.headers.get('x-forwarded-for')
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
       ip: clientIp,
     }
 
-    const response = await fetch(`${cmsApiUrl}/api/analytics`, {
+    const response = await fetch(ANALYTICS_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

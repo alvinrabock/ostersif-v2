@@ -30,7 +30,7 @@ export function AnalyticsTracker({ storeId }: AnalyticsTrackerProps) {
     urlRef.current = url
 
     // Track page view (non-blocking)
-    fetch('/api/analytics', {
+    fetch('/v1/analytics', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -51,7 +51,7 @@ export function AnalyticsTracker({ storeId }: AnalyticsTrackerProps) {
     const trackDuration = () => {
       const duration = Math.round((Date.now() - startTimeRef.current) / 1000)
       if (duration > 0) {
-        navigator.sendBeacon('/api/analytics', JSON.stringify({
+        navigator.sendBeacon('/v1/analytics', JSON.stringify({
           storeId,
           type: 'event',
           payload: {
@@ -71,7 +71,7 @@ export function AnalyticsTracker({ storeId }: AnalyticsTrackerProps) {
       window.removeEventListener('beforeunload', trackDuration)
       const duration = Math.round((Date.now() - startTimeRef.current) / 1000)
       if (duration > 0) {
-        fetch('/api/analytics', {
+        fetch('/v1/analytics', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
