@@ -3,7 +3,7 @@
  * Adapts Frontspace Partner type to match legacy Partner type from Payload
  */
 
-import { frontspace } from '../client';
+import { frontspace, fetchPosts } from '../client';
 import type { Partner as _FrontspacePartner } from '../types';
 import type { Partner } from '@/types';
 
@@ -185,20 +185,62 @@ export async function fetchPartnersInAffarsnatverket(): Promise<Partner[]> {
 /**
  * Fetch partners in Öster i Samhället
  * Filters by partner_till_oster_i_samhallet = true using GraphQL contentFilter
+ * Returns partners with kopplade_paket field for grouping
+ * Uses two-call approach: fetch partners + fetch partnerpaket for relation lookup
  */
-export async function fetchPartnersInOsterISamhallet(): Promise<Partner[]> {
+export async function fetchPartnersInOsterISamhallet(): Promise<(Partner & { kopplade_paket?: { id: string; title: string; slug: string } })[]> {
   try {
-    const { posts } = await frontspace.partners.getAll({
-      contentFilter: {
-        partner_till_oster_i_samhallet: true,
-      },
-      sort: 'title',
-      limit: 150,
-    });
+    // Fetch partners and partnerpaket in parallel
+    const [partnersResult, partnerpaketResult] = await Promise.all([
+      frontspace.partners.getAll({
+        contentFilter: {
+          partner_till_oster_i_samhallet: true,
+        },
+        limit: 150,
+      }),
+      fetchPosts('partnerpaket', { limit: 500 }),
+    ]);
 
-    return posts.map(transformPartner);
+    const { posts: partners } = partnersResult;
+    const { posts: allPartnerpaket } = partnerpaketResult;
+
+    // Build lookup map for partnerpaket by ID
+    const partnerpaketMap = new Map<string, { id: string; title: string; slug: string }>();
+    for (const paket of allPartnerpaket as any[]) {
+      partnerpaketMap.set(paket.id, {
+        id: paket.id,
+        title: paket.title,
+        slug: paket.slug,
+      });
+    }
+
+    return partners.map((partner: any) => {
+      const transformed = transformPartner(partner);
+
+      // Parse content to get kopplade_paket UUID
+      let content = partner.content || {};
+      if (typeof content === 'string') {
+        try {
+          content = JSON.parse(content);
+        } catch {
+          content = {};
+        }
+      }
+
+      // kopplade_paket is a UUID string - look up the full object
+      const koppladePaketId = content.kopplade_paket;
+      const koppladePaket = typeof koppladePaketId === 'string'
+        ? partnerpaketMap.get(koppladePaketId)
+        : undefined;
+
+      return {
+        ...transformed,
+        kopplade_paket: koppladePaket,
+      };
+    });
   } catch (error) {
     console.error('Error fetching partners in Öster i Samhället from Frontspace:', error);
     return [];
   }
 }
+

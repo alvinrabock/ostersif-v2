@@ -12,6 +12,10 @@ const FRONTSPACE_API_KEY = process.env.FRONTSPACE_API_KEY;
 // Request timeout for GraphQL requests (15 seconds - allows for slow API responses)
 const REQUEST_TIMEOUT_MS = 15000;
 
+// Retry configuration
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY_MS = 1000; // 1 second
+
 if (!FRONTSPACE_ENDPOINT) {
   console.warn('⚠️  Frontspace endpoint not configured. Set FRONTSPACE_ENDPOINT in .env');
 }
@@ -52,69 +56,115 @@ function getPostTypeCacheTags(postType: string): string[] {
 }
 
 /**
- * Base GraphQL fetch function for Frontspace API
+ * Sleep for a given number of milliseconds
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Check if error is retryable (rate limit or server error)
+ */
+function isRetryableError(status: number): boolean {
+  return status === 429 || (status >= 500 && status < 600);
+}
+
+/**
+ * Base GraphQL fetch function for Frontspace API with retry logic
  */
 async function frontspaceGraphQLFetch<T>(
   query: string,
   variables?: Record<string, any>,
   tags?: string[]
 ): Promise<T> {
-  // Create abort controller for timeout
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  let lastError: Error | null = null;
 
-  try {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'x-store-id': FRONTSPACE_STORE_ID,
-    };
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    // Create abort controller for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-    if (FRONTSPACE_API_KEY) {
-      headers['Authorization'] = `Bearer ${FRONTSPACE_API_KEY}`;
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'x-store-id': FRONTSPACE_STORE_ID,
+      };
+
+      if (FRONTSPACE_API_KEY) {
+        headers['Authorization'] = `Bearer ${FRONTSPACE_API_KEY}`;
+      }
+
+      // Debug: Log if store ID is missing
+      if (!FRONTSPACE_STORE_ID) {
+        console.error('❌ FRONTSPACE_STORE_ID is empty! Check .env file');
+      }
+
+      const response = await fetch(FRONTSPACE_ENDPOINT, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          query,
+          variables,
+        }),
+        signal: controller.signal,
+        next: {
+          tags: tags || ['frontspace'], // Cache indefinitely, revalidate only via webhook
+        },
+      });
+
+      clearTimeout(timeoutId);
+
+      // Handle rate limit (429) and server errors (5xx) with retry
+      if (isRetryableError(response.status)) {
+        const retryAfter = response.headers.get('Retry-After');
+        const delayMs = retryAfter
+          ? parseInt(retryAfter, 10) * 1000
+          : INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt); // Exponential backoff
+
+        console.warn(`⚠️ Frontspace API returned ${response.status}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
+
+        if (attempt < MAX_RETRIES - 1) {
+          await sleep(delayMs);
+          continue;
+        }
+      }
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error('GraphQL Response Error:', result);
+        throw new Error(`Frontspace GraphQL error: ${response.status} ${response.statusText} - ${JSON.stringify(result)}`);
+      }
+
+      if (result.errors) {
+        console.error('GraphQL errors:', result.errors);
+        throw new Error(`GraphQL errors: ${JSON.stringify(result.errors)}`);
+      }
+
+      return result.data as T;
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.warn(`⏱️ Timeout on attempt ${attempt + 1}/${MAX_RETRIES}`);
+        lastError = new Error(`Frontspace GraphQL timeout after ${REQUEST_TIMEOUT_MS}ms`);
+
+        // Retry on timeout
+        if (attempt < MAX_RETRIES - 1) {
+          const delayMs = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt);
+          await sleep(delayMs);
+          continue;
+        }
+      } else {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        // Don't retry on non-retryable errors
+        break;
+      }
     }
-
-    // Debug: Log if store ID is missing
-    if (!FRONTSPACE_STORE_ID) {
-      console.error('❌ FRONTSPACE_STORE_ID is empty! Check .env file');
-    }
-
-    const response = await fetch(FRONTSPACE_ENDPOINT, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        query,
-        variables,
-      }),
-      signal: controller.signal,
-      next: {
-        tags: tags || ['frontspace'], // Cache indefinitely, revalidate only via webhook
-      },
-    });
-
-    clearTimeout(timeoutId);
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      console.error('GraphQL Response Error:', result);
-      throw new Error(`Frontspace GraphQL error: ${response.status} ${response.statusText} - ${JSON.stringify(result)}`);
-    }
-
-    if (result.errors) {
-      console.error('GraphQL errors:', result.errors);
-      throw new Error(`GraphQL errors: ${JSON.stringify(result.errors)}`);
-    }
-
-    return result.data as T;
-  } catch (error) {
-    clearTimeout(timeoutId);
-    if (error instanceof Error && error.name === 'AbortError') {
-      console.error(`⏱️ Timeout fetching from Frontspace GraphQL after ${REQUEST_TIMEOUT_MS}ms`);
-      throw new Error(`Frontspace GraphQL timeout after ${REQUEST_TIMEOUT_MS}ms`);
-    }
-    console.error(`❌ Error fetching from Frontspace GraphQL:`, error);
-    throw error;
   }
+
+  console.error(`❌ Frontspace GraphQL failed after ${MAX_RETRIES} attempts:`, lastError);
+  throw lastError || new Error('Frontspace GraphQL request failed');
 }
 
 /**

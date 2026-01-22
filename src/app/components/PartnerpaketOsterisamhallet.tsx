@@ -4,12 +4,22 @@ import Image from 'next/image';
 import { fetchPosts } from '@/lib/frontspace/client';
 import { fetchPartnersInOsterISamhallet } from '@/lib/frontspace/adapters/partners';
 import PersonalItem from '@/app/components/Personal/PersonalItem';
-import { Foretagspaket, Personal, Partner } from '@/types';
+import { Foretagspaket, Personal } from '@/types';
 
 export default async function PartnerpaketOsterisamhallet() {
   try {
-    // Fetch partners with partner_till_oster_i_samhallet = true
-    const partners: Partner[] = await fetchPartnersInOsterISamhallet();
+    // Fetch partners with partner_till_oster_i_samhallet = true (includes kopplade_paket)
+    const partners = await fetchPartnersInOsterISamhallet();
+
+    // Group partners by kopplade_paket title
+    const partnersByPackage = partners.reduce((acc, partner) => {
+      const packageTitle = partner.kopplade_paket?.title || 'Övriga partners';
+      if (!acc[packageTitle]) {
+        acc[packageTitle] = [];
+      }
+      acc[packageTitle].push(partner);
+      return acc;
+    }, {} as Record<string, typeof partners>);
 
     // Fetch the Samhällsengagemang category
     const { posts: allKategorier } = await fetchPosts('partnerpaket-kategorier', { limit: 100 });
@@ -141,7 +151,7 @@ export default async function PartnerpaketOsterisamhallet() {
         {/* Samhällsengagemang Packages Grid - 4 columns */}
         {foretagspaket.length > 0 && (
           <div>
-            <h2 className="text-3xl font-bold text-white mb-8">Välj paket</h2>
+            <h2 className="text-3xl font-bold text-white mb-8 text-center">Välj paket</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {foretagspaket.map((paket) => (
                 <div key={paket.id} className="bg-custom_dark_red rounded-lg overflow-hidden flex flex-col p-6 text-center items-center">
@@ -173,48 +183,53 @@ export default async function PartnerpaketOsterisamhallet() {
           </div>
         )}
 
-        {/* Partners in Öster i Samhället */}
+        {/* Partners in Öster i Samhället - grouped by kopplade_paket */}
         {partners.length > 0 && (
-          <div id="partners" className="py-12">
-            <h2 className="text-3xl font-bold text-white mb-8 text-center">Partners</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-10 w-full">
-              {partners.map((partner) => {
-                const logoUrl = typeof partner.logotyp === 'string'
-                  ? partner.logotyp
-                  : partner.logotyp?.url;
+          <div id="partners" className="py-12 space-y-12">
+            {Object.entries(partnersByPackage).map(([packageTitle, packagePartners]) => (
+              <div key={packageTitle}>
+                <h2 className="text-3xl font-bold text-white mb-8 text-center">{packageTitle}</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-10 w-full">
+                  {packagePartners.map((partner) => {
+                    const logoUrl = typeof partner.logotyp === 'string'
+                      ? partner.logotyp
+                      : partner.logotyp?.url;
 
-                const partnerLink = partner.link || partner.webbplats || '#';
+                    const partnerLink = partner.link || partner.webbplats || '#';
 
-                return (
-                  <Link
-                    key={partner.id}
-                    href={partnerLink}
-                    target={partnerLink !== '#' ? "_blank" : "_self"}
-                    rel={partnerLink !== '#' ? "noopener noreferrer" : undefined}
-                    className="flex items-center justify-center group transition-opacity hover:opacity-80"
-                    aria-label={`Visit ${partner.title}'s website`}
-                    prefetch={false}
-                  >
-                    {logoUrl ? (
-                      <div className="relative w-32 aspect-[3/2] flex items-center justify-center">
-                        <Image
-                          src={logoUrl}
-                          alt={`${partner.title} logo`}
-                          fill
-                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                          className="object-contain"
-                          loading="lazy"
-                        />
-                      </div>
-                    ) : (
-                      <span className="text-white/80 font-bold text-sm text-left group-hover:text-white transition-colors">
-                        {partner.title}
-                      </span>
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
+                    return (
+                      <Link
+                        key={partner.id}
+                        href={partnerLink}
+                        target={partnerLink !== '#' ? "_blank" : "_self"}
+                        rel={partnerLink !== '#' ? "noopener noreferrer" : undefined}
+                        className="flex items-center justify-center group transition-opacity hover:opacity-80"
+                        aria-label={`Visit ${partner.title}'s website`}
+                        prefetch={false}
+                      >
+                        {logoUrl ? (
+                          <div className="relative w-32 aspect-[3/2] flex items-center justify-center">
+                            <Image
+                              src={logoUrl}
+                              alt={`${partner.title} logo`}
+                              fill
+                              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                              className="object-contain"
+                              loading="lazy"
+                              unoptimized
+                            />
+                          </div>
+                        ) : (
+                          <span className="text-white/80 font-bold text-sm text-left group-hover:text-white transition-colors">
+                            {partner.title}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
