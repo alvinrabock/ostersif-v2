@@ -181,3 +181,24 @@ export async function fetchPartnersInAffarsnatverket(): Promise<Partner[]> {
     return [];
   }
 }
+
+/**
+ * Fetch partners in Öster i Samhället
+ * Filters by partner_till_oster_i_samhallet = true using GraphQL contentFilter
+ */
+export async function fetchPartnersInOsterISamhallet(): Promise<Partner[]> {
+  try {
+    const { posts } = await frontspace.partners.getAll({
+      contentFilter: {
+        partner_till_oster_i_samhallet: true,
+      },
+      sort: 'title',
+      limit: 150,
+    });
+
+    return posts.map(transformPartner);
+  } catch (error) {
+    console.error('Error fetching partners in Öster i Samhället from Frontspace:', error);
+    return [];
+  }
+}

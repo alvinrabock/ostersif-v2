@@ -1,11 +1,17 @@
 import React from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
 import { fetchPosts } from '@/lib/frontspace/client';
+import { fetchPartnersInOsterISamhallet } from '@/lib/frontspace/adapters/partners';
 import ForetagsPaketItem from '@/app/components/Partners/ForetagsPaketItem';
 import PersonalItem from '@/app/components/Personal/PersonalItem';
-import { Foretagspaket, Personal } from '@/types';
+import { Foretagspaket, Personal, Partner } from '@/types';
 
 export default async function PartnerpaketOsterisamhallet() {
   try {
+    // Fetch partners with partner_till_oster_i_samhallet = true
+    const partners: Partner[] = await fetchPartnersInOsterISamhallet();
+
     // Fetch the Samhällsengagemang category
     const { posts: allKategorier } = await fetchPosts('partnerpaket-kategorier', { limit: 100 });
     const samhallsengagemangKategori = allKategorier.find((kat: any) => kat.slug === 'samhallsengagemang');
@@ -145,6 +151,51 @@ export default async function PartnerpaketOsterisamhallet() {
           </div>
         )}
 
+        {/* Partners in Öster i Samhället */}
+        {partners.length > 0 && (
+          <div>
+            <h2 className="text-3xl font-bold text-white mb-8">Partners</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-10 w-full">
+              {partners.map((partner) => {
+                const logoUrl = typeof partner.logotyp === 'string'
+                  ? partner.logotyp
+                  : partner.logotyp?.url;
+
+                const partnerLink = partner.link || partner.webbplats || '#';
+
+                return (
+                  <Link
+                    key={partner.id}
+                    href={partnerLink}
+                    target={partnerLink !== '#' ? "_blank" : "_self"}
+                    rel={partnerLink !== '#' ? "noopener noreferrer" : undefined}
+                    className="flex items-center justify-center group transition-opacity hover:opacity-80"
+                    aria-label={`Visit ${partner.title}'s website`}
+                    prefetch={false}
+                  >
+                    {logoUrl ? (
+                      <div className="relative w-32 aspect-[3/2] flex items-center justify-center">
+                        <Image
+                          src={logoUrl}
+                          alt={`${partner.title} logo`}
+                          fill
+                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                          className="object-contain"
+                          loading="lazy"
+                        />
+                      </div>
+                    ) : (
+                      <span className="text-white/80 font-bold text-sm text-left group-hover:text-white transition-colors">
+                        {partner.title}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Personnel from both departments */}
         {personnel.length > 0 && (
           <div>
@@ -157,8 +208,8 @@ export default async function PartnerpaketOsterisamhallet() {
           </div>
         )}
 
-        {/* Show message if neither are available */}
-        {foretagspaket.length === 0 && personnel.length === 0 && (
+        {/* Show message if nothing is available */}
+        {foretagspaket.length === 0 && partners.length === 0 && personnel.length === 0 && (
           <div className="text-center text-gray-400 py-12">
             <p>Information kommer snart</p>
           </div>

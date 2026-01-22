@@ -1,10 +1,10 @@
 import Link from 'next/link'
 import { Partner } from '@/types'
 import { Media } from '@/app/components/Media/index'
-import { fetchPartnersOsterISamhallet } from '@/lib/apollo/fetchPartners/fetchOsterISamhalletPartner'
+import { fetchPartnersInOsterISamhallet } from '@/lib/frontspace/adapters/partners'
 
 const PartnerOsterISamhalletComponent = async () => {
-  const partners: Partner[] = await fetchPartnersOsterISamhallet()
+  const partners: Partner[] = await fetchPartnersInOsterISamhallet()
 
   if (!partners.length) return null
 
