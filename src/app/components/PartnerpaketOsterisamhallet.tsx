@@ -3,7 +3,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { fetchPosts } from '@/lib/frontspace/client';
 import { fetchPartnersInOsterISamhallet } from '@/lib/frontspace/adapters/partners';
-import ForetagsPaketItem from '@/app/components/Partners/ForetagsPaketItem';
 import PersonalItem from '@/app/components/Personal/PersonalItem';
 import { Foretagspaket, Personal, Partner } from '@/types';
 
@@ -142,10 +141,33 @@ export default async function PartnerpaketOsterisamhallet() {
         {/* Samhällsengagemang Packages Grid - 4 columns */}
         {foretagspaket.length > 0 && (
           <div>
-            <h2 className="text-3xl font-bold text-white mb-8">Öster i samhället</h2>
+            <h2 className="text-3xl font-bold text-white mb-8">Välj paket</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {foretagspaket.map((paket) => (
-                <ForetagsPaketItem key={paket.id} item={paket} />
+                <div key={paket.id} className="bg-custom_dark_red rounded-lg overflow-hidden flex flex-col p-6 text-center items-center">
+                  {/* Title - small text */}
+                  <h3 className="text-sm font-medium text-white/80 uppercase tracking-wide">
+                    {paket.title}
+                  </h3>
+
+                  {/* Price - big text */}
+                  <p className="text-3xl font-bold text-white mt-2">
+                    {paket.price}
+                  </p>
+
+                  {/* Separator */}
+                  <hr className="border-white/20 my-4 w-full" />
+
+                  {/* Checklist */}
+                  <div className="flex-1 space-y-2 text-left w-full">
+                    {Array.isArray(paket.Ingaripaketet) && paket.Ingaripaketet.map((subItem) => (
+                      <p key={subItem.id} className="flex items-start text-sm text-white/80">
+                        <span className="mr-2 text-white flex-shrink-0">✔</span>
+                        {subItem.text}
+                      </p>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
@@ -153,8 +175,8 @@ export default async function PartnerpaketOsterisamhallet() {
 
         {/* Partners in Öster i Samhället */}
         {partners.length > 0 && (
-          <div>
-            <h2 className="text-3xl font-bold text-white mb-8">Partners</h2>
+          <div id="partners" className="py-12">
+            <h2 className="text-3xl font-bold text-white mb-8 text-center">Partners</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-10 w-full">
               {partners.map((partner) => {
                 const logoUrl = typeof partner.logotyp === 'string'
