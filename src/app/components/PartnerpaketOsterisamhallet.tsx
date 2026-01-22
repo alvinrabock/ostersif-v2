@@ -11,15 +11,20 @@ export default async function PartnerpaketOsterisamhallet() {
     // Fetch partners with partner_till_oster_i_samhallet = true (includes kopplade_paket)
     const partners = await fetchPartnersInOsterISamhallet();
 
-    // Group partners by kopplade_paket title
+    // Group partners by kopplade_paket title, storing sort_order for sorting
     const partnersByPackage = partners.reduce((acc, partner) => {
       const packageTitle = partner.kopplade_paket?.title || 'Övriga partners';
+      const sortOrder = partner.kopplade_paket?.sort_order ?? 999;
       if (!acc[packageTitle]) {
-        acc[packageTitle] = [];
+        acc[packageTitle] = { partners: [], sort_order: sortOrder };
       }
-      acc[packageTitle].push(partner);
+      acc[packageTitle].partners.push(partner);
       return acc;
-    }, {} as Record<string, typeof partners>);
+    }, {} as Record<string, { partners: typeof partners; sort_order: number }>);
+
+    // Sort groups by sort_order (lower values last)
+    const sortedPackages = Object.entries(partnersByPackage)
+      .sort(([, a], [, b]) => b.sort_order - a.sort_order);
 
     // Fetch the Samhällsengagemang category
     const { posts: allKategorier } = await fetchPosts('partnerpaket-kategorier', { limit: 100 });
@@ -183,10 +188,10 @@ export default async function PartnerpaketOsterisamhallet() {
           </div>
         )}
 
-        {/* Partners in Öster i Samhället - grouped by kopplade_paket */}
+        {/* Partners in Öster i Samhället - grouped by kopplade_paket, sorted by sort_order */}
         {partners.length > 0 && (
           <div id="partners" className="py-12 space-y-12">
-            {Object.entries(partnersByPackage).map(([packageTitle, packagePartners]) => (
+            {sortedPackages.map(([packageTitle, { partners: packagePartners }]) => (
               <div key={packageTitle}>
                 <h2 className="text-3xl font-bold text-white mb-8 text-center">{packageTitle}</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-10 w-full">

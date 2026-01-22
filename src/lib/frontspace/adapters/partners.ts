@@ -188,7 +188,7 @@ export async function fetchPartnersInAffarsnatverket(): Promise<Partner[]> {
  * Returns partners with kopplade_paket field for grouping
  * Uses two-call approach: fetch partners + fetch partnerpaket for relation lookup
  */
-export async function fetchPartnersInOsterISamhallet(): Promise<(Partner & { kopplade_paket?: { id: string; title: string; slug: string } })[]> {
+export async function fetchPartnersInOsterISamhallet(): Promise<(Partner & { kopplade_paket?: { id: string; title: string; slug: string; sort_order: number } })[]> {
   try {
     // Fetch partners and partnerpaket in parallel
     const [partnersResult, partnerpaketResult] = await Promise.all([
@@ -205,12 +205,13 @@ export async function fetchPartnersInOsterISamhallet(): Promise<(Partner & { kop
     const { posts: allPartnerpaket } = partnerpaketResult;
 
     // Build lookup map for partnerpaket by ID
-    const partnerpaketMap = new Map<string, { id: string; title: string; slug: string }>();
+    const partnerpaketMap = new Map<string, { id: string; title: string; slug: string; sort_order: number }>();
     for (const paket of allPartnerpaket as any[]) {
       partnerpaketMap.set(paket.id, {
         id: paket.id,
         title: paket.title,
         slug: paket.slug,
+        sort_order: paket.sort_order ?? 999,
       });
     }
 
