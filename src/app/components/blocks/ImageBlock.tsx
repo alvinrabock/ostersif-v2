@@ -2,11 +2,12 @@
  * Image Block Component
  *
  * Renders images from Frontspace CMS
- * Uses regular <img> tags to support dynamic image sources
+ * Uses FadeInImage component for smooth loading transitions
  * Supports border radius and other inline styling properties from block.styles
  */
 
 import React from 'react'
+import FadeInImage from '@/app/components/FadeInImage'
 
 export interface Block {
   id: string
@@ -29,7 +30,7 @@ export default function ImageBlock({ block, blockId }: ImageBlockProps) {
   // The CSS styles are applied via the block-${blockId} class
   // The image should fill its container and inherit border-radius via overflow:hidden
   const imageElement = (
-    <img
+    <FadeInImage
       src={src}
       alt={alt || 'Image'}
       className="w-full h-full object-cover"

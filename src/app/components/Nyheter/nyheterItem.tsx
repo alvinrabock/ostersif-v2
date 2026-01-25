@@ -1,4 +1,6 @@
-import React from "react";
+'use client';
+
+import React, { useState } from "react";
 import Link from "next/link";
 import { Post } from "@/types";
 import { Play } from "lucide-react";
@@ -9,6 +11,7 @@ interface NyheterItemProps {
 }
 
 const NyheterItem: React.FC<NyheterItemProps> = ({ post, priority = false }) => {
+  const [imageLoaded, setImageLoaded] = useState(false);
   const imageResource =
     post.heroImage && typeof post.heroImage !== "string" ? post.heroImage : null;
 
@@ -34,8 +37,10 @@ const NyheterItem: React.FC<NyheterItemProps> = ({ post, priority = false }) => 
             <img
               src={imageUrl || youtubeThumbnail || fallbackImage}
               alt={imageResource?.alt || "YouTube Thumbnail"}
-              className="w-full h-full object-cover rounded-md"
+              className={`w-full h-full object-cover rounded-md transition-opacity duration-500 ease-out ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
               loading={priority ? "eager" : "lazy"}
+              onLoad={() => setImageLoaded(true)}
+              onError={() => setImageLoaded(true)}
             />
             <div className="absolute top-2 left-2 bg-black/50 rounded-full p-1">
               <Play className="h-4 w-4 text-white" />
@@ -45,15 +50,19 @@ const NyheterItem: React.FC<NyheterItemProps> = ({ post, priority = false }) => 
           <img
             src={imageUrl}
             alt={imageResource?.alt || post.title}
-            className="w-full h-full object-cover"
+            className={`w-full h-full object-cover transition-opacity duration-500 ease-out ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
             loading={priority ? "eager" : "lazy"}
+            onLoad={() => setImageLoaded(true)}
+            onError={() => setImageLoaded(true)}
           />
         ) : (
           <img
             src={fallbackImage}
             alt="Fallback Thumbnail"
-            className="w-full h-full object-cover"
+            className={`w-full h-full object-cover transition-opacity duration-500 ease-out ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
             loading={priority ? "eager" : "lazy"}
+            onLoad={() => setImageLoaded(true)}
+            onError={() => setImageLoaded(true)}
           />
         )}
       </div>

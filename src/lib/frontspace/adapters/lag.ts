@@ -89,14 +89,22 @@ export async function fetchSingleLag(slug: string): Promise<FrontspaceLag | null
 
 /**
  * Fetch teams with SEF/SMC API enabled
- * Returns teams that have fetchfromsefapi=true and have smc_teamid set
+ * Uses server-side contentFilter to filter by fetchfromsefapi=true
  */
 export async function fetchTeamsWithSEF(): Promise<FrontspaceLag[]> {
   try {
-    const allTeams = await fetchAllLag();
-    return allTeams.filter(
-      (team) => team.content.fetchfromsefapi === true && team.content.smc_teamid
-    );
+    // Use contentFilter to filter server-side
+    const { posts } = await frontspace.lag.getAll({
+      limit: 100,
+      contentFilter: {
+        fetchfromsefapi: true,
+      },
+    });
+
+    // Additional filter for smc_teamid since we need it to be set (not empty)
+    const teamsWithSmcId = posts.filter((team: any) => team.content?.smc_teamid);
+
+    return teamsWithSmcId.map(transformLag);
   } catch (error) {
     console.error('Error fetching SEF teams from Frontspace:', error);
     return [];

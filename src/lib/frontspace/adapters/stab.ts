@@ -60,28 +60,21 @@ export async function fetchAllStab(limit = 100): Promise<FrontspaceStab[]> {
 
 /**
  * Fetch staff by team ID
- * Filters staff whose lag.id matches the given teamId
+ * Uses server-side contentFilter to filter by lag relation field
  */
 export async function fetchStabByTeam(teamId: string): Promise<FrontspaceStab[]> {
   try {
-    // Fetch all staff and filter by team
-    const { posts: allStaff } = await fetchPosts<any>('stab', { limit: 200 });
-
-    // Filter staff that belong to this team
-    const filteredStaff = allStaff.filter((staff: any) => {
-      const lag = staff.content?.lag;
-      if (!lag) return false;
-
-      // lag can be an object with id or just a string ID
-      if (typeof lag === 'string') {
-        return lag === teamId;
-      }
-      return lag?.id === teamId;
+    // Use contentFilter to filter by lag relation field server-side
+    const { posts } = await fetchPosts<any>('stab', {
+      limit: 200,
+      contentFilter: {
+        lag: teamId,
+      },
     });
 
-    console.log(`[fetchStabByTeam] Found ${filteredStaff.length} staff members for team: ${teamId}`);
+    console.log(`[fetchStabByTeam] Found ${posts.length} staff members for team: ${teamId}`);
 
-    return filteredStaff.map(transformStab);
+    return posts.map(transformStab);
   } catch (error) {
     console.error(`Error fetching stab by team ${teamId}:`, error);
     return [];

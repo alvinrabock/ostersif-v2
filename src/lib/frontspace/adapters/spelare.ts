@@ -62,29 +62,22 @@ export async function fetchAllSpelare(limit = 100): Promise<FrontspaceSpelare[]>
 
 /**
  * Fetch players by team ID
- * Filters players whose lag.id matches the given teamId
+ * Uses server-side contentFilter to filter by lag relation field
  */
 export async function fetchSpelareByTeam(teamId: string): Promise<FrontspaceSpelare[]> {
   try {
-    // Fetch all players and filter by team (reduced from 500 to prevent memory issues)
-    const { posts: allPlayers } = await fetchPosts<any>('spelare', { limit: 150 });
-
-    // Filter players that belong to this team
-    const filteredPlayers = allPlayers.filter((player: any) => {
-      const lag = player.content?.lag;
-      if (!lag) return false;
-
-      // lag can be an object with id or just a string ID
-      if (typeof lag === 'string') {
-        return lag === teamId;
-      }
-      return lag?.id === teamId;
+    // Use contentFilter to filter by lag relation field server-side
+    const { posts } = await fetchPosts<any>('spelare', {
+      limit: 150,
+      contentFilter: {
+        lag: teamId,
+      },
     });
 
-    console.log(`[fetchSpelareByTeam] Found ${filteredPlayers.length} players for team: ${teamId}`);
+    console.log(`[fetchSpelareByTeam] Found ${posts.length} players for team: ${teamId}`);
 
     // Sort by trojnummer (jersey number)
-    const sortedPlayers = filteredPlayers.sort((a: any, b: any) => {
+    const sortedPlayers = posts.sort((a: any, b: any) => {
       const numA = parseInt(a.content?.trojnummer || '999', 10);
       const numB = parseInt(b.content?.trojnummer || '999', 10);
       return numA - numB;

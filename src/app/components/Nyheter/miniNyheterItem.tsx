@@ -1,3 +1,6 @@
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
 import { Play } from 'lucide-react';
 import { Post } from '@/types';
@@ -9,6 +12,7 @@ interface MiniNyhetItemProps {
 }
 
 const MiniNyheterItem = ({ post, closeDialog, priority = false }: MiniNyhetItemProps) => {
+  const [imageLoaded, setImageLoaded] = useState(false);
   const imageResource =
     post.heroImage && typeof post.heroImage !== 'string' ? post.heroImage : null;
 
@@ -37,8 +41,10 @@ const MiniNyheterItem = ({ post, closeDialog, priority = false }: MiniNyhetItemP
           <img
             src={finalImageUrl}
             alt={imageResource?.alt || post.title}
-            className="w-full h-full object-cover"
+            className={`w-full h-full object-cover transition-opacity duration-500 ease-out ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
             loading={priority ? "eager" : "lazy"}
+            onLoad={() => setImageLoaded(true)}
+            onError={() => setImageLoaded(true)}
           />
         </div>
 

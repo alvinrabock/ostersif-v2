@@ -202,7 +202,7 @@ export async function fetchSingleNyhet(slug: string): Promise<Post | null> {
 
 /**
  * Fetch news posts by category
- * Uses Frontspace's contentFilter to filter by category UUID
+ * Uses server-side contentFilter to filter by category UUID
  */
 export async function fetchNyheterByCategory(
   categorySlug: string,
@@ -218,25 +218,17 @@ export async function fetchNyheterByCategory(
       return [];
     }
 
-    // Step 2: Fetch posts filtered by category UUID
-    // The kategori field is nested in content.kategori and is an array of UUIDs
+    // Step 2: Fetch posts filtered by category UUID using server-side contentFilter
     const offset = (page - 1) * limit;
 
-    // Fetch posts and filter client-side since contentFilter on nested arrays might not work
-    // Limited to 100 to prevent memory issues under high traffic
-    const { posts: allPosts } = await frontspace.nyheter.getAll({
-      limit: 100,
+    const { posts } = await frontspace.nyheter.getAll({
+      limit,
+      offset,
       sort: '-publishedAt',
+      contentFilter: {
+        kategori: category.id,
+      },
     });
-
-    // Filter posts that have this category in their content.kategori array
-    const filteredPosts = allPosts.filter((post: any) => {
-      const kategorier = post.content?.kategori || [];
-      return kategorier.includes(category.id);
-    });
-
-    // Apply pagination after filtering
-    const posts = filteredPosts.slice(offset, offset + limit);
 
     // Transform and return
     return posts.map(transformNyhetToPost);
@@ -328,7 +320,7 @@ export async function searchNyheter(
 
 /**
  * Fetch news posts connected to a specific team
- * Uses the kopplade_lag relation field to filter posts
+ * Uses server-side contentFilter to filter by kopplade_lag relation field
  */
 export async function fetchNyheterByTeam(
   teamId: string,
@@ -338,34 +330,17 @@ export async function fetchNyheterByTeam(
   try {
     const offset = (page - 1) * limit;
 
-    // Fetch posts and filter client-side by team ID in kopplade_lag
-    // Limited to 100 to prevent memory issues under high traffic
-    const { posts: allPosts } = await frontspace.nyheter.getAll({
-      limit: 100,
+    // Use contentFilter to filter by kopplade_lag relation field server-side
+    const { posts } = await frontspace.nyheter.getAll({
+      limit,
+      offset,
       sort: '-publishedAt',
+      contentFilter: {
+        kopplade_lag: teamId,
+      },
     });
 
-    // Filter posts that have this team in their content.kopplade_lag array
-    const filteredPosts = allPosts.filter((post: any) => {
-      const rawKoppladelag = post.content?.kopplade_lag;
-      // kopplade_lag can be: undefined, a single string ID, or an array of IDs/objects
-      if (!rawKoppladelag) return false;
-
-      // Normalize to array
-      const koppladelag = Array.isArray(rawKoppladelag) ? rawKoppladelag : [rawKoppladelag];
-
-      return koppladelag.some((lag: any) => {
-        if (typeof lag === 'string') {
-          return lag === teamId;
-        }
-        return lag?.id === teamId;
-      });
-    });
-
-    // Apply pagination after filtering
-    const posts = filteredPosts.slice(offset, offset + limit);
-
-    console.log(`[fetchNyheterByTeam] Found ${filteredPosts.length} total posts for team: ${teamId}, returning ${posts.length} for page ${page}`);
+    console.log(`[fetchNyheterByTeam] Found ${posts.length} posts for team: ${teamId}, page ${page}`);
 
     return posts.map(transformNyhetToPost);
   } catch (error) {

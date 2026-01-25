@@ -88,9 +88,6 @@ export default function NewsPageClient({
     // Memoize category tree to avoid rebuilding on every render
     const categoryTree = useMemo(() => buildCategoryTree(categories), [categories]);
 
-    // Memoize existing post IDs for duplicate checking
-    const existingPostIds = useMemo(() => new Set(posts.map(post => post.id)), [posts]);
-
     // Reset posts and pagination when category changes
     useEffect(() => {
         setPosts(deduplicatedInitialPosts);
@@ -174,12 +171,13 @@ export default function NewsPageClient({
                 return;
             }
 
-            // Efficiently filter duplicates using the memoized Set
-            const uniqueNewPosts = newPosts.filter((post: Post) => !existingPostIds.has(post.id));
-
-            if (uniqueNewPosts.length > 0) {
-                setPosts(prev => [...prev, ...uniqueNewPosts]);
-            }
+            // Filter duplicates inside setPosts callback to use current state
+            // This prevents race conditions when loadMore is called multiple times
+            setPosts(prev => {
+                const existingIds = new Set(prev.map(p => p.id));
+                const uniqueNewPosts = newPosts.filter((post: Post) => !existingIds.has(post.id));
+                return uniqueNewPosts.length > 0 ? [...prev, ...uniqueNewPosts] : prev;
+            });
 
             setCurrentPage(nextPage);
 
@@ -191,7 +189,7 @@ export default function NewsPageClient({
         } finally {
             setLoadingMore(false);
         }
-    }, [loadingMore, currentCategory, hasMore, currentPage, existingPostIds]);
+    }, [loadingMore, currentCategory, hasMore, currentPage]);
 
     const handleScroll = useCallback(() => {
         if (loadingMore || !hasMore) return;

@@ -2,6 +2,7 @@ import MaxWidthWrapper from "@/app/components/MaxWidthWrapper";
 import MiniNyhetertItem from "@/app/components/Nyheter/miniNyheterItem";
 import RichTextContent from "@/app/components/RichTextContent";
 import YouTubeEmbed from "@/app/components/YouTubeEmbed";
+import FadeInImage from "@/app/components/FadeInImage";
 import { fetchSingleNyhet, fetchNyheterByCategory, fetchAllNyheter } from "@/lib/frontspace/adapters/nyheter";
 import { Category, Media as MediaType } from "@/types";
 import { notFound } from "next/navigation";
@@ -219,11 +220,10 @@ export default async function Page({ params }: PageProps) {
               <YouTubeEmbed videoId={youtubeVideoId} />
             ) : post.heroImage && typeof post.heroImage !== 'string' && post.heroImage.url ? (
               <div className="w-full mb-6">
-                <img
+                <FadeInImage
                   src={post.heroImage.url}
                   alt={post.heroImage.alt || post.title}
                   className="w-full h-auto object-cover rounded-lg"
-                  loading="lazy"
                 />
               </div>
             ) : null}
