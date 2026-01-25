@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { Play } from 'lucide-react';
 import { Post } from '@/types';
@@ -13,6 +13,15 @@ interface MiniNyhetItemProps {
 
 const MiniNyheterItem = ({ post, closeDialog, priority = false }: MiniNyhetItemProps) => {
   const [imageLoaded, setImageLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  // Check if image is already loaded (cached) on mount
+  useEffect(() => {
+    if (imgRef.current?.complete && imgRef.current?.naturalHeight > 0) {
+      setImageLoaded(true);
+    }
+  }, []);
+
   const imageResource =
     post.heroImage && typeof post.heroImage !== 'string' ? post.heroImage : null;
 
@@ -39,6 +48,7 @@ const MiniNyheterItem = ({ post, closeDialog, priority = false }: MiniNyhetItemP
           )}
 
           <img
+            ref={imgRef}
             src={finalImageUrl}
             alt={imageResource?.alt || post.title}
             className={`w-full h-full object-cover transition-opacity duration-500 ease-out ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}

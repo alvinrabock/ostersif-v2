@@ -1,0 +1,12 @@
+{
+  "name": "smc-service-bus-listener",
+  "version": "1.0.0",
+  "description": "Azure Service Bus listener for SMC match updates - triggers Next.js cache revalidation",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@azure/service-bus": "^7.9.5"
+  }
+}

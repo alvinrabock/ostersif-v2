@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  smc-listener:
+    build: .
+    container_name: smc-service-bus-listener
+    restart: unless-stopped
+    environment:
+      - SERVICE_BUS_CONNECTION_STRING=${SERVICE_BUS_CONNECTION_STRING}
+      - SERVICE_BUS_TOPICS=${SERVICE_BUS_TOPICS:-p-sb-smc-sef-allsvenskan,p-sb-smc-sef-superettan}
+      - SERVICE_BUS_SUBSCRIPTION=${SERVICE_BUS_SUBSCRIPTION:-FRO01-2213135e-18a2-5d2d-3d26-8e8e2a912123}
+      - NEXTJS_WEBHOOK_URL=${NEXTJS_WEBHOOK_URL}
+      - SERVICE_BUS_REVALIDATE_SECRET=${SERVICE_BUS_REVALIDATE_SECRET}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

@@ -1,9 +1,33 @@
 'use client';
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Post } from "@/types";
 import { Play } from "lucide-react";
+
+// Reusable fade-in image component
+function FadeImage({ src, alt, className, loading }: { src: string; alt: string; className: string; loading: 'lazy' | 'eager' }) {
+  const [loaded, setLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    if (imgRef.current?.complete && imgRef.current?.naturalHeight > 0) {
+      setLoaded(true);
+    }
+  }, []);
+
+  return (
+    <img
+      ref={imgRef}
+      src={src}
+      alt={alt}
+      className={`${className} transition-opacity duration-500 ease-out ${loaded ? 'opacity-100' : 'opacity-0'}`}
+      loading={loading}
+      onLoad={() => setLoaded(true)}
+      onError={() => setLoaded(true)}
+    />
+  );
+}
 
 interface NyheterItemProps {
   post: Post;
@@ -11,7 +35,6 @@ interface NyheterItemProps {
 }
 
 const NyheterItem: React.FC<NyheterItemProps> = ({ post, priority = false }) => {
-  const [imageLoaded, setImageLoaded] = useState(false);
   const imageResource =
     post.heroImage && typeof post.heroImage !== "string" ? post.heroImage : null;
 
@@ -34,35 +57,29 @@ const NyheterItem: React.FC<NyheterItemProps> = ({ post, priority = false }) => 
       <div className="relative w-full aspect-[16/9] mb-4 bg-gray-200 rounded-md overflow-hidden">
         {hasYoutube ? (
           <div className="relative w-full h-full">
-            <img
+            <FadeImage
               src={imageUrl || youtubeThumbnail || fallbackImage}
               alt={imageResource?.alt || "YouTube Thumbnail"}
-              className={`w-full h-full object-cover rounded-md transition-opacity duration-500 ease-out ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+              className="w-full h-full object-cover rounded-md"
               loading={priority ? "eager" : "lazy"}
-              onLoad={() => setImageLoaded(true)}
-              onError={() => setImageLoaded(true)}
             />
             <div className="absolute top-2 left-2 bg-black/50 rounded-full p-1">
               <Play className="h-4 w-4 text-white" />
             </div>
           </div>
         ) : imageUrl ? (
-          <img
+          <FadeImage
             src={imageUrl}
             alt={imageResource?.alt || post.title}
-            className={`w-full h-full object-cover transition-opacity duration-500 ease-out ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className="w-full h-full object-cover"
             loading={priority ? "eager" : "lazy"}
-            onLoad={() => setImageLoaded(true)}
-            onError={() => setImageLoaded(true)}
           />
         ) : (
-          <img
+          <FadeImage
             src={fallbackImage}
             alt="Fallback Thumbnail"
-            className={`w-full h-full object-cover transition-opacity duration-500 ease-out ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className="w-full h-full object-cover"
             loading={priority ? "eager" : "lazy"}
-            onLoad={() => setImageLoaded(true)}
-            onError={() => setImageLoaded(true)}
           />
         )}
       </div>
