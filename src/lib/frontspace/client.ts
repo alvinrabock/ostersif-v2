@@ -188,18 +188,13 @@ export async function fetchMenuBySlug(slug: string): Promise<any> {
           url
           slug
           page_id
+          full_path
           target
           css_class
           parent_id
           sort_order
           is_active
           created_at
-          page {
-            id
-            slug
-            title
-            parent_id
-          }
           children {
             id
             title
@@ -207,13 +202,8 @@ export async function fetchMenuBySlug(slug: string): Promise<any> {
             url
             slug
             page_id
+            full_path
             target
-            page {
-              id
-              slug
-              title
-              parent_id
-            }
             children {
               id
               title
@@ -221,13 +211,8 @@ export async function fetchMenuBySlug(slug: string): Promise<any> {
               url
               slug
               page_id
+              full_path
               target
-              page {
-                id
-                slug
-                title
-                parent_id
-              }
             }
           }
         }
@@ -391,56 +376,6 @@ export async function fetchAllPages(options?: {
 }
 
 /**
- * Build full path for a page by traversing parent chain
- */
-function buildPagePath(pageId: string, pagesMap: Map<string, any>): string {
-  const segments: string[] = [];
-  let currentPage = pagesMap.get(pageId);
-  const visitedIds = new Set<string>();
-
-  while (currentPage) {
-    // Detect circular references
-    if (visitedIds.has(currentPage.id)) {
-      console.error(`Circular parent reference detected for page: ${currentPage.slug}`);
-      break;
-    }
-    visitedIds.add(currentPage.id);
-
-    segments.unshift(currentPage.slug);
-
-    if (currentPage.parent_id) {
-      currentPage = pagesMap.get(currentPage.parent_id);
-    } else {
-      break;
-    }
-  }
-
-  return '/' + segments.join('/');
-}
-
-/**
- * Enrich menu items with full nested paths
- */
-function enrichMenuItemsWithPaths(menuItems: any[], pagesMap: Map<string, any>): any[] {
-  return menuItems.map(item => {
-    const enrichedItem = { ...item };
-
-    // Build full path for internal pages
-    if (item.link_type === 'internal' && item.page_id) {
-      const fullPath = buildPagePath(item.page_id, pagesMap);
-      enrichedItem.url = fullPath;
-    }
-
-    // Recursively enrich children
-    if (item.children && item.children.length > 0) {
-      enrichedItem.children = enrichMenuItemsWithPaths(item.children, pagesMap);
-    }
-
-    return enrichedItem;
-  });
-}
-
-/**
  * Fetch all posts of a specific type
  */
 export async function fetchPosts<T>(
@@ -595,20 +530,38 @@ export async function fetchPostBySlug<T>(
 
 /**
  * Fetch huvudmeny (main menu)
+ * Menu items now include full_path from the backend, no need to fetch all pages
  */
 export async function fetchHuvudmeny() {
   const menu = await fetchMenuBySlug('huvudmeny');
 
   if (!menu || !menu.items) return menu;
 
-  // Fetch all pages to build the path map
-  const allPages = await fetchAllPages();
-  const pagesMap = new Map(allPages.map(page => [page.id, page]));
-
-  // Enrich menu items with full nested paths
-  menu.items = enrichMenuItemsWithPaths(menu.items, pagesMap);
+  // Transform menu items to use full_path as url for internal links
+  menu.items = transformMenuItemsWithFullPath(menu.items);
 
   return menu;
+}
+
+/**
+ * Transform menu items to use full_path for internal page links
+ */
+function transformMenuItemsWithFullPath(items: any[]): any[] {
+  return items.map(item => {
+    const transformed = { ...item };
+
+    // Use full_path for internal links
+    if (item.link_type === 'internal' && item.full_path) {
+      transformed.url = item.full_path;
+    }
+
+    // Recursively transform children
+    if (item.children && item.children.length > 0) {
+      transformed.children = transformMenuItemsWithFullPath(item.children);
+    }
+
+    return transformed;
+  });
 }
 
 /**
@@ -841,11 +794,12 @@ export const fetchFooterCached = unstable_cache(
 /**
  * Cached version of fetchHuvudmeny
  * Invalidated by webhook via 'menus' and 'frontspace' tags
+ * Note: No longer depends on PAGES since full_path is now provided by backend
  */
 export const fetchHuvudmenyCached = unstable_cache(
   fetchHuvudmeny,
   ['huvudmeny-data'],
-  { tags: [CACHE_TAGS.MENUS, CACHE_TAGS.FRONTSPACE, CACHE_TAGS.PAGES] }
+  { tags: [CACHE_TAGS.MENUS, CACHE_TAGS.FRONTSPACE] }
 );
 
 /**
