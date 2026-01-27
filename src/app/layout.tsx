@@ -10,6 +10,7 @@ import Script from "next/script";
 import { fetchFooterCached } from "@/lib/frontspace/client";
 import { Suspense } from "react";
 import { AnalyticsTracker } from "@/components/AnalyticsTracker";
+import { SiteJsonLd } from "@/components/JsonLd";
 
 const oswald = localFont({
   src: [
@@ -63,6 +64,8 @@ export default async function RootLayout({
     <html lang="sv">
       <head>
         <meta name="robots" content="index" />
+        {/* Structured Data (JSON-LD) */}
+        <SiteJsonLd />
         {/* SEF/EFD Top Bar Widget Script */}
         <Script
           id="league-top-bar-script"

@@ -15,6 +15,12 @@ export interface ResponsiveStyles {
   }
 }
 
+export interface BlockVisibility {
+  desktop?: boolean
+  tablet?: boolean
+  mobile?: boolean
+}
+
 /**
  * Convert kebab-case CSS properties to camelCase for React inline styles
  */
@@ -158,11 +164,13 @@ export function getBlockStyles(
  * Desktop-first approach: merges desktop responsive styles into base styles
  * Properly handles shorthand property expansion for responsive overrides
  * Supports linkColor for styling anchor tags within text blocks
+ * Supports visibility settings to hide blocks on specific devices
  */
 export function generateBlockCSS(
   blockId: string,
   baseStyles: Record<string, any> = {},
-  responsiveStyles: ResponsiveStyles = {}
+  responsiveStyles: ResponsiveStyles = {},
+  visibility?: BlockVisibility
 ): string {
   const className = `.block-${blockId}`
   let css = `${className} {\n`
@@ -308,6 +316,19 @@ export function generateBlockCSS(
     // Mobile link color
     if (mobileLinkColor && mobileLinkColor !== tabletLinkColor) {
       css += `@media (max-width: 767px) { ${className} a { color: ${mobileLinkColor}; } }\n`
+    }
+  }
+
+  // Generate visibility CSS for hiding blocks on specific devices
+  if (visibility) {
+    if (visibility.desktop === false) {
+      css += `@media (min-width: 1024px) { ${className} { display: none !important; } }\n`
+    }
+    if (visibility.tablet === false) {
+      css += `@media (min-width: 768px) and (max-width: 1023px) { ${className} { display: none !important; } }\n`
+    }
+    if (visibility.mobile === false) {
+      css += `@media (max-width: 767px) { ${className} { display: none !important; } }\n`
     }
   }
 

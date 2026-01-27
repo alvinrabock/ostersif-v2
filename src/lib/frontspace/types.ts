@@ -207,6 +207,15 @@ export interface Sida extends FrontspacePost {
 }
 
 /**
+ * Visibility settings for responsive block hiding
+ */
+export interface BlockVisibility {
+  desktop?: boolean;
+  tablet?: boolean;
+  mobile?: boolean;
+}
+
+/**
  * Block types for BlockRenderer
  */
 export interface PageBlock {
@@ -215,6 +224,7 @@ export interface PageBlock {
   content: any;
   styles?: Record<string, any>;
   responsiveStyles?: Record<string, Record<string, any>>;
+  visibility?: BlockVisibility;
 }
 
 export interface TemplateContent {

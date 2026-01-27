@@ -13,12 +13,19 @@ type PageProps = {
 export default async function Page({ params }: PageProps) {
   const resolvedParams = await params;
 
-  // Fetch all published pages (cached for performance)
-  const pages = await fetchAllPagesCached();
-  const pagesWithPaths = buildPagePaths(pages);
-
   // Construct full path from URL segments
   const fullPath = '/' + resolvedParams.slug.join('/');
+
+  // Try cached data first, fall back to fresh fetch if cache returns empty
+  // This handles the race condition during cache revalidation
+  let pages = await fetchAllPagesCached();
+
+  // If cache returned empty (during revalidation), fetch fresh data
+  if (!pages || pages.length === 0) {
+    pages = await fetchAllPages();
+  }
+
+  const pagesWithPaths = buildPagePaths(pages);
 
   // Find matching page
   const page = findPageByPath(pagesWithPaths, fullPath);
@@ -58,12 +65,15 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const resolvedParams = await params;
 
-  // Fetch all published pages (cached for performance)
-  const pages = await fetchAllPagesCached();
-  const pagesWithPaths = buildPagePaths(pages);
-
   // Construct full path from URL segments
   const fullPath = '/' + resolvedParams.slug.join('/');
+
+  // Try cached data first, fall back to fresh fetch if cache returns empty
+  let pages = await fetchAllPagesCached();
+  if (!pages || pages.length === 0) {
+    pages = await fetchAllPages();
+  }
+  const pagesWithPaths = buildPagePaths(pages);
 
   // Find matching page
   const page = findPageByPath(pagesWithPaths, fullPath);

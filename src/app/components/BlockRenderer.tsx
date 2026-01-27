@@ -14,6 +14,32 @@ export interface Block {
   content: any
   styles?: Record<string, any>
   responsiveStyles?: Record<string, Record<string, any>>
+  visibility?: {
+    desktop?: boolean
+    tablet?: boolean
+    mobile?: boolean
+  }
+  hidden?: boolean
+}
+
+/**
+ * Check if a block should be completely hidden (not rendered at all)
+ *
+ * NOTE: Responsive visibility (desktop/tablet/mobile) is handled via CSS media queries
+ * in generateBlockCSS, NOT here. This only checks for explicit hidden flags.
+ */
+function isBlockHidden(block: Block): boolean {
+  // Check direct hidden property (if Frontspace ever adds this)
+  if (block.hidden === true) return true
+
+  // Check content.hidden property (common CMS pattern)
+  if (block.content?.hidden === true) return true
+
+  // Responsive visibility (block.visibility) is handled by CSS media queries
+  // in generateBlockCSS - blocks are rendered but hidden via display:none
+  // So we do NOT filter here based on visibility flags
+
+  return false
 }
 
 interface BlockRendererProps {
@@ -23,13 +49,19 @@ interface BlockRendererProps {
 /**
  * Main renderer component - renders an array of blocks
  * Uses Promise.allSettled to prevent one failing block from crashing all blocks
+ * Filters out hidden blocks before rendering
  */
 export async function BlockRenderer({ blocks }: BlockRendererProps) {
   if (!blocks || blocks.length === 0) return null
 
+  // Filter out hidden blocks before rendering
+  const visibleBlocks = blocks.filter((block) => !isBlockHidden(block))
+
+  if (visibleBlocks.length === 0) return null
+
   // Use allSettled so one failing block doesn't crash all others
   const results = await Promise.allSettled(
-    blocks.map(async (block) => ({
+    visibleBlocks.map(async (block) => ({
       id: block.id,
       element: await BlockComponent({ block })
     }))
@@ -42,7 +74,7 @@ export async function BlockRenderer({ blocks }: BlockRendererProps) {
           return <React.Fragment key={result.value.id}>{result.value.element}</React.Fragment>
         } else {
           // Log error but don't crash - render nothing for this block
-          console.error(`[BlockRenderer] Block ${blocks[index]?.id} failed:`, result.reason)
+          console.error(`[BlockRenderer] Block ${visibleBlocks[index]?.id} failed:`, result.reason)
           return null
         }
       })}
@@ -56,7 +88,8 @@ export async function BlockRenderer({ blocks }: BlockRendererProps) {
 async function BlockComponent({ block }: { block: Block }) {
   // Use the block ID directly from CMS (already has 'block-' prefix)
   const blockId = block.id
-  const css = generateBlockCSS(blockId, block.styles, block.responsiveStyles)
+
+  const css = generateBlockCSS(blockId, block.styles, block.responsiveStyles, block.visibility)
 
   return (
     <>

@@ -807,7 +807,9 @@ export const fetchHuvudmenyCached = unstable_cache(
  * Invalidated by webhook via 'pages' and 'frontspace' tags
  */
 export const fetchAllPagesCached = unstable_cache(
-  async (options?: { limit?: number }) => fetchAllPages(options),
+  async (options?: { limit?: number }) => {
+    return await fetchAllPages(options);
+  },
   ['all-pages-data'],
   { tags: [CACHE_TAGS.PAGES, CACHE_TAGS.FRONTSPACE] }
 );
