@@ -27,6 +27,23 @@ interface FormComponentProps {
   submitButtonTextColor?: string
 }
 
+// Helper to normalize options - handles both string arrays and object arrays
+function normalizeOptions(options: any[] | undefined): { value: string; label: string }[] {
+  if (!options || !Array.isArray(options)) return []
+
+  return options.map((opt) => {
+    // If it's already an object with value/label
+    if (typeof opt === 'object' && opt !== null) {
+      return {
+        value: opt.value || opt.id || opt.label || String(opt),
+        label: opt.label || opt.name || opt.value || String(opt)
+      }
+    }
+    // If it's a string
+    return { value: String(opt), label: String(opt) }
+  })
+}
+
 export function FormComponent({
   form,
   blockId: _blockId,
@@ -124,8 +141,47 @@ export function FormComponent({
   return (
     <form onSubmit={handleSubmit} className={`space-y-6 ${className}`}>
       {form.fields.map(field => {
-        // Checkbox has different layout (label after input)
+        // Checkbox - can be simple (no options) or with options (renders as radio group)
         if (field.type === 'checkbox') {
+          const checkboxOptions = normalizeOptions(field.options)
+
+          // If has options, render as radio group (single choice from options)
+          if (checkboxOptions.length > 0) {
+            return (
+              <div key={field.name}>
+                <label className="block font-medium mb-2" style={labelStyle}>
+                  {field.label}
+                  {field.required && <span className="text-red-500 ml-1">*</span>}
+                </label>
+                <div className="space-y-3">
+                  {checkboxOptions.map((option) => (
+                    <div key={option.value} className="flex items-center">
+                      <input
+                        type="radio"
+                        id={`${field.name}-${option.value}`}
+                        name={field.name}
+                        value={option.value}
+                        checked={formData[field.name] === option.value}
+                        onChange={(e) => handleChange(field.name, e.target.value)}
+                        required={field.required}
+                        className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300"
+                        style={inputStyle}
+                      />
+                      <label
+                        htmlFor={`${field.name}-${option.value}`}
+                        className="ml-3"
+                        style={labelStyle}
+                      >
+                        {option.label}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          }
+
+          // Simple checkbox (no options) - just yes/no toggle
           return (
             <div key={field.name} className="flex items-start">
               <input
@@ -148,6 +204,7 @@ export function FormComponent({
 
         // Radio buttons
         if (field.type === 'radio') {
+          const radioOptions = normalizeOptions(field.options)
           return (
             <div key={field.name}>
               <label className="block font-medium mb-2" style={labelStyle}>
@@ -155,25 +212,25 @@ export function FormComponent({
                 {field.required && <span className="text-red-500 ml-1">*</span>}
               </label>
               <div className="space-y-3">
-                {field.options?.map((option) => (
-                  <div key={option} className="flex items-center">
+                {radioOptions.map((option) => (
+                  <div key={option.value} className="flex items-center">
                     <input
                       type="radio"
-                      id={`${field.name}-${option}`}
+                      id={`${field.name}-${option.value}`}
                       name={field.name}
-                      value={option}
-                      checked={formData[field.name] === option}
+                      value={option.value}
+                      checked={formData[field.name] === option.value}
                       onChange={(e) => handleChange(field.name, e.target.value)}
                       required={field.required}
                       className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300"
                       style={inputStyle}
                     />
                     <label
-                      htmlFor={`${field.name}-${option}`}
+                      htmlFor={`${field.name}-${option.value}`}
                       className="ml-3"
                       style={labelStyle}
                     >
-                      {option}
+                      {option.label}
                     </label>
                   </div>
                 ))}
@@ -217,8 +274,8 @@ export function FormComponent({
                 style={inputStyle}
               >
                 <option value="">Välj ett alternativ</option>
-                {field.options?.map(opt => (
-                  <option key={opt} value={opt}>{opt}</option>
+                {normalizeOptions(field.options).map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
             ) : (
