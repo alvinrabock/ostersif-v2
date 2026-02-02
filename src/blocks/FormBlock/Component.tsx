@@ -24,7 +24,8 @@ interface FormBlockProps {
 
 export default async function FormBlock({ block, blockId }: FormBlockProps) {
   const content = block.content || {}
-  const formId = content.selectedFormId
+  // Support both 'formId' and 'selectedFormId' field names
+  const formId = content.formId || content.selectedFormId
 
   // If no form selected, return null
   if (!formId) {
@@ -47,9 +48,18 @@ export default async function FormBlock({ block, blockId }: FormBlockProps) {
       >
         <FormComponent
           form={form}
+          blockId={blockId}
           className={`block-${blockId}`}
+          submitButtonText={content.submitButtonText}
+          confirmationMessage={content.confirmationMessage}
+          fieldBackgroundColor={content.fieldBackgroundColor}
+          fieldBorderColor={content.fieldBorderColor}
           submitButtonColor={content.submitButtonColor}
           submitButtonTextColor={content.submitButtonTextColor}
+          submitButtonBorderColor={content.submitButtonBorderColor}
+          submitButtonWidth={content.submitButtonWidth}
+          labelFontSize={content.labelFontSize}
+          inputFontSize={content.inputFontSize}
         />
       </div>
     )

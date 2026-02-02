@@ -1,8 +1,17 @@
 {
   "teamId": "01JVVHS4ESCV6K0GYXXB0K1NHS",
   "teamName": "Östers IF",
-  "lastUpdated": "2026-01-27T21:09:33.157Z",
+  "lastUpdated": "2026-02-02T09:40:08.523Z",
   "leagues": [
+    {
+      "leagueId": "01KG4RMP8WF1CT12DXX4VTC6FD",
+      "leagueName": "Superettan",
+      "startDate": "2026-04-03",
+      "endDate": "2026-11-07",
+      "tournamentId": 133340,
+      "seasonYear": "2026",
+      "ostersTeamId": "01KG4RMSBSJB3X64X39GW11BBH"
+    },
     {
       "leagueId": "01KEEZWQD7WE6Y59RTPS8GNW96",
       "leagueName": "Träningsmatcher Elit, herr",

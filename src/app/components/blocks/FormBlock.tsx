@@ -6,7 +6,7 @@
  */
 
 import React from 'react'
-import { getTenantClient } from '@/lib/fetch-with-tenant'
+import { frontspace } from '@/lib/frontspace/client'
 import { FormComponent } from '@/app/components/FormComponent'
 
 export interface Block {
@@ -24,7 +24,8 @@ interface FormBlockProps {
 
 export default async function FormBlock({ block, blockId }: FormBlockProps) {
   const content = block.content || {}
-  const formId = content.selectedFormId
+  // Support both 'formId' and 'selectedFormId' field names
+  const formId = content.formId || content.selectedFormId
 
   // If no form selected, return null
   if (!formId) {
@@ -32,11 +33,8 @@ export default async function FormBlock({ block, blockId }: FormBlockProps) {
   }
 
   try {
-    // Get tenant-specific client for multi-tenant support
-    const tenantClient = await getTenantClient()
-
     // Fetch the form from API
-    const form = await tenantClient.getForm(formId)
+    const form = await frontspace.forms.getById(formId)
 
     // If form not found or not active, return null
     if (!form || form.status !== 'active') {
@@ -48,12 +46,27 @@ export default async function FormBlock({ block, blockId }: FormBlockProps) {
         className={`form-block block-${blockId}`}
         data-block-id={blockId}
       >
-        <FormComponent form={form} />
+        <FormComponent
+          form={form}
+          blockId={blockId}
+          className={`block-${blockId}`}
+          submitButtonText={content.submitButtonText}
+          confirmationMessage={content.confirmationMessage}
+          fieldBackgroundColor={content.fieldBackgroundColor}
+          fieldBorderColor={content.fieldBorderColor}
+          submitButtonColor={content.submitButtonColor}
+          submitButtonTextColor={content.submitButtonTextColor}
+          submitButtonBorderColor={content.submitButtonBorderColor}
+          submitButtonWidth={content.submitButtonWidth}
+          labelFontSize={content.labelFontSize}
+          inputFontSize={content.inputFontSize}
+        />
       </div>
     )
-  } catch {
+  } catch (error) {
     // Silently fail - form doesn't exist or backend error
     // This prevents pages with broken forms from crashing
+    console.error('Error loading form:', error)
     return null
   }
 }

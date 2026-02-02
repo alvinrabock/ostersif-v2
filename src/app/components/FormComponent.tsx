@@ -3,6 +3,7 @@
 /**
  * Form Component - Client-side form with submission handling
  * Implements Frontspace Form Block with all field types and validation
+ * Uses CSS variables from FormBlock for responsive styling
  */
 
 import { useState, FormEvent } from 'react'
@@ -11,14 +12,33 @@ import { Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 
 interface FormComponentProps {
   form: FormType
+  blockId?: string
   className?: string
+  submitButtonText?: string
+  confirmationMessage?: string
+  fieldBackgroundColor?: string
+  fieldBorderColor?: string
+  submitButtonBorderColor?: string
+  submitButtonWidth?: string
+  labelFontSize?: string
+  inputFontSize?: string
+  // Legacy props - still supported
   submitButtonColor?: string
   submitButtonTextColor?: string
 }
 
 export function FormComponent({
   form,
+  blockId: _blockId,
   className = '',
+  submitButtonText = 'Skicka',
+  confirmationMessage = 'Ditt formulär har skickats. Vi återkommer så snart som möjligt.',
+  fieldBackgroundColor,
+  fieldBorderColor,
+  submitButtonBorderColor,
+  submitButtonWidth,
+  labelFontSize,
+  inputFontSize,
   submitButtonColor = '#0A0D26',
   submitButtonTextColor = '#ffffff'
 }: FormComponentProps) {
@@ -74,14 +94,27 @@ export function FormComponent({
           <h3 className="text-lg font-semibold text-green-900">Tack!</h3>
         </div>
         <p className="text-green-700">
-          Ditt formulär har skickats. Vi återkommer så snart som möjligt.
+          {confirmationMessage}
         </p>
       </div>
     )
   }
 
+  // Build input styles using CSS variables (set by FormBlock) and direct props
+  const inputStyle: React.CSSProperties = {
+    backgroundColor: fieldBackgroundColor || 'var(--field-background-color, transparent)',
+    borderColor: fieldBorderColor || 'var(--field-border-color, #d1d5db)',
+    color: 'var(--field-text-color, inherit)',
+    fontSize: inputFontSize || 'inherit',
+  }
+
+  const labelStyle: React.CSSProperties = {
+    color: 'var(--label-color, #374151)',
+    fontSize: labelFontSize || '0.875rem',
+  }
+
   const baseInputClasses = `
-    w-full px-4 py-3 rounded-lg border border-gray-300
+    w-full px-4 py-3 rounded-lg border
     focus:ring-2 focus:ring-blue-500 focus:border-transparent
     transition-all duration-200
     placeholder:text-gray-400
@@ -103,8 +136,9 @@ export function FormComponent({
                 onChange={(e) => handleChange(field.name, e.target.checked)}
                 required={field.required}
                 className="mt-1 h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                style={inputStyle}
               />
-              <label htmlFor={field.name} className="ml-3 text-gray-700">
+              <label htmlFor={field.name} className="ml-3" style={labelStyle}>
                 {field.label}
                 {field.required && <span className="text-red-500 ml-1">*</span>}
               </label>
@@ -116,7 +150,7 @@ export function FormComponent({
         if (field.type === 'radio') {
           return (
             <div key={field.name}>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block font-medium mb-2" style={labelStyle}>
                 {field.label}
                 {field.required && <span className="text-red-500 ml-1">*</span>}
               </label>
@@ -132,10 +166,12 @@ export function FormComponent({
                       onChange={(e) => handleChange(field.name, e.target.value)}
                       required={field.required}
                       className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300"
+                      style={inputStyle}
                     />
                     <label
                       htmlFor={`${field.name}-${option}`}
-                      className="ml-3 text-gray-700"
+                      className="ml-3"
+                      style={labelStyle}
                     >
                       {option}
                     </label>
@@ -151,7 +187,8 @@ export function FormComponent({
           <div key={field.name}>
             <label
               htmlFor={field.name}
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="block font-medium mb-2"
+              style={labelStyle}
             >
               {field.label}
               {field.required && <span className="text-red-500 ml-1">*</span>}
@@ -167,6 +204,7 @@ export function FormComponent({
                 onChange={(e) => handleChange(field.name, e.target.value)}
                 rows={5}
                 className={baseInputClasses}
+                style={inputStyle}
               />
             ) : field.type === 'select' ? (
               <select
@@ -176,6 +214,7 @@ export function FormComponent({
                 value={formData[field.name] || ''}
                 onChange={(e) => handleChange(field.name, e.target.value)}
                 className={baseInputClasses}
+                style={inputStyle}
               >
                 <option value="">Välj ett alternativ</option>
                 {field.options?.map(opt => (
@@ -192,6 +231,7 @@ export function FormComponent({
                 value={formData[field.name] || ''}
                 onChange={(e) => handleChange(field.name, e.target.value)}
                 className={baseInputClasses}
+                style={inputStyle}
               />
             )}
           </div>
@@ -208,17 +248,21 @@ export function FormComponent({
       <button
         type="submit"
         disabled={loading}
-        className="w-full py-4 px-6 rounded-lg font-semibold
+        className="py-4 px-6 rounded-lg font-semibold
                    focus:ring-4 focus:ring-blue-300
                    disabled:opacity-50 disabled:cursor-not-allowed
                    transition-all duration-200 flex items-center justify-center gap-2"
         style={{
-          backgroundColor: loading ? '#9CA3AF' : submitButtonColor,
-          color: submitButtonTextColor,
+          backgroundColor: loading ? '#9CA3AF' : `var(--submit-button-color, ${submitButtonColor})`,
+          color: `var(--submit-button-text-color, ${submitButtonTextColor})`,
+          borderColor: submitButtonBorderColor || 'var(--submit-button-border-color, transparent)',
+          borderWidth: submitButtonBorderColor ? '1px' : '0',
+          borderStyle: 'solid',
+          width: submitButtonWidth || '100%',
         }}
       >
         {loading && <Loader2 className="w-5 h-5 animate-spin" />}
-        {loading ? 'Skickar...' : 'Skicka'}
+        {loading ? 'Skickar...' : submitButtonText}
       </button>
     </form>
   )
