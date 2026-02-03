@@ -12,10 +12,24 @@ interface MatchCardProps {
     teamsWithSEF?: Lag[];
 }
 
-// TeamLogo component with fallback
+// Supported logo formats in order of preference
+const LOGO_FORMATS = ['svg', 'png'] as const;
+
+// TeamLogo component with fallback through multiple formats
 const TeamLogo = ({ teamName, className }: { teamName: string; className?: string }) => {
+    const [formatIndex, setFormatIndex] = useState(0);
     const [hasError, setHasError] = useState(false);
-    const logoPath = `/logos/${lowercase(teamName)}.svg`;
+
+    const getLogoPath = (format: string) => `/logos/${lowercase(teamName)}.${format}`;
+
+    const handleError = () => {
+        const nextIndex = formatIndex + 1;
+        if (nextIndex < LOGO_FORMATS.length) {
+            setFormatIndex(nextIndex);
+        } else {
+            setHasError(true);
+        }
+    };
 
     if (hasError) {
         // Fallback: show team name initials or short version
@@ -35,11 +49,11 @@ const TeamLogo = ({ teamName, className }: { teamName: string; className?: strin
 
     return (
         <Image
-            src={logoPath}
+            src={getLogoPath(LOGO_FORMATS[formatIndex])}
             alt={teamName}
             fill
             className="object-contain"
-            onError={() => setHasError(true)}
+            onError={handleError}
         />
     );
 };

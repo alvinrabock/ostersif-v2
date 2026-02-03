@@ -16,8 +16,14 @@ interface MatchCardProps {
     leagueName?: string;
 }
 
+// Supported logo formats in order of preference
+const LOGO_FORMATS = ['svg', 'png'] as const;
+
 const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) => {
-    // State to track which logos failed to load
+    // State to track which logo format to try (index in LOGO_FORMATS array)
+    const [homeLogoFormatIndex, setHomeLogoFormatIndex] = useState(0);
+    const [awayLogoFormatIndex, setAwayLogoFormatIndex] = useState(0);
+    // Track if all formats have been exhausted
     const [homeLogoError, setHomeLogoError] = useState(false);
     const [awayLogoError, setAwayLogoError] = useState(false);
 
@@ -44,15 +50,29 @@ const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) =
     // Determine the time to display
     const displayTime = formattedTime === "00:00" ? "TBD" : formattedTime;
 
-    const getTeamLogoPath = (teamName: string) => {
+    const getTeamLogoPath = (teamName: string, formatIndex: number) => {
         const formattedName = lowercase(teamName);
-        return `/logos/${formattedName}.svg`;
+        const format = LOGO_FORMATS[formatIndex] || 'svg';
+        return `/logos/${formattedName}.${format}`;
     };
 
-    // Component for team logo with fallback
+    // Component for team logo with fallback through multiple formats
     const TeamLogo = ({ teamName, isHome }: { teamName: string; isHome: boolean }) => {
         const logoError = isHome ? homeLogoError : awayLogoError;
         const setLogoError = isHome ? setHomeLogoError : setAwayLogoError;
+        const formatIndex = isHome ? homeLogoFormatIndex : awayLogoFormatIndex;
+        const setFormatIndex = isHome ? setHomeLogoFormatIndex : setAwayLogoFormatIndex;
+
+        const handleLogoError = () => {
+            // Try next format
+            const nextIndex = formatIndex + 1;
+            if (nextIndex < LOGO_FORMATS.length) {
+                setFormatIndex(nextIndex);
+            } else {
+                // All formats exhausted, show fallback
+                setLogoError(true);
+            }
+        };
 
         if (logoError) {
             // Shorten team name to initials if too long
@@ -79,11 +99,11 @@ const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) =
         return (
             <div className="w-12 h-12 relative">
                 <Image
-                    src={getTeamLogoPath(teamName)}
+                    src={getTeamLogoPath(teamName, formatIndex)}
                     alt={teamName}
                     fill
                     className="object-contain !m-0"
-                    onError={() => setLogoError(true)}
+                    onError={handleLogoError}
                 />
             </div>
         );

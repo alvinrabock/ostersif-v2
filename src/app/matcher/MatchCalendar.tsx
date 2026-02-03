@@ -43,9 +43,41 @@ export function MatchCalendar({
     return grouped;
   }, [matches]);
 
-  const getTeamLogoPath = (teamName: string) => {
+  // Supported logo formats in order of preference
+  const LOGO_FORMATS = ['svg', 'png'] as const;
+
+  const getTeamLogoPath = (teamName: string, format: string = 'svg') => {
     const formattedName = lowercase(teamName);
-    return `/logos/${formattedName}.svg`;
+    return `/logos/${formattedName}.${format}`;
+  };
+
+  // TeamLogo component with format fallback
+  const TeamLogo = ({ teamName }: { teamName: string }) => {
+    const [formatIndex, setFormatIndex] = React.useState(0);
+    const [hasError, setHasError] = React.useState(false);
+
+    const handleError = () => {
+      const nextIndex = formatIndex + 1;
+      if (nextIndex < LOGO_FORMATS.length) {
+        setFormatIndex(nextIndex);
+      } else {
+        setHasError(true);
+      }
+    };
+
+    if (hasError) {
+      return null; // Hide logo if all formats fail
+    }
+
+    return (
+      <Image
+        src={getTeamLogoPath(teamName, LOGO_FORMATS[formatIndex])}
+        alt={teamName}
+        fill
+        className="object-contain p-0.5"
+        onError={handleError}
+      />
+    );
   };
 
   // Custom day content renderer
@@ -77,16 +109,7 @@ export function MatchCalendar({
                 >
                   {/* Home team logo */}
                   <div className="w-5 h-5 relative rounded-full overflow-hidden bg-white/10 flex-shrink-0">
-                    <Image
-                      src={getTeamLogoPath(homeTeam)}
-                      alt={homeTeam}
-                      fill
-                      className="object-contain p-0.5"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                      }}
-                    />
+                    <TeamLogo teamName={homeTeam} />
                   </div>
 
                   {/* VS indicator */}
@@ -94,16 +117,7 @@ export function MatchCalendar({
 
                   {/* Away team logo */}
                   <div className="w-5 h-5 relative rounded-full overflow-hidden bg-white/10 flex-shrink-0">
-                    <Image
-                      src={getTeamLogoPath(awayTeam)}
-                      alt={awayTeam}
-                      fill
-                      className="object-contain p-0.5"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                      }}
-                    />
+                    <TeamLogo teamName={awayTeam} />
                   </div>
                 </div>
               );
