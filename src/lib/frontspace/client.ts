@@ -1015,7 +1015,7 @@ export async function fetchMatcherCached(options?: { limit?: number; where?: Whe
 
 /**
  * Fetch upcoming matches from CMS using server-side date filtering
- * Filters: datum >= today (status filtered client-side for OR logic)
+ * Filters: datum >= today AND match_status NOT 'over'
  * Uses Next.js fetch cache, invalidated by webhook via 'matcher' tag
  */
 export async function fetchUpcomingMatchesCached(limit = 10) {
@@ -1025,10 +1025,11 @@ export async function fetchUpcomingMatchesCached(limit = 10) {
     where: {
       content: {
         datum: { greater_than_equal: today },
+        match_status: { not_equals: 'over' },
       },
     },
     sortBy: 'content.datum',
-    sortDirection: 'asc',
+    sortDirection: 'desc',
   });
 }
 

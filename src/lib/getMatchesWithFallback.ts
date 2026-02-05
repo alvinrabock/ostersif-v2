@@ -333,33 +333,25 @@ export async function getMatchesWithFallback(options?: {
 
 /**
  * Get upcoming matches using server-side date filtering
- * Filters: datum >= today AND status is 'Scheduled' or 'In progress'
- * Always sorts by kickoff date ascending (soonest first)
+ * Filters: datum >= today, sorted by datum ascending (soonest first)
+ * Server-side sorting only - no client-side sorting
  */
 export async function getUpcomingMatches(limit = 10): Promise<MatchCardData[]> {
   try {
-    // Use server-side filtering via cached function
+    // Use server-side filtering and sorting via cached function
     const { posts: cmsMatches } = await fetchUpcomingMatchesCached(limit);
 
     if (cmsMatches && cmsMatches.length > 0) {
-      const matches = cmsMatches.map(transformCMSMatchToCardData);
-      // Explicitly sort by kickoff date ascending (soonest first)
-      // This ensures correct order even if CMS API sorting isn't working
-      return matches.sort((a, b) =>
-        new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime()
-      );
+      // Transform only - server handles sorting
+      return cmsMatches.map(transformCMSMatchToCardData);
     }
   } catch (error) {
     console.error('CMS upcoming matches fetch failed:', error);
   }
 
-  // Fallback
+  // Fallback to SMC API
   const today = new Date().toISOString().split('T')[0];
-  const matches = await getMatchesWithFallback({ limit, dateFrom: today });
-  // Also sort fallback results
-  return matches.sort((a, b) =>
-    new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime()
-  );
+  return getMatchesWithFallback({ limit, dateFrom: today });
 }
 
 /**
