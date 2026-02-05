@@ -1030,24 +1030,31 @@ export async function fetchMatcherNoCache(options?: { limit?: number; where?: Wh
 /**
  * Fetch upcoming matches from CMS using server-side date filtering
  * Filters: datum >= today (status filtered client-side for OR logic)
+ * Note: today's date is passed as parameter to ensure cache key changes daily
  */
-export const fetchUpcomingMatchesCached = unstable_cache(
-  async (limit = 10) => {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    return await fetchPosts<MatcherPost>('matcher', {
-      limit,
-      where: {
-        content: {
-          datum: { greater_than_equal: today },
+export async function fetchUpcomingMatchesCached(limit = 10) {
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+  // Create a cached function with today's date in the cache key
+  const fetchFn = unstable_cache(
+    async (filterDate: string, fetchLimit: number) => {
+      return await fetchPosts<MatcherPost>('matcher', {
+        limit: fetchLimit,
+        where: {
+          content: {
+            datum: { greater_than_equal: filterDate },
+          },
         },
-      },
-      sortBy: 'content.datum',
-      sortDirection: 'asc',
-    });
-  },
-  ['upcoming-matches'],
-  { tags: [CACHE_TAGS.MATCHER, CACHE_TAGS.FRONTSPACE] }
-);
+        sortBy: 'content.datum',
+        sortDirection: 'asc',
+      });
+    },
+    ['upcoming-matches', today], // Include today in cache key so it refreshes daily
+    { tags: [CACHE_TAGS.MATCHER, CACHE_TAGS.FRONTSPACE] }
+  );
+
+  return fetchFn(today, limit);
+}
 
 /**
  * Fetch recent/past matches from CMS using server-side filtering
