@@ -14,7 +14,6 @@ import { MatchCardData } from "@/types";
 import {
   frontspace,
   fetchMatcherCached,
-  fetchMatcherNoCache,
   fetchUpcomingMatchesCached,
   fetchRecentMatchesCached,
   fetchMatchesByDateRangeCached,
@@ -510,7 +509,7 @@ export async function getFilteredMatches(options: {
 
   try {
     // Fetch from CMS with caching
-    const { posts: cmsMatches, total } = await fetchMatcherCached({
+    const { posts: cmsMatches } = await fetchMatcherCached({
       limit,
       where,
     });
