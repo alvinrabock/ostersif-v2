@@ -995,31 +995,17 @@ export const fetchAllPagesCached = unstable_cache(
 );
 
 // ============================================================================
-// MATCHER (MATCHES) - CMS-First with Fallback
+// MATCHER (MATCHES) - CMS-First with Fetch Cache
+// Uses Next.js fetch cache with tag-based revalidation (same as nyheter)
 // ============================================================================
 
 import type { MatcherPost } from './types';
 
 /**
  * Fetch all matches from CMS with optional where clause filtering
- * Invalidated by webhook via 'matcher' and 'frontspace' tags
+ * Uses Next.js fetch cache, invalidated by webhook via 'matcher' tag
  */
-export const fetchMatcherCached = unstable_cache(
-  async (options?: { limit?: number; where?: WhereClause }) => {
-    return await fetchPosts<MatcherPost>('matcher', {
-      ...options,
-      sortBy: 'content.datum',
-      sortDirection: 'asc',
-    });
-  },
-  ['matcher-data'],
-  { tags: [CACHE_TAGS.MATCHER, CACHE_TAGS.FRONTSPACE] }
-);
-
-/**
- * Fetch matches WITHOUT cache - useful for debugging or fresh data
- */
-export async function fetchMatcherNoCache(options?: { limit?: number; where?: WhereClause }) {
+export async function fetchMatcherCached(options?: { limit?: number; where?: WhereClause }) {
   return await fetchPosts<MatcherPost>('matcher', {
     ...options,
     sortBy: 'content.datum',
@@ -1030,89 +1016,70 @@ export async function fetchMatcherNoCache(options?: { limit?: number; where?: Wh
 /**
  * Fetch upcoming matches from CMS using server-side date filtering
  * Filters: datum >= today (status filtered client-side for OR logic)
- * Note: today's date is passed as parameter to ensure cache key changes daily
+ * Uses Next.js fetch cache, invalidated by webhook via 'matcher' tag
  */
 export async function fetchUpcomingMatchesCached(limit = 10) {
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-
-  // Create a cached function with today's date in the cache key
-  const fetchFn = unstable_cache(
-    async (filterDate: string, fetchLimit: number) => {
-      return await fetchPosts<MatcherPost>('matcher', {
-        limit: fetchLimit,
-        where: {
-          content: {
-            datum: { greater_than_equal: filterDate },
-          },
-        },
-        sortBy: 'content.datum',
-        sortDirection: 'asc',
-      });
+  return await fetchPosts<MatcherPost>('matcher', {
+    limit,
+    where: {
+      content: {
+        datum: { greater_than_equal: today },
+      },
     },
-    ['upcoming-matches', today], // Include today in cache key so it refreshes daily
-    { tags: [CACHE_TAGS.MATCHER, CACHE_TAGS.FRONTSPACE] }
-  );
-
-  return fetchFn(today, limit);
+    sortBy: 'content.datum',
+    sortDirection: 'asc',
+  });
 }
 
 /**
  * Fetch recent/past matches from CMS using server-side filtering
  * Filters: match_status = 'Over'
+ * Uses Next.js fetch cache, invalidated by webhook via 'matcher' tag
  */
-export const fetchRecentMatchesCached = unstable_cache(
-  async (limit = 10) => {
-    return await fetchPosts<MatcherPost>('matcher', {
-      limit,
-      where: {
-        content: {
-          match_status: { equals: 'Over' },
-        },
+export async function fetchRecentMatchesCached(limit = 10) {
+  return await fetchPosts<MatcherPost>('matcher', {
+    limit,
+    where: {
+      content: {
+        match_status: { equals: 'Over' },
       },
-      sortBy: 'content.datum',
-      sortDirection: 'desc',
-    });
-  },
-  ['recent-matches'],
-  { tags: [CACHE_TAGS.MATCHER, CACHE_TAGS.FRONTSPACE] }
-);
+    },
+    sortBy: 'content.datum',
+    sortDirection: 'desc',
+  });
+}
 
 /**
  * Fetch matches by date range from CMS using server-side filtering
+ * Uses Next.js fetch cache, invalidated by webhook via 'matcher' tag
  */
-export const fetchMatchesByDateRangeCached = unstable_cache(
-  async (startDate: string, endDate: string, limit = 100) => {
-    return await fetchPosts<MatcherPost>('matcher', {
-      limit,
-      where: {
-        content: {
-          datum: { greater_than_equal: startDate, less_than_equal: endDate },
-        },
+export async function fetchMatchesByDateRangeCached(startDate: string, endDate: string, limit = 100) {
+  return await fetchPosts<MatcherPost>('matcher', {
+    limit,
+    where: {
+      content: {
+        datum: { greater_than_equal: startDate, less_than_equal: endDate },
       },
-      sortBy: 'content.datum',
-      sortDirection: 'asc',
-    });
-  },
-  ['matches-by-date-range'],
-  { tags: [CACHE_TAGS.MATCHER, CACHE_TAGS.FRONTSPACE] }
-);
+    },
+    sortBy: 'content.datum',
+    sortDirection: 'asc',
+  });
+}
 
 /**
  * Fetch matches by season from CMS using server-side filtering
+ * Uses Next.js fetch cache, invalidated by webhook via 'matcher' tag
  */
-export const fetchMatchesBySeasonCached = unstable_cache(
-  async (season: string, limit = 100) => {
-    return await fetchPosts<MatcherPost>('matcher', {
-      limit,
-      where: {
-        content: {
-          sasong: { equals: season },
-        },
+export async function fetchMatchesBySeasonCached(season: string, limit = 100) {
+  return await fetchPosts<MatcherPost>('matcher', {
+    limit,
+    where: {
+      content: {
+        sasong: { equals: season },
       },
-      sortBy: 'content.datum',
-      sortDirection: 'asc',
-    });
-  },
-  ['matches-by-season'],
-  { tags: [CACHE_TAGS.MATCHER, CACHE_TAGS.FRONTSPACE] }
-);
+    },
+    sortBy: 'content.datum',
+    sortDirection: 'asc',
+  });
+}
