@@ -541,8 +541,8 @@ function MatchClient({ initialMatchDetails, initialLineupData }: MatchClientProp
                 <div className="pt-6 pb-20">
                     {!hasAnyData ? (
                         <div className="text-center py-12 text-white">
-                            <h2 className="text-2xl font-semibold mb-4">Kommer snart</h2>
-                            <p className="text-gray-300">Information om matchen kommer snart att finnas tillgänglig.</p>
+                            <h2 className="text-2xl font-semibold mb-4">Finns ingen matchdata</h2>
+                            <p className="text-gray-300">Antingen är inte informationen tillgänglig eller så finns det ingen för den här matchen.</p>
                         </div>
                     ) : (
                     <Tabs

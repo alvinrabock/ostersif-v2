@@ -202,7 +202,7 @@ export async function fetchSingleNyhet(slug: string): Promise<Post | null> {
 
 /**
  * Fetch news posts by category
- * Uses server-side contentFilter to filter by category UUID
+ * Uses where clause with content filter format: { content: { field: { equals: value } } }
  */
 export async function fetchNyheterByCategory(
   categorySlug: string,
@@ -218,15 +218,17 @@ export async function fetchNyheterByCategory(
       return [];
     }
 
-    // Step 2: Fetch posts filtered by category UUID using server-side contentFilter
+    // Step 2: Fetch posts filtered by category UUID using where clause
     const offset = (page - 1) * limit;
 
     const { posts } = await frontspace.nyheter.getAll({
       limit,
       offset,
       sort: '-publishedAt',
-      contentFilter: {
-        kategori: category.id,
+      where: {
+        content: {
+          kategori: { equals: category.id },
+        },
       },
     });
 
@@ -240,13 +242,16 @@ export async function fetchNyheterByCategory(
 
 /**
  * Fetch pinned/featured posts
+ * Uses where clause with content filter format: { content: { field: { equals: value } } }
  */
 export async function fetchFastPosts(limit = 5): Promise<Post[]> {
   try {
     const { posts } = await frontspace.nyheter.getAll({
       limit,
-      filters: {
-        fastPost: true,
+      where: {
+        content: {
+          fast_post: { equals: true },
+        },
       },
       sort: '-publishedAt',
     });
@@ -260,13 +265,16 @@ export async function fetchFastPosts(limit = 5): Promise<Post[]> {
 
 /**
  * Fetch posts for homepage
+ * Uses where clause with content filter format: { content: { field: { equals: value } } }
  */
 export async function fetchHomepageNyheter(limit = 5): Promise<Post[]> {
   try {
     const { posts } = await frontspace.nyheter.getAll({
       limit,
-      filters: {
-        visa_upp_pa_start: true,  // Use the actual Frontspace field name
+      where: {
+        content: {
+          visa_upp_pa_start: { equals: true },
+        },
       },
       sort: '-publishedAt',
     });
@@ -280,6 +288,7 @@ export async function fetchHomepageNyheter(limit = 5): Promise<Post[]> {
 
 /**
  * Fetch posts for app/RSS feed (with publicera_till_app filter)
+ * Uses where clause with content filter format: { content: { field: { equals: value } } }
  */
 export async function fetchAppPosts(limit = 50, page = 1): Promise<Post[]> {
   try {
@@ -287,8 +296,10 @@ export async function fetchAppPosts(limit = 50, page = 1): Promise<Post[]> {
     const { posts } = await frontspace.nyheter.getAll({
       limit,
       offset,
-      filters: {
-        publicera_till_app: true,
+      where: {
+        content: {
+          publicera_till_app: { equals: true },
+        },
       },
       sort: '-publishedAt',
     });
@@ -320,7 +331,7 @@ export async function searchNyheter(
 
 /**
  * Fetch news posts connected to a specific team
- * Uses server-side contentFilter to filter by kopplade_lag relation field
+ * Uses where clause with content filter format: { content: { field: { equals: value } } }
  */
 export async function fetchNyheterByTeam(
   teamId: string,
@@ -330,13 +341,15 @@ export async function fetchNyheterByTeam(
   try {
     const offset = (page - 1) * limit;
 
-    // Use contentFilter to filter by kopplade_lag relation field server-side
+    // Use where clause to filter by kopplade_lag relation field server-side
     const { posts } = await frontspace.nyheter.getAll({
       limit,
       offset,
       sort: '-publishedAt',
-      contentFilter: {
-        kopplade_lag: teamId,
+      where: {
+        content: {
+          kopplade_lag: { equals: teamId },
+        },
       },
     });
 

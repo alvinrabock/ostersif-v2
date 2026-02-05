@@ -43,6 +43,7 @@ export const CACHE_TAGS = {
   SPELARE: 'spelare',
   STAB: 'stab',
   FORMS: 'forms',
+  MATCHER: 'matcher',
 } as const;
 
 /**
@@ -376,6 +377,31 @@ export async function fetchAllPages(options?: {
 }
 
 /**
+ * Where clause operators for server-side filtering
+ * Frontspace supports: equals, not_equals, greater_than, less_than,
+ * greater_than_equal, less_than_equal, like, contains, in, not_in
+ */
+export interface WhereOperators {
+  equals?: any;
+  not_equals?: any;
+  greater_than?: any;
+  less_than?: any;
+  greater_than_equal?: any;
+  less_than_equal?: any;
+  like?: string;
+  contains?: string;
+  in?: any[];
+  not_in?: any[];
+}
+
+export type WhereClause = {
+  [field: string]: WhereOperators | any;
+} & {
+  AND?: WhereClause[];
+  OR?: WhereClause[];
+};
+
+/**
  * Fetch all posts of a specific type
  */
 export async function fetchPosts<T>(
@@ -385,16 +411,18 @@ export async function fetchPosts<T>(
     offset?: number;
     filters?: Record<string, any>;
     contentFilter?: Record<string, any>;
+    where?: WhereClause;
     sort?: string;
     search?: string;
     sortBy?: string;
     sortDirection?: 'asc' | 'desc';
   }
 ): Promise<{ posts: T[]; total: number; hasMore?: boolean }> {
-  const { limit = 10, offset = 0, filters, contentFilter, search, sort, sortBy, sortDirection } = options || {};
+  const { limit = 10, offset = 0, filters, contentFilter, where, search, sort, sortBy, sortDirection } = options || {};
 
   // Use filters as contentFilter if provided (filters is the public API, contentFilter is the internal GraphQL param)
-  const actualContentFilter = contentFilter || filters || null;
+  // The where clause takes precedence over contentFilter for advanced filtering
+  const actualContentFilter = where || contentFilter || filters || null;
 
   // Convert legacy sort format (e.g., '-publishedAt') to sortBy/sortDirection
   let actualSortBy = sortBy;
@@ -409,11 +437,13 @@ export async function fetchPosts<T>(
     }
   }
 
-  // Construct GraphQL query for fetching posts from Frontspace with search support
+  // Construct GraphQL query for fetching posts from Frontspace with search and where clause support
   // Note: Relation fields like kategori are stored in the content JSON, not as separate fields
+  // The 'where' clause supports operators like: equals, greater_than, less_than, contains, in, etc.
+  // Example: { "content.datum": { "greater_than": "2025-01-01" } }
   const query = `
-    query GetPosts($storeId: String!, $postTypeSlug: String, $limit: Int, $offset: Int, $contentFilter: JSON, $search: String, $sortBy: String, $sortDirection: String) {
-      posts(storeId: $storeId, postTypeSlug: $postTypeSlug, limit: $limit, offset: $offset, contentFilter: $contentFilter, search: $search, sortBy: $sortBy, sortDirection: $sortDirection) {
+    query GetPosts($storeId: String!, $postTypeSlug: String, $limit: Int, $offset: Int, $where: PostWhere, $search: String, $sortBy: String, $sortDirection: String) {
+      posts(storeId: $storeId, postTypeSlug: $postTypeSlug, limit: $limit, offset: $offset, where: $where, search: $search, sortBy: $sortBy, sortDirection: $sortDirection) {
         posts {
           id
           title
@@ -442,7 +472,7 @@ export async function fetchPosts<T>(
       postTypeSlug: postType,
       limit,
       offset,
-      contentFilter: actualContentFilter,
+      where: actualContentFilter,
     };
 
     // Only add search params if we're searching
@@ -526,6 +556,59 @@ export async function fetchPostBySlug<T>(
     console.error(`Post not found: ${postType}/${slug}`);
     return null;
   }
+}
+
+/**
+ * Fetch a single post by its CMS ID (UUID/ULID)
+ * Uses the postById query if available, falls back to posts query with ID filter
+ */
+export async function fetchPostById<T>(
+  postType: string,
+  id: string
+): Promise<T | null> {
+  // Try fetching by ID using the posts query with ID in where clause
+  const query = `
+    query GetPostById($storeId: String!, $postTypeSlug: String!, $id: String!) {
+      postById(storeId: $storeId, postTypeSlug: $postTypeSlug, id: $id) {
+        id
+        title
+        slug
+        content
+        status
+        created_at
+        updated_at
+        published_at
+        postType {
+          id
+          name
+          slug
+        }
+      }
+    }
+  `;
+
+  try {
+    const data = await frontspaceGraphQLFetch<any>(query, {
+      storeId: FRONTSPACE_STORE_ID,
+      postTypeSlug: postType,
+      id
+    }, getPostTypeCacheTags(postType));
+
+    if (data.postById && data.postById.status === 'published') {
+      return data.postById as T;
+    }
+  } catch {
+    // postById query might not exist, try alternative approach
+  }
+
+  // Fallback: Try using the slug query (in case ID is also a valid slug)
+  try {
+    return await fetchPostBySlug<T>(postType, id);
+  } catch {
+    // Slug lookup failed
+  }
+
+  return null;
 }
 
 /**
@@ -697,6 +780,103 @@ export const frontspace = {
   forms: {
     getById: (formId: string) => fetchFormById(formId),
   },
+  matcher: {
+    getAll: (options?: Parameters<typeof fetchPosts>[1]) =>
+      fetchPosts('matcher', { ...options, sortBy: 'content.datum', sortDirection: 'asc' }),
+    getBySlug: (slug: string) =>
+      fetchPostBySlug('matcher', slug),
+    getById: (id: string) =>
+      fetchPostById('matcher', id),
+    /**
+     * Get upcoming matches using server-side filtering
+     * Filters: datum >= today (status filtered client-side for OR logic)
+     */
+    getUpcoming: (limit = 10) => {
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      return fetchPosts('matcher', {
+        limit,
+        where: {
+          content: {
+            datum: { greater_than_equal: today },
+          },
+        },
+        sortBy: 'content.datum',
+        sortDirection: 'asc',
+      });
+    },
+    /**
+     * Get past matches using server-side filtering
+     * Filters: match_status = 'Over'
+     */
+    getPast: (limit = 10) => {
+      return fetchPosts('matcher', {
+        limit,
+        where: {
+          content: {
+            match_status: { equals: 'Over' },
+          },
+        },
+        sortBy: 'content.datum',
+        sortDirection: 'desc',
+      });
+    },
+    /**
+     * Get matches within a date range using server-side filtering
+     */
+    getByDateRange: (startDate: string, endDate: string, limit = 100) => {
+      return fetchPosts('matcher', {
+        limit,
+        where: {
+          content: {
+            datum: { greater_than_equal: startDate, less_than_equal: endDate },
+          },
+        },
+        sortBy: 'content.datum',
+        sortDirection: 'asc',
+      });
+    },
+    /**
+     * Get matches by season using server-side filtering
+     */
+    getBySeason: (season: string, limit = 100) => {
+      return fetchPosts('matcher', {
+        limit,
+        where: {
+          content: {
+            sasong: { equals: season },
+          },
+        },
+        sortBy: 'content.datum',
+        sortDirection: 'asc',
+      });
+    },
+    /**
+     * Get matches by status using server-side filtering
+     */
+    getByStatus: (status: 'Scheduled' | 'In progress' | 'Over', limit = 100) => {
+      return fetchPosts('matcher', {
+        limit,
+        where: {
+          content: {
+            match_status: { equals: status },
+          },
+        },
+        sortBy: 'content.datum',
+        sortDirection: status === 'Over' ? 'desc' : 'asc',
+      });
+    },
+    getByExternalId: async (externalMatchId: string) => {
+      const result = await fetchPosts('matcher', {
+        limit: 1,
+        where: {
+          content: {
+            externalmatchid: { equals: externalMatchId },
+          },
+        },
+      });
+      return result.posts[0] || null;
+    },
+  },
 };
 
 // ============================================================================
@@ -812,4 +992,120 @@ export const fetchAllPagesCached = unstable_cache(
   },
   ['all-pages-data'],
   { tags: [CACHE_TAGS.PAGES, CACHE_TAGS.FRONTSPACE] }
+);
+
+// ============================================================================
+// MATCHER (MATCHES) - CMS-First with Fallback
+// ============================================================================
+
+import type { MatcherPost } from './types';
+
+/**
+ * Fetch all matches from CMS with optional where clause filtering
+ * Invalidated by webhook via 'matcher' and 'frontspace' tags
+ */
+export const fetchMatcherCached = unstable_cache(
+  async (options?: { limit?: number; where?: WhereClause }) => {
+    return await fetchPosts<MatcherPost>('matcher', {
+      ...options,
+      sortBy: 'content.datum',
+      sortDirection: 'asc',
+    });
+  },
+  ['matcher-data'],
+  { tags: [CACHE_TAGS.MATCHER, CACHE_TAGS.FRONTSPACE] }
+);
+
+/**
+ * Fetch matches WITHOUT cache - useful for debugging or fresh data
+ */
+export async function fetchMatcherNoCache(options?: { limit?: number; where?: WhereClause }) {
+  return await fetchPosts<MatcherPost>('matcher', {
+    ...options,
+    sortBy: 'content.datum',
+    sortDirection: 'asc',
+  });
+}
+
+/**
+ * Fetch upcoming matches from CMS using server-side date filtering
+ * Filters: datum >= today (status filtered client-side for OR logic)
+ */
+export const fetchUpcomingMatchesCached = unstable_cache(
+  async (limit = 10) => {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    return await fetchPosts<MatcherPost>('matcher', {
+      limit,
+      where: {
+        content: {
+          datum: { greater_than_equal: today },
+        },
+      },
+      sortBy: 'content.datum',
+      sortDirection: 'asc',
+    });
+  },
+  ['upcoming-matches'],
+  { tags: [CACHE_TAGS.MATCHER, CACHE_TAGS.FRONTSPACE] }
+);
+
+/**
+ * Fetch recent/past matches from CMS using server-side filtering
+ * Filters: match_status = 'Over'
+ */
+export const fetchRecentMatchesCached = unstable_cache(
+  async (limit = 10) => {
+    return await fetchPosts<MatcherPost>('matcher', {
+      limit,
+      where: {
+        content: {
+          match_status: { equals: 'Over' },
+        },
+      },
+      sortBy: 'content.datum',
+      sortDirection: 'desc',
+    });
+  },
+  ['recent-matches'],
+  { tags: [CACHE_TAGS.MATCHER, CACHE_TAGS.FRONTSPACE] }
+);
+
+/**
+ * Fetch matches by date range from CMS using server-side filtering
+ */
+export const fetchMatchesByDateRangeCached = unstable_cache(
+  async (startDate: string, endDate: string, limit = 100) => {
+    return await fetchPosts<MatcherPost>('matcher', {
+      limit,
+      where: {
+        content: {
+          datum: { greater_than_equal: startDate, less_than_equal: endDate },
+        },
+      },
+      sortBy: 'content.datum',
+      sortDirection: 'asc',
+    });
+  },
+  ['matches-by-date-range'],
+  { tags: [CACHE_TAGS.MATCHER, CACHE_TAGS.FRONTSPACE] }
+);
+
+/**
+ * Fetch matches by season from CMS using server-side filtering
+ */
+export const fetchMatchesBySeasonCached = unstable_cache(
+  async (season: string, limit = 100) => {
+    return await fetchPosts<MatcherPost>('matcher', {
+      limit,
+      where: {
+        content: {
+          sasong: { equals: season },
+        },
+      },
+      sortBy: 'content.datum',
+      sortDirection: 'asc',
+    });
+  },
+  ['matches-by-season'],
+  { tags: [CACHE_TAGS.MATCHER, CACHE_TAGS.FRONTSPACE] }
 );

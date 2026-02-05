@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
+import Link from "next/link";
 import { MatchCardData } from "@/types";
 import MatchCard from "@/app/components/Match/MatchCard";
+import { Button } from "@/app/components/ui/Button";
 
 interface KommandeMatcherClientProps {
     initialMatches: MatchCardData[];
@@ -72,12 +74,18 @@ export default function KommandeMatcherClient({ initialMatches }: KommandeMatche
             <div className="flex flex-col gap-4">
                 {matches.map((match) => (
                     <MatchCard
-                        key={match.matchId}
+                        key={match.cmsId || match.matchId}
                         match={match}
                         colorTheme="red"
+                        leagueName={match.leagueName}
                     />
                 ))}
             </div>
+            <Link href="/matcher" className="block mt-2">
+                <Button variant="outline" className="w-full text-white">
+                    Visa alla matcher
+                </Button>
+            </Link>
         </div>
     );
 }

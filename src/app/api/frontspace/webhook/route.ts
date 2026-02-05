@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
     const allContentTypes = [
       'nyheter', 'lag', 'partners', 'personal', 'jobb', 'dokument',
       'nyhetskategorier', 'spelare', 'stab', 'pages', 'menus', 'footer', 'forms',
-      'homepage'
+      'homepage', 'matcher'
     ];
 
     // Track what we revalidate for logging
@@ -213,11 +213,17 @@ export async function POST(request: NextRequest) {
       // For delete events or unknown postType, revalidate all common post type paths
       // This ensures deleted content is removed from archive pages
       if (event === 'post.deleted' || postType === 'unknown') {
-        const commonPostTypePaths = ['/nyheter', '/lag', '/partners', '/personal', '/jobb'];
+        const commonPostTypePaths = ['/nyheter', '/lag', '/partners', '/personal', '/jobb', '/matcher'];
         for (const path of commonPostTypePaths) {
           revalidatePath(path);
           revalidatedPaths.push(path);
         }
+      }
+
+      // Specifically revalidate /matcher path for matcher post changes
+      if (postType === 'matcher') {
+        revalidatePath('/matcher');
+        revalidatedPaths.push('/matcher');
       }
 
       console.log(`📝 POST event: revalidated paths: ${revalidatedPaths.join(', ')}`);
@@ -269,7 +275,7 @@ export async function GET(request: NextRequest) {
     const allContentTypes = [
       'nyheter', 'lag', 'partners', 'personal', 'jobb', 'dokument',
       'nyhetskategorier', 'spelare', 'stab', 'pages', 'menus', 'footer', 'forms',
-      'homepage'
+      'homepage', 'matcher'
     ];
 
     // Revalidate all tags

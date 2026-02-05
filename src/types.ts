@@ -1993,17 +1993,32 @@ export interface MatchCardData {
     status: string;
     arenaName: string;
     leagueId: string | number; // Support both ULID strings (SMC API 2.0) and numbers (Fogis)
+    leagueName?: string; // League/tournament name
+    season?: string; // Season year (e.g., "2025")
     homeTeam: string;
     awayTeam: string;
-    roundNumber: number;
+    homeTeamLogo?: string; // Optional CMS logo override
+    awayTeamLogo?: string; // Optional CMS logo override
+    isCustomGame?: boolean; // True if manually created in CMS
+    cmsSlug?: string; // CMS slug for custom matches (used in URLs)
+    cmsId?: string; // CMS post UUID (always unique, use for React keys)
+    externalMatchId?: string; // Raw SMC match ID (ULID) - used in URLs for single match page
+    roundNumber?: number; // Optional round number
     goalsHome: number;
     goalsAway: number;
     event?: MatchEventData;
-    ticketURL: string;
-    soldTickets?: number;        
-    customButtonText?: string;   
-    customButtonLink?: string;   
+    ticketURL?: string;
+    ticketText?: string; // Custom ticket button text from CMS (e.g., "Biljetter", "Köp biljetter")
+    soldTickets?: number;
+    customButtonText?: string;
+    customButtonLink?: string;
     maxTickets?: number;
+    // Ordered link buttons from CMS (preserves CMS order for rendering)
+    linkButtons?: Array<{
+        type: 'ticket' | 'custom';
+        text: string;
+        url: string;
+    }>;
     // ✅ New optional nested field from third API
     liveStats?: {
         "home-team-score": number;

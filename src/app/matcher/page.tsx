@@ -3,14 +3,15 @@ import MaxWidthWrapper from "@/app/components/MaxWidthWrapper";
 import { Suspense } from "react";
 import { getLeaguesGroupedBySeason, getLeagueCache } from "@/lib/leagueCache";
 import { getAllMatchesWithTieredCache } from "@/lib/matchCache";
+import { getMatchesWithFallback } from "@/lib/getMatchesWithFallback";
 import MatcherArchiveClient from "./MatchArchiveClient";
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { MatchCardData } from "@/types";
 
-// Use dynamic rendering to support tiered caching
-// Finished matches are cached forever, upcoming for 5 min, live always fresh
-export const dynamic = 'force-dynamic';
+// Static page with on-demand revalidation via webhooks
+// No time-based revalidation - cache is invalidated only when CMS data changes
+export const revalidate = false;
 
 export const metadata: Metadata = {
   title: 'Matcher - Östers IF',
@@ -69,17 +70,28 @@ export default async function Page() {
     );
   }
 
-  // Pre-fetch initial matches server-side using tiered caching
-  // Finished matches: cached forever | Upcoming: 5 min cache | Live: always fresh
+  // Pre-fetch initial matches server-side with current season filter
+  // CMS-first approach: Use server-side filtering via where clause
   let initialMatches: MatchCardData[] = [];
   try {
     const currentYear = new Date().getFullYear().toString();
+    const currentSeason = seasons.find(s => s.seasonYear === currentYear)?.seasonYear || seasons[0]?.seasonYear;
     const currentSeasonLeagues = seasons.find(s => s.seasonYear === currentYear)?.tournaments || seasons[0]?.tournaments || [];
     const leagueIds = currentSeasonLeagues.map(t => t.leagueId);
     const teamId = leagueCache?.teamId;
 
-    if (leagueIds.length > 0 && teamId) {
-      // Use tiered caching: finished (forever), upcoming (5 min), live (fresh)
+    // CMS-first with server-side season filtering via where clause
+    const cmsMatches = await getMatchesWithFallback({
+      leagueIds,
+      teamId,
+      limit: 200,
+      season: currentSeason, // Server-side filter by current season
+    });
+
+    if (cmsMatches && cmsMatches.length > 0) {
+      initialMatches = cmsMatches;
+    } else if (leagueIds.length > 0 && teamId) {
+      // Fallback to tiered cache (existing SMC-based system)
       const { all } = await getAllMatchesWithTieredCache(leagueIds, teamId);
       initialMatches = all;
     }

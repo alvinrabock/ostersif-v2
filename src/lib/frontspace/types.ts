@@ -267,3 +267,71 @@ export interface FrontspaceListResponse<T> {
 export interface FrontspaceSingleResponse<T> {
   post: T;
 }
+
+/**
+ * Link item in the lankar repeater
+ * CMS field slugs: lanktext, url
+ */
+export interface MatcherLink {
+  id?: string;
+  lanktext?: string; // Link text (CMS slug: lanktext)
+  url?: string;
+}
+
+/**
+ * Lineup player for custom games
+ */
+export interface LineupPlayer {
+  id?: string;
+  namn?: string;
+  position?: string;
+  nummer?: number;
+}
+
+/**
+ * Matcher (Match) - CMS-first match data
+ * Synced from SMC API or created manually for custom games
+ * Field names match CMS (Swedish)
+ */
+export interface MatcherPost extends FrontspacePost {
+  // External IDs (null for custom games)
+  externalmatchid?: string;
+  externalleagueid?: string;
+
+  // Teams
+  hemmalag: string;
+  bortalag: string;
+
+  // Optional logo overrides for custom games (normally derived from team name)
+  logotyp_hemmalag?: FrontspaceMedia;
+  logotype_bortalag?: FrontspaceMedia;
+
+  // Schedule
+  datum?: string;           // Date part (YYYY-MM-DD)
+  tid_for_avspark?: string; // Time part (HH:mm)
+  arena?: string;
+
+  // Result
+  matchstatus?: 'Scheduled' | 'in-progress' | 'Over';
+  mal_hemmalag?: number;
+  mal_bortalag?: number;
+
+  // League & Season
+  leaguename?: string;
+  sasong?: string; // Season year (e.g., "2025")
+
+  // Links (repeater field for tickets, streams, etc.)
+  lankar?: MatcherLink[];
+
+  // Ticket info
+  salda_biljetter?: number;
+  maxtickets?: number;
+
+  // Lineup for custom games (SMC API used for synced games)
+  laguppstallning_hemmalag?: LineupPlayer[];
+  laguppstallning_bortalag?: LineupPlayer[];
+
+  // Meta
+  iscustomgame?: 'true' | 'false';  // Select field, not boolean
+  lastsyncedat?: string;
+}

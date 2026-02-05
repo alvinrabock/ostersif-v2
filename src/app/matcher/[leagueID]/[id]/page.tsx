@@ -1,4 +1,5 @@
 // app/matcher/[leagueID]/[id]/page.tsx
+import { getMatchById } from "@/lib/getMatchesWithFallback";
 import {
     getSingleMatch,
     getFinishedMatchCached,
@@ -9,7 +10,7 @@ import { fetchtLineupData } from "@/lib/Superadmin/fetchLineup";
 import type { Metadata } from 'next';
 import MatchClient from "./MatchClient";
 import { cache } from 'react';
-import { MatchLineup } from '@/types';
+import { MatchLineup, Match } from '@/types';
 
 // Use dynamic rendering to support tiered caching
 // Finished matches: cached forever | Upcoming: 5 min cache | Live: always fresh
@@ -21,23 +22,72 @@ type PageProps = {
 
 // Cache the initial fetch within a single request
 const getCachedMatch = cache(getSingleMatch);
+const getCachedCMSMatch = cache(getMatchById);
 
-// Get match with appropriate cache tier
-async function getMatchWithCache(leagueId: string, matchId: string) {
-    // First fetch to determine status
+// Get match with SMC-first for full data, CMS as fallback for custom matches
+async function getMatchWithCache(leagueId: string, matchId: string): Promise<Match | null> {
+    // Try SMC API first for full Match data (includes lineup, team IDs, etc.)
     const match = await getCachedMatch(leagueId, matchId);
-    const category = getMatchStatusCategory(match);
 
-    // For finished matches, ensure we use the forever-cached version
-    if (category === 'finished') {
-        return getFinishedMatchCached(leagueId, matchId);
+    if (match) {
+        const category = getMatchStatusCategory(match);
+
+        // For finished matches, use forever-cached version
+        if (category === 'finished') {
+            return getFinishedMatchCached(leagueId, matchId);
+        }
+        // For upcoming, use 5 min cache
+        if (category === 'upcoming') {
+            return getUpcomingMatchCached(leagueId, matchId);
+        }
+        // Live matches - return fresh data
+        return match;
     }
-    // For upcoming, use 5 min cache
-    if (category === 'upcoming') {
-        return getUpcomingMatchCached(leagueId, matchId);
+
+    // Fallback: Check CMS for custom matches not in SMC
+    console.log('⚠️ SMC miss, checking CMS for custom match...');
+    const cmsMatch = await getCachedCMSMatch(matchId, leagueId);
+
+    if (cmsMatch) {
+        console.log('✅ Found custom match in CMS');
+        // Convert CMS MatchCardData to Match type with minimal fields
+        return {
+            matchId: cmsMatch.matchId,
+            extMatchId: String(cmsMatch.matchId),
+            kickoff: cmsMatch.kickoff,
+            modifiedDate: cmsMatch.modifiedDate || '',
+            matchTotalTime: 0,
+            statusId: 0,
+            status: cmsMatch.status,
+            seasonId: 0,
+            season: cmsMatch.season || '',
+            arenaId: 0,
+            arenaName: cmsMatch.arenaName,
+            leagueId: cmsMatch.leagueId,
+            leagueName: cmsMatch.leagueName || '',
+            homeTeam: cmsMatch.homeTeam,
+            homeTeamId: '',
+            extHomeTeamId: '',
+            awayTeam: cmsMatch.awayTeam,
+            awayTeamId: '',
+            extAwayTeamId: '',
+            roundNumber: 0,
+            homeEngagingTeam: '',
+            awayEngagingTeam: '',
+            attendees: null,
+            goalsHome: cmsMatch.goalsHome,
+            goalsAway: cmsMatch.goalsAway,
+            homeLineup: { formation: '', players: [] },
+            awayLineup: { formation: '', players: [] },
+            referees: [],
+            ticketURL: cmsMatch.ticketURL,
+            soldTickets: cmsMatch.soldTickets,
+            customButtonText: cmsMatch.customButtonText,
+            customButtonLink: cmsMatch.customButtonLink,
+        } as Match;
     }
-    // Live matches - return the fresh data we already have
-    return match;
+
+    return null;
 }
 
 // Generate dynamic metadata

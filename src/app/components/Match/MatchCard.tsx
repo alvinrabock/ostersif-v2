@@ -17,7 +17,7 @@ interface MatchCardProps {
 }
 
 // Supported logo formats in order of preference
-const LOGO_FORMATS = ['svg', 'png'] as const;
+const LOGO_FORMATS = ['svg', 'webp', 'png'] as const;
 
 const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) => {
     // State to track which logo format to try (index in LOGO_FORMATS array)
@@ -57,7 +57,8 @@ const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) =
     };
 
     // Component for team logo with fallback through multiple formats
-    const TeamLogo = ({ teamName, isHome }: { teamName: string; isHome: boolean }) => {
+    // Supports optional CMS logo override via customLogo prop
+    const TeamLogo = ({ teamName, isHome, customLogo }: { teamName: string; isHome: boolean; customLogo?: string }) => {
         const logoError = isHome ? homeLogoError : awayLogoError;
         const setLogoError = isHome ? setHomeLogoError : setAwayLogoError;
         const formatIndex = isHome ? homeLogoFormatIndex : awayLogoFormatIndex;
@@ -96,10 +97,13 @@ const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) =
             );
         }
 
+        // Use CMS logo if provided, otherwise derive from team name
+        const logoSrc = customLogo || getTeamLogoPath(teamName, formatIndex);
+
         return (
             <div className="w-12 h-12 relative">
                 <Image
-                    src={getTeamLogoPath(teamName, formatIndex)}
+                    src={logoSrc}
                     alt={teamName}
                     fill
                     className="object-contain !m-0"
@@ -148,20 +152,22 @@ const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) =
 
     // Check for both ticket sources
     const hasEventTickets = showSecondButton && match?.event?.tickets_url;
-    const hasDirectTickets = showSecondButton && match?.ticketURL;
 
-    // NEW: Check for custom button
-    const hasCustomButton = showSecondButton && match?.customButtonText && match?.customButtonLink;
+    // Use linkButtons array if available (preserves CMS order), otherwise fallback to individual fields
+    const cmsLinkButtons = showSecondButton && match?.linkButtons && match.linkButtons.length > 0
+        ? match.linkButtons
+        : [];
 
-    // Updated logic to account for custom button
-    const hasActiveSecondButton = hasEventTickets || hasDirectTickets;
-    const hasActiveThirdButton = hasCustomButton;
+    // Fallback for backward compatibility when linkButtons is not available
+    const hasDirectTickets = showSecondButton && !cmsLinkButtons.length && match?.ticketURL;
+    const hasCustomButton = showSecondButton && !cmsLinkButtons.length && match?.customButtonText && match?.customButtonLink;
 
-    // Calculate total buttons (View Match + tickets + custom)
-    const totalButtons = 1 + (hasActiveSecondButton ? 1 : 0) + (hasActiveThirdButton ? 1 : 0);
+    // Calculate total buttons (View Match + event tickets + CMS links OR legacy buttons)
+    const legacyButtonCount = (hasDirectTickets ? 1 : 0) + (hasCustomButton ? 1 : 0);
+    const totalButtons = 1 + (hasEventTickets ? 1 : 0) + cmsLinkButtons.length + legacyButtonCount;
 
     // Dynamic grid columns based on total buttons
-    const gridCols = totalButtons === 3 ? 'grid-cols-3 max-[500px]:grid-cols-1' :
+    const gridCols = totalButtons >= 3 ? 'grid-cols-3 max-[500px]:grid-cols-1' :
         totalButtons === 2 ? 'grid-cols-2 max-[200px]:grid-cols-1' :
             'grid-cols-1';
 
@@ -191,7 +197,6 @@ const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) =
 
     return (
         <div
-            key={match.matchId}
             className={`relative rounded-lg ${padding} flex flex-col xl:flex-row gap-4 sm:gap-2 items-center justify-between ${backgroundColor} ${borderColor} ${textColor} transition-colors duration-200`}
         >
 
@@ -201,7 +206,7 @@ const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) =
                         {match.homeTeam ? (
                             <>
                                 <div className={`p-1 aspect-square rounded-lg flex items-center justify-center p-2 ${darkBackgroundColor}`}>
-                                    <TeamLogo teamName={match.homeTeam} isHome={true} />
+                                    <TeamLogo teamName={match.homeTeam} isHome={true} customLogo={match.homeTeamLogo} />
                                 </div>
                                 <p className={`text-xs font-bold !m-0 ${textColor}`}>{match.homeTeam}</p>
                             </>
@@ -269,7 +274,7 @@ const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) =
                         {match.awayTeam ? (
                             <>
                                 <div className={`aspect-square rounded-lg flex items-center justify-center p-2 ${darkBackgroundColor}`}>
-                                    <TeamLogo teamName={match.awayTeam} isHome={false} />
+                                    <TeamLogo teamName={match.awayTeam} isHome={false} customLogo={match.awayTeamLogo} />
                                 </div>
                                 <p className={`text-xs font-bold !m-0 ${textColor}`}>{match.awayTeam}</p>
                             </>
@@ -343,7 +348,7 @@ const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) =
             </div>
 
             <div className={`grid ${gridCols} gap-2 w-full lg:w-fit mt-4 lg:mt-0`}>
-                <Link href={`/matcher/${match.leagueId}/${match.matchId}`}>
+                <Link href={`/matcher/${match.leagueId}/${match.externalMatchId || match.cmsId || match.cmsSlug || match.matchId}`}>
                     <Button
                         variant="outline"
                         className={`w-full ${colorTheme === 'outline-blue'
@@ -355,6 +360,7 @@ const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) =
                     </Button>
                 </Link>
 
+                {/* Event tickets from Ebiljett API (always first if exists) */}
                 {hasEventTickets && (
                     <Link
                         target="_blank"
@@ -384,7 +390,34 @@ const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) =
                     </Link>
                 )}
 
-                {hasDirectTickets && !hasEventTickets && (
+                {/* CMS link buttons - rendered in CMS order */}
+                {cmsLinkButtons.map((btn, index) => (
+                    <Link key={`${btn.type}-${index}`} href={btn.url} target="_blank" passHref>
+                        <Button
+                            variant={
+                                colorTheme === 'outline'
+                                    ? 'outline'
+                                    : colorTheme === 'outline-blue'
+                                        ? 'lightblue'
+                                        : colorTheme === 'red'
+                                            ? 'lightred'
+                                            : 'default'
+                            }
+                            className={`w-full ${colorTheme === 'outline'
+                                ? 'border-custom-dark-red'
+                                : colorTheme === 'outline-blue'
+                                    ? 'border-blue-500'
+                                    : ''
+                                } flex items-center justify-center gap-2`}
+                        >
+                            {btn.type === 'ticket' && <TicketIcon className="w-6 h-6" />}
+                            <span>{btn.text}</span>
+                        </Button>
+                    </Link>
+                ))}
+
+                {/* Legacy fallback: Direct ticket button (when linkButtons not available) */}
+                {hasDirectTickets && (
                     <Link href={match.ticketURL || '#'} target="_blank" passHref>
                         <Button
                             variant={
@@ -404,12 +437,12 @@ const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) =
                                 } flex items-center justify-center gap-2`}
                         >
                             <TicketIcon className="w-6 h-6" />
-                            <span>Biljetter</span>
+                            <span>{match.ticketText || 'Biljetter'}</span>
                         </Button>
                     </Link>
                 )}
 
-                {/* NEW: Custom Button */}
+                {/* Legacy fallback: Custom button (when linkButtons not available) */}
                 {hasCustomButton && (
                     <Link href={match.customButtonLink || '#'} target="_blank" passHref>
                         <Button

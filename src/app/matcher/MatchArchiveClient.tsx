@@ -7,7 +7,7 @@ import { DateRange } from 'react-day-picker';
 
 import { MatchCardData } from '@/types';
 import { SeasonGroup } from '@/lib/leagueCache';
-import { getMatches } from '@/lib/fetchMatches';
+import { getFilteredMatches } from '@/lib/getMatchesWithFallback';
 
 import MatchCard from '../components/Match/MatchCard';
 import { MatchCardSkeleton } from '../components/Skeletons/MatchCardSkeleton';
@@ -24,8 +24,6 @@ interface MatchFiltersProps {
     seasons: SeasonGroup[];
     initialMatches?: MatchCardData[];
 }
-
-const OSTERS_TEAM_ID = '01JVVHS4ESCV6K0GYXXB0K1NHS';
 
 const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [] }) => {
     const router = useRouter();
@@ -59,7 +57,9 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [
         tournaments: s.tournaments
     }));
 
-    const defaultSeason = seasons[0]?.seasonYear;
+    // Current year is always the default/latest season (e.g., 2026)
+    const currentYear = new Date().getFullYear().toString();
+    const defaultSeason = seasons[0]?.seasonYear || currentYear;
     const selectedSeason = seasonFilter || defaultSeason;
 
     // League options for selected season
@@ -72,216 +72,49 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [
             })) || []
         : [];
 
-    // OPTIMIZATION 1: Only fetch specific league when filtered
-    const leagueIdsToFetch = useMemo(() => {
-        // If a specific league is filtered, only fetch that league
-        if (leagueFilter) {
-            console.log(`🎯 Fetching specific league: ${leagueFilter}`);
-            return [leagueFilter];
-        }
-
-        const selectedSeasonData = seasons.find(s => s.seasonYear === selectedSeason);
-
-        console.log('🔍 Debug:', {
-            selectedSeason,
-            hasSeasonData: !!selectedSeasonData,
-            tournamentsCount: selectedSeasonData?.tournaments.length,
-            leagueFilter
-        });
-
-        // Fetch all leagues for the selected season
-        const allLeagueIds = selectedSeasonData?.tournaments.map(t => t.leagueId) || [];
-        console.log(`📅 Fetching all ${allLeagueIds.length} leagues for season ${selectedSeason}`);
-        return allLeagueIds;
-    }, [seasons, selectedSeason, leagueFilter]);
+    // Check if we can use initialMatches (optimization)
+    // initialMatches are for the current year, so we can use them if:
+    // - No filters at all, OR
+    // - Only season filter is set AND it matches current year
+    const onlySeasonFilter = seasonFilter && !isPlayedFilter && !locationFilter && !leagueFilter && !dateFromParam && !dateToParam;
+    const canUseInitialMatches = (!hasFilters || (onlySeasonFilter && seasonFilter === currentYear)) && initialMatches.length > 0;
 
     useEffect(() => {
-        let intervalId: NodeJS.Timeout | null = null;
-
-        // Skip fetch if we already have matches (from server or previous state) and no filters
-        // This handles both initial load AND navigation back
-        const alreadyHaveData = matches.length > 0 || initialMatches.length > 0;
-
-        if (alreadyHaveData && !hasFilters) {
-            // Use initialMatches if matches state is empty (happens on navigation back)
-            if (matches.length === 0 && initialMatches.length > 0) {
-                setMatches(initialMatches);
-            }
-
-            // Still check for live matches to set up polling
-            const dataToCheck = matches.length > 0 ? matches : initialMatches;
-            const hasLiveMatch = dataToCheck.some(match => match.status === 'In progress');
-            if (hasLiveMatch) {
-                const fetchMatchesForPolling = async () => {
-                    try {
-                        const allMatches = await getMatches(
-                            leagueIdsToFetch,
-                            OSTERS_TEAM_ID,
-                            undefined,
-                            undefined,
-                            locationFilter as "home" | "away" | undefined
-                        );
-                        setMatches(allMatches);
-                    } catch (error) {
-                        console.error('Error polling matches:', error);
-                    }
-                };
-                intervalId = setInterval(fetchMatchesForPolling, 60000);
-            }
-            return () => {
-                if (intervalId) clearInterval(intervalId);
-            };
+        // When we can use initialMatches, skip fetching
+        if (canUseInitialMatches) {
+            setMatches(initialMatches);
+            setLoading(false);
+            return;
         }
 
         const fetchMatchesInternal = async () => {
             // Only show loading skeleton if we have NO data at all
-            if (!alreadyHaveData) {
+            if (matches.length === 0) {
                 setLoading(true);
             }
 
             try {
-                // Fetch matches using optimized league IDs and Östers IF team filter
-                const allMatches = await getMatches(
-                    leagueIdsToFetch,
-                    OSTERS_TEAM_ID, // Pass Östers IF team ID to API
-                    undefined, // dateFrom
-                    undefined, // dateTo
-                    locationFilter as "home" | "away" | undefined // location filter
-                );
-
-                // Filter matches client-side (minimal filtering now since API does most of it)
-                const filtered = allMatches.filter(match => {
-                    // Parse kickoff as Swedish local time by replacing space with 'T'
-                    const kickoffStr = match.kickoff ?? '';
-                    const matchDate = new Date(kickoffStr.replace(' ', 'T'));
-
-                    console.log('🔍 Filtering match:', {
-                        matchId: match.matchId,
-                        kickoffStr,
-                        matchDate: matchDate.toISOString(),
-                        homeTeam: match.homeTeam,
-                        awayTeam: match.awayTeam,
-                    });
-
-                    // League filtering is already handled by leagueIdsToFetch, but double-check
-                    if (leagueFilter && String(match.leagueId) !== leagueFilter) {
-                        console.log('❌ Filtered out by league filter');
-                        return false;
-                    }
-
-                    // Filter by date range from URL params
-                    if (dateFromParam) {
-                        const fromDate = new Date(dateFromParam);
-                        fromDate.setHours(0, 0, 0, 0);
-                        console.log('📅 URL dateFrom check:', {
-                            fromDate: fromDate.toISOString(),
-                            matchDate: matchDate.toISOString(),
-                            passes: matchDate >= fromDate
-                        });
-                        if (matchDate < fromDate) {
-                            console.log('❌ Filtered out by dateFrom URL param');
-                            return false;
-                        }
-                    }
-                    if (dateToParam) {
-                        const toDate = new Date(dateToParam);
-                        toDate.setHours(23, 59, 59, 999);
-                        console.log('📅 URL dateTo check:', {
-                            toDate: toDate.toISOString(),
-                            matchDate: matchDate.toISOString(),
-                            passes: matchDate <= toDate
-                        });
-                        if (matchDate > toDate) {
-                            console.log('❌ Filtered out by dateTo URL param');
-                            return false;
-                        }
-                    }
-
-                    // Filter by calendar date range
-                    if (selectedRange?.from && selectedRange?.to) {
-                        const rangeFrom = new Date(selectedRange.from);
-                        rangeFrom.setHours(0, 0, 0, 0);
-                        const rangeTo = new Date(selectedRange.to);
-                        rangeTo.setHours(23, 59, 59, 999);
-                        console.log('📅 Calendar range check:', {
-                            rangeFrom: rangeFrom.toISOString(),
-                            rangeTo: rangeTo.toISOString(),
-                            matchDate: matchDate.toISOString(),
-                            passes: matchDate >= rangeFrom && matchDate <= rangeTo
-                        });
-                        if (matchDate < rangeFrom || matchDate > rangeTo) {
-                            console.log('❌ Filtered out by calendar date range');
-                            return false;
-                        }
-                    }
-
-                    console.log('✅ Match passed all filters');
-                    return true;
+                const filteredMatches = await getFilteredMatches({
+                    status: isPlayedFilter ? 'played' : undefined,
+                    dateFrom: dateFromParam || (selectedRange?.from ? format(selectedRange.from, 'yyyy-MM-dd') : undefined),
+                    dateTo: dateToParam || (selectedRange?.to ? format(selectedRange.to, 'yyyy-MM-dd') : undefined),
+                    season: selectedSeason,
+                    location: locationFilter as 'home' | 'away' | undefined,
+                    leagueId: leagueFilter || undefined,
+                    limit: 200,
                 });
 
-                let sortedMatches: MatchCardData[] = [];
-
-                if (isPlayedFilter) {
-                    sortedMatches = filtered
-                        .filter(match => match.status === 'Over')
-                        .sort((a, b) => new Date(b.kickoff ?? '').getTime() - new Date(a.kickoff ?? '').getTime());
-                } else {
-                    const upcoming = filtered
-                        .filter(
-                            match =>
-                                match.status !== 'Over' &&
-                                (new Date(match.kickoff ?? '').getTime() > Date.now() || match.status === 'In progress')
-                        )
-                        .sort((a, b) => new Date(a.kickoff ?? '').getTime() - new Date(b.kickoff ?? '').getTime());
-
-                    const played = filtered
-                        .filter(match => match.status === 'Over')
-                        .sort((a, b) => new Date(b.kickoff ?? '').getTime() - new Date(a.kickoff ?? '').getTime());
-
-                    sortedMatches = [...upcoming, ...played];
-                }
-
-                setMatches(sortedMatches);
-
-                // OPTIMIZATION 2: Stop polling if no live matches
-                const hasLiveMatch = sortedMatches.some(match => match.status === 'In progress');
-                if (!hasLiveMatch && intervalId) {
-                    clearInterval(intervalId);
-                    intervalId = null;
-                }
-
-                return hasLiveMatch;
-
+                setMatches(filteredMatches);
             } catch (error) {
                 console.error('Error fetching matches:', error);
                 setMatches([]);
-                if (intervalId) {
-                    clearInterval(intervalId);
-                    intervalId = null;
-                }
-                return false;
             } finally {
                 setLoading(false);
             }
         };
 
-        // Initial fetch
-        fetchMatchesInternal().then(hasLiveMatch => {
-            // OPTIMIZATION 2: Only set up polling if there are live matches
-            if (hasLiveMatch) {
-                intervalId = setInterval(() => {
-                    fetchMatchesInternal();
-                }, 60000);
-            }
-        });
-
-        // Cleanup interval on unmount or dependency change
-        return () => {
-            if (intervalId) {
-                clearInterval(intervalId);
-            }
-        };
-    }, [seasons, isPlayedFilter, locationFilter, leagueFilter, leagueIdsToFetch, selectedRange, dateFromParam, dateToParam, selectedSeason, hasFilters, initialMatches]);
+        fetchMatchesInternal();
+    }, [seasons, isPlayedFilter, locationFilter, leagueFilter, selectedRange, dateFromParam, dateToParam, selectedSeason, canUseInitialMatches, initialMatches]);
 
 
     const updateQueryParam = (key: string, value?: string) => {
@@ -346,8 +179,6 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [
         });
         return map;
     }, [seasons]);
-
-    console.log(matches)
 
     return (
         <div className="space-y-6 text-white">
@@ -481,11 +312,11 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [
                 ) : matches.length > 0 ? (
                     <ul className="grid grid-cols-1 lg:grid-cols-2  xl:grid-cols-1  gap-6">
                         {matches.map(match => {
-                            // Use memoized league name lookup (O(1) instead of O(n))
-                            const leagueName = leagueNameMap.get(String(match.leagueId));
+                            // Prefer leagueName from CMS, fallback to memoized lookup
+                            const leagueName = match.leagueName || leagueNameMap.get(String(match.leagueId));
 
                             return (
-                                <li key={match.matchId}>
+                                <li key={match.cmsId || match.matchId}>
                                     <MatchCard match={match} colorTheme="red" leagueName={leagueName} />
                                 </li>
                             );

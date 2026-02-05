@@ -142,9 +142,17 @@ export async function getMatches(
     }
   };
 
+  // Östers IF team name variations for client-side filtering (fallback)
+  const OSTERS_NAMES = ['östers if', 'öster', 'östers'];
+  const isOstersMatch = (match: RawMatchData) => {
+    const homeTeam = (match['home-team'] || '').toLowerCase();
+    const awayTeam = (match['away-team'] || '').toLowerCase();
+    return OSTERS_NAMES.some(name => homeTeam.includes(name) || awayTeam.includes(name));
+  };
+
   // Build all API URLs using league-specific team IDs from cache
   const buildAllUrls = async () => {
-    const urls: Array<{ url: string; leagueId: string }> = [];
+    const urls: Array<{ url: string; leagueId: string; isFiltered: boolean; teamIdUsed?: string | number }> = [];
 
     // Get team IDs from cache for all leagues in parallel
     const teamIdPromises = leagueIds.map(leagueId => getOstersTeamIdFromCache(leagueId));
@@ -158,25 +166,28 @@ export async function getMatches(
 
       if (!teamIdForLeague || !teamId) {
         // If we couldn't find team ID or no filtering requested, fetch all matches
-        urls.push({ url: baseUrl, leagueId });
+        urls.push({ url: baseUrl, leagueId, isFiltered: false });
         continue;
       }
 
+      // Ensure team ID is converted to string for URL (handles both numeric and ULID formats)
+      const teamIdStr = String(teamIdForLeague);
+
       // Use API filtering with cached league-specific team ID
       if (location === 'home') {
-        const url = `${baseUrl}?home-team-id=${teamIdForLeague}`;
-        urls.push({ url, leagueId });
+        const url = `${baseUrl}?home-team-id=${teamIdStr}`;
+        urls.push({ url, leagueId, isFiltered: true, teamIdUsed: teamIdForLeague });
         console.log(`🏠 Home URL: ${url}`);
       } else if (location === 'away') {
-        const url = `${baseUrl}?away-team-id=${teamIdForLeague}`;
-        urls.push({ url, leagueId });
+        const url = `${baseUrl}?away-team-id=${teamIdStr}`;
+        urls.push({ url, leagueId, isFiltered: true, teamIdUsed: teamIdForLeague });
         console.log(`✈️ Away URL: ${url}`);
       } else {
         // Fetch both home and away with cached team ID
-        const homeUrl = `${baseUrl}?home-team-id=${teamIdForLeague}`;
-        const awayUrl = `${baseUrl}?away-team-id=${teamIdForLeague}`;
-        urls.push({ url: homeUrl, leagueId });
-        urls.push({ url: awayUrl, leagueId });
+        const homeUrl = `${baseUrl}?home-team-id=${teamIdStr}`;
+        const awayUrl = `${baseUrl}?away-team-id=${teamIdStr}`;
+        urls.push({ url: homeUrl, leagueId, isFiltered: true, teamIdUsed: teamIdForLeague });
+        urls.push({ url: awayUrl, leagueId, isFiltered: true, teamIdUsed: teamIdForLeague });
         console.log(`🏠 Home URL: ${homeUrl}`);
         console.log(`✈️ Away URL: ${awayUrl}`);
       }
@@ -186,45 +197,108 @@ export async function getMatches(
   };
 
   // Fetch all match data in parallel (maximum parallelization)
+  // With fallback: if API filtering returns 0 results, fetch all and filter client-side
   const fetchAllMatches = async () => {
     const urlConfigs = await buildAllUrls();
     console.log(`🚀 Fetching ${urlConfigs.length} match API calls in parallel...`);
 
-    const fetchPromises = urlConfigs.map(async ({ url, leagueId }) => {
+    // Group configs by leagueId to track which leagues need fallback
+    const leagueResults = new Map<string, { matches: RawMatchData[]; wasFiltered: boolean; teamIdUsed?: string | number }>();
+
+    const fetchPromises = urlConfigs.map(async ({ url, leagueId, isFiltered, teamIdUsed }) => {
       try {
         const response = await fetchWithTimeout(url, { method: "GET", headers });
         if (!response.ok) {
           console.warn(`⚠️  Failed to fetch matches for league ${leagueId}: ${response.status} ${response.statusText}`);
-          return []; // Return empty array instead of throwing
+          return { leagueId, matches: [] as RawMatchData[], isFiltered, teamIdUsed };
         }
         const data = await response.json();
 
         // Check if response is an array, if not return empty array
         if (!Array.isArray(data)) {
           console.warn(`⚠️  League ${leagueId} returned non-array data:`, typeof data);
-          return [];
+          return { leagueId, matches: [] as RawMatchData[], isFiltered, teamIdUsed };
         }
 
-        return data as RawMatchData[];
+        return { leagueId, matches: data as RawMatchData[], isFiltered, teamIdUsed };
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
           console.warn(`⏱️  Timeout fetching league ${leagueId}`);
         } else {
           console.error(`❌ Error fetching league ${leagueId}:`, error);
         }
-        return []; // Return empty array on error
+        return { leagueId, matches: [] as RawMatchData[], isFiltered, teamIdUsed };
       }
     });
 
     const results = await Promise.all(fetchPromises);
-    const flattenedMatches = results.flat();
 
+    // Aggregate results by league and check for fallback needs
+    for (const { leagueId, matches, isFiltered, teamIdUsed } of results) {
+      const existing = leagueResults.get(leagueId);
+      if (existing) {
+        existing.matches.push(...matches);
+      } else {
+        leagueResults.set(leagueId, { matches: [...matches], wasFiltered: isFiltered, teamIdUsed });
+      }
+    }
+
+    // Check if any filtered leagues returned 0 results - try fallback
+    const leaguesNeedingFallback: string[] = [];
+    for (const [leagueId, data] of leagueResults) {
+      if (data.wasFiltered && data.matches.length === 0 && data.teamIdUsed) {
+        console.log(`⚠️  League ${leagueId} API filtering returned 0 matches (team ID: ${data.teamIdUsed}) - will try fallback`);
+        leaguesNeedingFallback.push(leagueId);
+      }
+    }
+
+    // Fallback: fetch ALL matches for leagues where filtering didn't work, then filter client-side
+    if (leaguesNeedingFallback.length > 0) {
+      console.log(`🔄 Attempting fallback for ${leaguesNeedingFallback.length} leagues...`);
+
+      const fallbackPromises = leaguesNeedingFallback.map(async (leagueId) => {
+        const baseUrl = `https://smc-api.telenor.no/leagues/${leagueId}/matches`;
+        console.log(`📥 Fallback: fetching ALL matches from ${baseUrl}`);
+
+        try {
+          const response = await fetchWithTimeout(baseUrl, { method: "GET", headers });
+          if (!response.ok) {
+            console.warn(`⚠️  Fallback failed for league ${leagueId}: ${response.status}`);
+            return { leagueId, matches: [] as RawMatchData[] };
+          }
+
+          const allMatches = await response.json() as RawMatchData[];
+          // Filter client-side by team name
+          const ostersMatches = allMatches.filter(isOstersMatch);
+          console.log(`✅ Fallback for league ${leagueId}: found ${ostersMatches.length} Östers matches out of ${allMatches.length} total`);
+
+          return { leagueId, matches: ostersMatches };
+        } catch (error) {
+          console.error(`❌ Fallback error for league ${leagueId}:`, error);
+          return { leagueId, matches: [] as RawMatchData[] };
+        }
+      });
+
+      const fallbackResults = await Promise.all(fallbackPromises);
+
+      // Update league results with fallback data
+      for (const { leagueId, matches } of fallbackResults) {
+        leagueResults.set(leagueId, { matches, wasFiltered: false });
+      }
+    }
+
+    // Flatten all matches
+    const allMatches: RawMatchData[] = [];
+    for (const data of leagueResults.values()) {
+      allMatches.push(...data.matches);
+    }
 
     // Deduplicate by match-id (important when fetching home + away separately)
     const uniqueMatches = Array.from(
-      new Map(flattenedMatches.map((m: RawMatchData) => [m["match-id"], m])).values()
+      new Map(allMatches.map((m: RawMatchData) => [m["match-id"], m])).values()
     );
 
+    console.log(`📊 Total unique matches after dedup: ${uniqueMatches.length}`);
     return uniqueMatches;
   };
 
