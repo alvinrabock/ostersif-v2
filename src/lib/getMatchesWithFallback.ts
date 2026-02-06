@@ -332,46 +332,28 @@ export async function getMatchesWithFallback(options?: {
 }
 
 /**
- * Get upcoming matches using server-side date filtering and sorting
- * Filters: datum >= today, match_status != 'over'
- * Sorted by datum ascending (soonest first)
+ * Get upcoming matches using the same logic as /matcher page
+ * Uses getMatchesWithFallback which works correctly
+ * Filters: datum >= today (not 'over' matches)
+ * Sorted by kickoff date ascending (soonest first), then limited
  */
 export async function getUpcomingMatches(limit = 10): Promise<MatchCardData[]> {
-  try {
-    // Use server-side filtering and sorting via cached function
-    const { posts: cmsMatches } = await fetchUpcomingMatchesCached(limit);
-
-    // Server log to debug API sorting
-    console.log('[getUpcomingMatches] Raw API order:', cmsMatches?.slice(0, 5).map(m => {
-      const raw = m as any;
-      const content = typeof raw.content === 'string' ? JSON.parse(raw.content) : raw.content;
-      return { title: m.title, datum: content?.datum };
-    }));
-
-    if (cmsMatches && cmsMatches.length > 0) {
-      // Transform CMS data to MatchCardData format
-      const matches = cmsMatches.map(transformCMSMatchToCardData);
-
-      // Sort by kickoff date ascending (soonest first)
-      // Client-side sorting as safeguard in case API sorting isn't available
-      const sorted = matches.sort((a, b) =>
-        new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime()
-      );
-
-      console.log('[getUpcomingMatches] After client sort:', sorted.slice(0, 5).map(m => ({
-        homeTeam: m.homeTeam,
-        kickoff: m.kickoff,
-      })));
-
-      return sorted;
-    }
-  } catch (error) {
-    console.error('CMS upcoming matches fetch failed:', error);
-  }
-
-  // Fallback to SMC API
   const today = new Date().toISOString().split('T')[0];
-  return getMatchesWithFallback({ limit, dateFrom: today });
+
+  // Use same approach as /matcher page - fetch more, sort, then limit
+  // This ensures we get the soonest matches regardless of API sort order
+  const allUpcoming = await getMatchesWithFallback({
+    limit: 50, // Fetch more to ensure we get all upcoming matches
+    dateFrom: today,
+  });
+
+  // Filter out completed matches and sort by kickoff ascending
+  const upcoming = allUpcoming
+    .filter(m => m.status !== 'Over')
+    .sort((a, b) => new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime());
+
+  // Return only the requested number
+  return upcoming.slice(0, limit);
 }
 
 /**
