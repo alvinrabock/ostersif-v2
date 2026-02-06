@@ -140,7 +140,7 @@ export async function fetchPartnersByLevel(levelSlug: string): Promise<Partner[]
 
 /**
  * Fetch Huvudpartners (main partners)
- * Queries directly by partnerniva UUID using contentFilter
+ * Queries directly by partnerniva UUID using where clause
  */
 export async function fetchHuvudpartners(): Promise<Partner[]> {
   // Known UUID for "Huvudpartner" partnernivå
@@ -150,7 +150,9 @@ export async function fetchHuvudpartners(): Promise<Partner[]> {
     const { posts } = await frontspace.partners.getAllWithRelations({
       limit: 100,
       contentFilter: {
-        partnerniva: HUVUDPARTNER_UUID,
+        content: {
+          partnerniva: { equals: HUVUDPARTNER_UUID },
+        },
       },
     });
 
@@ -163,16 +165,18 @@ export async function fetchHuvudpartners(): Promise<Partner[]> {
 
 /**
  * Fetch partners in Affärsnatverket
- * Filters by med_i_osternatverket = true using GraphQL contentFilter
+ * Filters by med_i_osternatverket = true using where clause
  */
 export async function fetchPartnersInAffarsnatverket(): Promise<Partner[]> {
   try {
     const { posts } = await frontspace.partners.getAll({
-      contentFilter: {
-        med_i_osternatverket: true,
+      where: {
+        content: {
+          med_i_osternatverket: { equals: true },
+        },
       },
       sort: 'title',
-      limit: 150, // Reduced from 500 to prevent memory issues
+      limit: 150,
     });
 
     return posts.map(transformPartner);
@@ -184,7 +188,7 @@ export async function fetchPartnersInAffarsnatverket(): Promise<Partner[]> {
 
 /**
  * Fetch partners in Öster i Samhället
- * Filters by partner_till_oster_i_samhallet = true using GraphQL contentFilter
+ * Filters by partner_till_oster_i_samhallet = true using where clause
  * Returns partners with kopplade_paket field for grouping
  * Uses two-call approach: fetch partners + fetch partnerpaket for relation lookup
  */
@@ -193,8 +197,10 @@ export async function fetchPartnersInOsterISamhallet(): Promise<(Partner & { kop
     // Fetch partners and partnerpaket in parallel
     const [partnersResult, partnerpaketResult] = await Promise.all([
       frontspace.partners.getAll({
-        contentFilter: {
-          partner_till_oster_i_samhallet: true,
+        where: {
+          content: {
+            partner_till_oster_i_samhallet: { equals: true },
+          },
         },
         limit: 150,
       }),
