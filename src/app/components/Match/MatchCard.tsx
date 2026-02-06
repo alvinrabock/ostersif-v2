@@ -17,7 +17,8 @@ interface MatchCardProps {
 }
 
 // Supported logo formats in order of preference
-const LOGO_FORMATS = ['svg', 'webp', 'png'] as const;
+// Try png before webp since most logos are png files
+const LOGO_FORMATS = ['svg', 'png', 'webp'] as const;
 
 const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) => {
     // State to track which logo format to try (index in LOGO_FORMATS array)
