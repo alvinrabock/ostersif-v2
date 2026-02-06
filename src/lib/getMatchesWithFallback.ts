@@ -341,15 +341,28 @@ export async function getUpcomingMatches(limit = 10): Promise<MatchCardData[]> {
     // Use server-side filtering and sorting via cached function
     const { posts: cmsMatches } = await fetchUpcomingMatchesCached(limit);
 
+    // Server log to debug API sorting
+    console.log('[getUpcomingMatches] Raw API order:', cmsMatches?.slice(0, 5).map(m => {
+      const content = typeof m.content === 'string' ? JSON.parse(m.content) : m.content;
+      return { title: m.title, datum: content?.datum };
+    }));
+
     if (cmsMatches && cmsMatches.length > 0) {
       // Transform CMS data to MatchCardData format
       const matches = cmsMatches.map(transformCMSMatchToCardData);
 
       // Sort by kickoff date ascending (soonest first)
       // Client-side sorting as safeguard in case API sorting isn't available
-      return matches.sort((a, b) =>
+      const sorted = matches.sort((a, b) =>
         new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime()
       );
+
+      console.log('[getUpcomingMatches] After client sort:', sorted.slice(0, 5).map(m => ({
+        homeTeam: m.homeTeam,
+        kickoff: m.kickoff,
+      })));
+
+      return sorted;
     }
   } catch (error) {
     console.error('CMS upcoming matches fetch failed:', error);
