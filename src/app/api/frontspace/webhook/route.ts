@@ -12,6 +12,7 @@ const WEBHOOK_SECRET = process.env.FRONTSPACE_WEBHOOK_SECRET;
 // These are the Frontspace post type IDs for this store
 const POST_TYPE_ID_MAP: Record<string, string> = {
   '1d062e33-6965-4084-b3f2-981cb57e9790': 'nyheter',
+  '5e8b21d9-5c7a-4919-8dc2-0ccde6108964': 'matcher',
   // Add other post type IDs as needed
 };
 
@@ -114,6 +115,8 @@ export async function POST(request: NextRequest) {
           rawPostType = 'partners';
         } else if (content.avdelning) {
           rawPostType = 'personal';
+        } else if (content.hemmalag || content.bortalag || content.datum) {
+          rawPostType = 'matcher';
         }
       }
     }
