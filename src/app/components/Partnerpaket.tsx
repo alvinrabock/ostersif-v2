@@ -1,5 +1,5 @@
 import React from 'react';
-import Image from 'next/image';
+import FadeInImage from '@/app/components/ui/FadeInImage';
 import Link from 'next/link';
 import { fetchPosts } from '@/lib/frontspace/client';
 
@@ -40,7 +40,7 @@ const PartnerpaketItem = ({ item }: { item: any }) => {
       {/* Image section */}
       <div className="relative aspect-[16/10] w-full overflow-hidden">
         {heroImageUrl ? (
-          <Image
+          <FadeInImage
             src={heroImageUrl}
             alt={item.title || 'Partner package'}
             fill

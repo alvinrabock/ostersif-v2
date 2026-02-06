@@ -27,6 +27,9 @@ const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) =
     // Track if all formats have been exhausted
     const [homeLogoError, setHomeLogoError] = useState(false);
     const [awayLogoError, setAwayLogoError] = useState(false);
+    // Track if logos have loaded for fade-in animation
+    const [homeLogoLoaded, setHomeLogoLoaded] = useState(false);
+    const [awayLogoLoaded, setAwayLogoLoaded] = useState(false);
 
     const LiveshowScore = match.status == "In progress";
     const showScore = match.status === "Over";
@@ -57,19 +60,22 @@ const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) =
         return `/logos/${formattedName}.${format}`;
     };
 
-    // Component for team logo with fallback through multiple formats
+    // Component for team logo with fallback through multiple formats and fade-in animation
     // Supports optional CMS logo override via customLogo prop
     const TeamLogo = ({ teamName, isHome, customLogo }: { teamName: string; isHome: boolean; customLogo?: string }) => {
         const logoError = isHome ? homeLogoError : awayLogoError;
         const setLogoError = isHome ? setHomeLogoError : setAwayLogoError;
         const formatIndex = isHome ? homeLogoFormatIndex : awayLogoFormatIndex;
         const setFormatIndex = isHome ? setHomeLogoFormatIndex : setAwayLogoFormatIndex;
+        const isLoaded = isHome ? homeLogoLoaded : awayLogoLoaded;
+        const setIsLoaded = isHome ? setHomeLogoLoaded : setAwayLogoLoaded;
 
         const handleLogoError = () => {
             // Try next format
             const nextIndex = formatIndex + 1;
             if (nextIndex < LOGO_FORMATS.length) {
                 setFormatIndex(nextIndex);
+                setIsLoaded(false); // Reset loaded state for new format
             } else {
                 // All formats exhausted, show fallback
                 setLogoError(true);
@@ -107,8 +113,9 @@ const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) =
                     src={logoSrc}
                     alt={teamName}
                     fill
-                    className="object-contain !m-0"
+                    className={`object-contain !m-0 transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
                     onError={handleLogoError}
+                    onLoad={() => setIsLoaded(true)}
                 />
             </div>
         );

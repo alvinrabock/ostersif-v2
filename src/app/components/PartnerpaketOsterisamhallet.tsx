@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import FadeInImage from '@/app/components/ui/FadeInImage';
 import { fetchPosts } from '@/lib/frontspace/client';
 import { fetchPartnersInOsterISamhallet } from '@/lib/frontspace/adapters/partners';
 import PersonalItem from '@/app/components/Personal/PersonalItem';
@@ -214,7 +214,7 @@ export default async function PartnerpaketOsterisamhallet() {
                       >
                         {logoUrl ? (
                           <div className="relative w-32 aspect-[3/2] flex items-center justify-center">
-                            <Image
+                            <FadeInImage
                               src={logoUrl}
                               alt={`${partner.title} logo`}
                               fill

@@ -15,10 +15,11 @@ interface MatchCardProps {
 // Supported logo formats in order of preference
 const LOGO_FORMATS = ['svg', 'png'] as const;
 
-// TeamLogo component with fallback through multiple formats
+// TeamLogo component with fallback through multiple formats and fade-in animation
 const TeamLogo = ({ teamName, className }: { teamName: string; className?: string }) => {
     const [formatIndex, setFormatIndex] = useState(0);
     const [hasError, setHasError] = useState(false);
+    const [isLoaded, setIsLoaded] = useState(false);
 
     const getLogoPath = (format: string) => `/logos/${lowercase(teamName)}.${format}`;
 
@@ -26,6 +27,7 @@ const TeamLogo = ({ teamName, className }: { teamName: string; className?: strin
         const nextIndex = formatIndex + 1;
         if (nextIndex < LOGO_FORMATS.length) {
             setFormatIndex(nextIndex);
+            setIsLoaded(false); // Reset loaded state for new format
         } else {
             setHasError(true);
         }
@@ -52,8 +54,9 @@ const TeamLogo = ({ teamName, className }: { teamName: string; className?: strin
             src={getLogoPath(LOGO_FORMATS[formatIndex])}
             alt={teamName}
             fill
-            className="object-contain"
+            className={`object-contain transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
             onError={handleError}
+            onLoad={() => setIsLoaded(true)}
         />
     );
 };
