@@ -10,7 +10,7 @@ import { fetchUpcomingMatchesCached } from '@/lib/frontspace/client';
 
 export async function GET() {
   try {
-    const { posts: cmsMatches, totalCount } = await fetchUpcomingMatchesCached(10);
+    const { posts: cmsMatches, total } = await fetchUpcomingMatchesCached(10);
 
     // Extract just the relevant data for debugging
     const matchData = cmsMatches?.map((m, index) => {
@@ -31,7 +31,7 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      totalCount,
+      total,
       message: 'Raw order from API - check if sorted by datum ascending',
       matches: matchData,
       timestamp: new Date().toISOString(),
