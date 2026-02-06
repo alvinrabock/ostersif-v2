@@ -147,9 +147,9 @@ export async function fetchHuvudpartners(): Promise<Partner[]> {
   const HUVUDPARTNER_UUID = 'eaf356ff-2d48-4c85-91e5-de39ea0dc485';
 
   try {
-    const { posts } = await frontspace.partners.getAllWithRelations({
+    const { posts } = await frontspace.partners.getAll({
       limit: 100,
-      contentFilter: {
+      where: {
         content: {
           partnerniva: { equals: HUVUDPARTNER_UUID },
         },
