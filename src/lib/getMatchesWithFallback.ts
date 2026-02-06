@@ -14,7 +14,6 @@ import { MatchCardData } from "@/types";
 import {
   frontspace,
   fetchMatcherCached,
-  fetchUpcomingMatchesCached,
   fetchRecentMatchesCached,
   fetchMatchesByDateRangeCached,
   fetchMatchesBySeasonCached,
