@@ -332,17 +332,17 @@ export async function getMatchesWithFallback(options?: {
 }
 
 /**
- * Get upcoming matches using server-side date filtering
+ * Get upcoming matches using server-side date filtering and sorting
  * Filters: datum >= today, match_status != 'over'
- * Client-side sorting required because Frontspace API sorting is unreliable across leagues
+ * Sorted by datum ascending (soonest first)
  */
 export async function getUpcomingMatches(limit = 10): Promise<MatchCardData[]> {
   try {
-    // Use server-side filtering via cached function
+    // Use server-side filtering and sorting via cached function
     const { posts: cmsMatches } = await fetchUpcomingMatchesCached(limit);
 
     if (cmsMatches && cmsMatches.length > 0) {
-      // Transform and sort client-side (API sorting is unreliable across leagues)
+      // Transform CMS data to MatchCardData format
       const matches = cmsMatches.map(transformCMSMatchToCardData);
 
       // Sort by status priority and kickoff date (same as /matcher page)

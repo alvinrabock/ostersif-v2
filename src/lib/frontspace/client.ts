@@ -1008,7 +1008,7 @@ import type { MatcherPost } from './types';
 export async function fetchMatcherCached(options?: { limit?: number; where?: WhereClause }) {
   return await fetchPosts<MatcherPost>('matcher', {
     ...options,
-    sortBy: 'content.datum',
+    sortBy: 'datum',
     sortDirection: 'asc',
   });
 }
@@ -1028,8 +1028,8 @@ export async function fetchUpcomingMatchesCached(limit = 10) {
         match_status: { not_equals: 'over' },
       },
     },
-    sortBy: 'content.datum',
-    sortDirection: 'desc',
+    sortBy: 'datum',
+    sortDirection: 'asc',
   });
 }
 
@@ -1043,10 +1043,10 @@ export async function fetchRecentMatchesCached(limit = 10) {
     limit,
     where: {
       content: {
-        match_status: { equals: 'Over' },
+        match_status: { equals: 'over' },
       },
     },
-    sortBy: 'content.datum',
+    sortBy: 'datum',
     sortDirection: 'desc',
   });
 }
@@ -1063,7 +1063,7 @@ export async function fetchMatchesByDateRangeCached(startDate: string, endDate: 
         datum: { greater_than_equal: startDate, less_than_equal: endDate },
       },
     },
-    sortBy: 'content.datum',
+    sortBy: 'datum',
     sortDirection: 'asc',
   });
 }
@@ -1080,7 +1080,7 @@ export async function fetchMatchesBySeasonCached(season: string, limit = 100) {
         sasong: { equals: season },
       },
     },
-    sortBy: 'content.datum',
+    sortBy: 'datum',
     sortDirection: 'asc',
   });
 }
