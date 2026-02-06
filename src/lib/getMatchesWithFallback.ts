@@ -343,7 +343,8 @@ export async function getUpcomingMatches(limit = 10): Promise<MatchCardData[]> {
 
     // Server log to debug API sorting
     console.log('[getUpcomingMatches] Raw API order:', cmsMatches?.slice(0, 5).map(m => {
-      const content = typeof m.content === 'string' ? JSON.parse(m.content) : m.content;
+      const raw = m as any;
+      const content = typeof raw.content === 'string' ? JSON.parse(raw.content) : raw.content;
       return { title: m.title, datum: content?.datum };
     }));
 
