@@ -9,9 +9,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { MatchCardData } from "@/types";
 
-// Static page with on-demand revalidation via webhooks
-// No time-based revalidation - cache is invalidated only when CMS data changes
-export const revalidate = false;
+// On-demand revalidation only via webhook - no time-based polling
 
 export const metadata: Metadata = {
   title: 'Matcher - Östers IF',

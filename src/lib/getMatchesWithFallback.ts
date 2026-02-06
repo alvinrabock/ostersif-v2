@@ -343,10 +343,8 @@ export async function getUpcomingMatches(limit = 10): Promise<MatchCardData[]> {
 
     if (cmsMatches && cmsMatches.length > 0) {
       // Transform CMS data to MatchCardData format
-      const matches = cmsMatches.map(transformCMSMatchToCardData);
-
-      // Sort by status priority and kickoff date (same as /matcher page)
-      return sortMatches(matches);
+      // API now handles sorting by datum, no client-side sorting needed
+      return cmsMatches.map(transformCMSMatchToCardData);
     }
   } catch (error) {
     console.error('CMS upcoming matches fetch failed:', error);
