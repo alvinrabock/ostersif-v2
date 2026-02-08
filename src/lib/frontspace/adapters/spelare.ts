@@ -62,15 +62,17 @@ export async function fetchAllSpelare(limit = 100): Promise<FrontspaceSpelare[]>
 
 /**
  * Fetch players by team ID
- * Uses server-side contentFilter to filter by lag relation field
+ * Uses server-side where clause to filter by lag relation field
  */
 export async function fetchSpelareByTeam(teamId: string): Promise<FrontspaceSpelare[]> {
   try {
-    // Use contentFilter to filter by lag relation field server-side
+    // Use where clause with content filter format: { content: { field: { equals: value } } }
     const { posts } = await fetchPosts<any>('spelare', {
       limit: 150,
-      contentFilter: {
-        lag: teamId,
+      where: {
+        content: {
+          lag: { equals: teamId },
+        },
       },
     });
 

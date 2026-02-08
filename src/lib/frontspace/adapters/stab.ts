@@ -60,15 +60,17 @@ export async function fetchAllStab(limit = 100): Promise<FrontspaceStab[]> {
 
 /**
  * Fetch staff by team ID
- * Uses server-side contentFilter to filter by lag relation field
+ * Uses server-side where clause to filter by lag relation field
  */
 export async function fetchStabByTeam(teamId: string): Promise<FrontspaceStab[]> {
   try {
-    // Use contentFilter to filter by lag relation field server-side
+    // Use where clause with content filter format: { content: { field: { equals: value } } }
     const { posts } = await fetchPosts<any>('stab', {
       limit: 200,
-      contentFilter: {
-        lag: teamId,
+      where: {
+        content: {
+          lag: { equals: teamId },
+        },
       },
     });
 
