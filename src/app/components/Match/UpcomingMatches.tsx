@@ -21,7 +21,7 @@ export default async function UpcomingMatches() {
                     <div className="flex flex-col gap-4">
                         {matches.map((match, index) => (
                             <MatchCard
-                                key={match.matchId}
+                                key={match.cmsId || match.externalMatchId || match.matchId}
                                 match={match}
                                 colorTheme={index === 0 ? "red" : "outline"}
                             />

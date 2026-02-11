@@ -1,7 +1,7 @@
 {
   "teamId": "01JVVHS4ESCV6K0GYXXB0K1NHS",
   "teamName": "Östers IF",
-  "lastUpdated": "2026-02-06T16:25:18.355Z",
+  "lastUpdated": "2026-02-10T08:32:57.106Z",
   "leagues": [
     {
       "leagueId": "01KG4RMP8WF1CT12DXX4VTC6FD",
@@ -31,13 +31,22 @@
       "ostersTeamId": "01JVVHS4ESCV6K0GYXXB0K1NHS"
     },
     {
+      "leagueId": "01JQV8CGVWY99E0ZNJTZNN4G2K",
+      "leagueName": "Superettan",
+      "startDate": "2025-01-01",
+      "endDate": "2025-12-31",
+      "tournamentId": 123863,
+      "seasonYear": "2025",
+      "ostersTeamId": "01JQV8CSAHFF2Q8613FNJ843G9"
+    },
+    {
       "leagueId": "01JY1JCTCDAMHC3637MT54QXEH",
       "leagueName": "Träningsmatcher Elit, herr",
       "startDate": "2025-01-01",
       "endDate": "2025-12-31",
       "tournamentId": 123645,
       "seasonYear": "2025",
-      "ostersTeamId": "01JY1JD5NTEMW3Y5PDWFWGJFGE"
+      "ostersTeamId": "01JY1JD3PPS90MFV7GE44RY186"
     },
     {
       "leagueId": "61",
@@ -67,6 +76,15 @@
       "ostersTeamId": 19
     },
     {
+      "leagueId": "27",
+      "leagueName": "Allsvenskan",
+      "startDate": "2021-04-11",
+      "endDate": "2021-12-05",
+      "tournamentId": 88307,
+      "seasonYear": "2021",
+      "ostersTeamId": 13
+    },
+    {
       "leagueId": "28",
       "leagueName": "Superettan",
       "startDate": "2021-04-11",
@@ -76,6 +94,15 @@
       "ostersTeamId": 19
     },
     {
+      "leagueId": "25",
+      "leagueName": "Allsvenskan",
+      "startDate": "2020-06-14",
+      "endDate": "2020-12-06",
+      "tournamentId": 82492,
+      "seasonYear": "2020",
+      "ostersTeamId": 13
+    },
+    {
       "leagueId": "26",
       "leagueName": "Superettan",
       "startDate": "2020-06-16",
@@ -83,6 +110,15 @@
       "tournamentId": 82493,
       "seasonYear": "2020",
       "ostersTeamId": 19
+    },
+    {
+      "leagueId": "21",
+      "leagueName": "Allsvenskan",
+      "startDate": "2019-03-31",
+      "endDate": "2019-12-31",
+      "tournamentId": 77486,
+      "seasonYear": "2019",
+      "ostersTeamId": 13
     },
     {
       "leagueId": "22",

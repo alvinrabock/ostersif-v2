@@ -1,5 +1,10 @@
 import { SuperAdminTeamStats } from "@/types";
 
+/**
+ * Fetch team stats from Superadmin API
+ * Uses Next.js fetch cache with tag-based revalidation (same as nyheter)
+ * Cached indefinitely, revalidated via webhook or on-demand
+ */
 export async function fetchTeamStats(): Promise<SuperAdminTeamStats | null> {
     // Add timeout to prevent hanging during build
     const controller = new AbortController();
@@ -14,8 +19,10 @@ export async function fetchTeamStats(): Promise<SuperAdminTeamStats | null> {
                     Accept: 'application/json',
                     'x-api-key': process.env.SUPERADMIN_KEY || '',
                 },
-                cache: 'no-store',
                 signal: controller.signal,
+                next: {
+                    tags: ['team-stats', 'superadmin'], // Cache tags for revalidation
+                },
             }
         );
 

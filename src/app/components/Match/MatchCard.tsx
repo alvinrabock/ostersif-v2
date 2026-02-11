@@ -5,6 +5,7 @@ import { lowercase } from "@/utillities/lowercase";
 import { Button } from "@/app/components/ui/Button";
 import { MatchCardData } from "@/types";
 import TicketIcon from "../Icons/TicketIcon";
+import { getKnownLogoPath } from "@/lib/logoManifest";
 
 import { FootballFieldIcon } from "../Icons/FootballFieldIcon";
 import { FootballIcon } from "../Icons/FootballIcon";
@@ -16,9 +17,8 @@ interface MatchCardProps {
     leagueName?: string;
 }
 
-// Supported logo formats in order of preference
-// Try png before webp since most logos are png files
-const LOGO_FORMATS = ['svg', 'png', 'webp'] as const;
+// Fallback formats when logo not in manifest
+const FALLBACK_FORMATS = ['svg', 'png', 'webp'] as const;
 
 const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) => {
     // State to track which logo format to try (index in LOGO_FORMATS array)
@@ -35,12 +35,22 @@ const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) =
     const showScore = match.status === "Over";
 
     const formatDate = (date: string) => {
-        const formattedDate = new Date(date).toLocaleDateString("sv-SE", {
+        // Handle empty or invalid dates
+        if (!date || date === '') {
+            return { formattedDate: 'Datum ej satt', formattedTime: 'TBD' };
+        }
+
+        const dateObj = new Date(date);
+        if (isNaN(dateObj.getTime())) {
+            return { formattedDate: 'Datum ej satt', formattedTime: 'TBD' };
+        }
+
+        const formattedDate = dateObj.toLocaleDateString("sv-SE", {
             month: "long",
             day: "numeric",
         });
 
-        const formattedTime = new Date(date).toLocaleTimeString("sv-SE", {
+        const formattedTime = dateObj.toLocaleTimeString("sv-SE", {
             hour: "2-digit",
             minute: "2-digit",
             hour12: false,
@@ -54,10 +64,23 @@ const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) =
     // Determine the time to display
     const displayTime = formattedTime === "00:00" ? "TBD" : formattedTime;
 
+    // Get logo path - uses manifest first, falls back to trying formats
     const getTeamLogoPath = (teamName: string, formatIndex: number) => {
         const formattedName = lowercase(teamName);
-        const format = LOGO_FORMATS[formatIndex] || 'svg';
+        // Check manifest first - if logo is known, use it directly
+        const knownPath = getKnownLogoPath(formattedName);
+        if (knownPath && formatIndex === 0) {
+            return knownPath;
+        }
+        // Fallback: try formats in order (for logos not in manifest)
+        const format = FALLBACK_FORMATS[formatIndex] || 'svg';
         return `/logos/${formattedName}.${format}`;
+    };
+
+    // Check if team has a known logo (in manifest)
+    const hasKnownLogo = (teamName: string) => {
+        const formattedName = lowercase(teamName);
+        return getKnownLogoPath(formattedName) !== null;
     };
 
     // Component for team logo with fallback through multiple formats and fade-in animation
@@ -69,13 +92,29 @@ const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) =
         const setFormatIndex = isHome ? setHomeLogoFormatIndex : setAwayLogoFormatIndex;
         const isLoaded = isHome ? homeLogoLoaded : awayLogoLoaded;
         const setIsLoaded = isHome ? setHomeLogoLoaded : setAwayLogoLoaded;
+        // Track if CMS logo failed so we can fall back to local logos
+        const [cmsLogoFailed, setCmsLogoFailed] = useState(false);
 
         const handleLogoError = () => {
-            // Try next format
+            // If CMS logo failed, mark it and try local logos
+            if (customLogo && !cmsLogoFailed) {
+                setCmsLogoFailed(true);
+                setIsLoaded(false);
+                return;
+            }
+
+            // If logo is in manifest and failed, go directly to text fallback
+            // (manifest guarantees the correct format, so failure means file issue)
+            if (hasKnownLogo(teamName) && formatIndex === 0) {
+                setLogoError(true);
+                return;
+            }
+
+            // Try next fallback format (for logos not in manifest)
             const nextIndex = formatIndex + 1;
-            if (nextIndex < LOGO_FORMATS.length) {
+            if (nextIndex < FALLBACK_FORMATS.length) {
                 setFormatIndex(nextIndex);
-                setIsLoaded(false); // Reset loaded state for new format
+                setIsLoaded(false);
             } else {
                 // All formats exhausted, show fallback
                 setLogoError(true);
@@ -104,8 +143,8 @@ const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) =
             );
         }
 
-        // Use CMS logo if provided, otherwise derive from team name
-        const logoSrc = customLogo || getTeamLogoPath(teamName, formatIndex);
+        // Use CMS logo if provided and not failed, otherwise derive from team name
+        const logoSrc = (customLogo && !cmsLogoFailed) ? customLogo : getTeamLogoPath(teamName, formatIndex);
 
         return (
             <div className="w-12 h-12 relative">

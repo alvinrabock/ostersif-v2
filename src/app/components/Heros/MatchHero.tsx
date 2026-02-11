@@ -133,22 +133,17 @@ export default function MatchHero({
     // Check for start phase - now handling single object instead of array
     const hasStartPhase = matchPhaseData?.["event-type"] === "start-phase";
 
-    const formattedDate = new Date(matchDetails.kickoff).toLocaleDateString(
-        "sv-SE",
-        {
-            month: "long",
-            day: "numeric",
-        }
-    );
+    // Handle empty or invalid kickoff dates
+    const kickoffDateObj = matchDetails.kickoff ? new Date(matchDetails.kickoff) : null;
+    const isValidKickoff = kickoffDateObj && !isNaN(kickoffDateObj.getTime());
 
-    const formattedTime = new Date(matchDetails.kickoff).toLocaleTimeString(
-        "sv-SE",
-        {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-        }
-    );
+    const formattedDate = isValidKickoff
+        ? kickoffDateObj.toLocaleDateString("sv-SE", { month: "long", day: "numeric" })
+        : "Datum ej satt";
+
+    const formattedTime = isValidKickoff
+        ? kickoffDateObj.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit", hour12: false })
+        : "TBD";
 
     const isMatchLive = (
         startFirstHalf: string | null,

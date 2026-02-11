@@ -25,7 +25,7 @@ export default function SenastSpeladeMatcherClient({ matches }: SenastSpeladeMat
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {matches.map((match) => (
                     <MiniMatchCard
-                        key={match.matchId}
+                        key={match.cmsId || match.externalMatchId || match.matchId}
                         match={match}
                         colorTheme="red"
                     />

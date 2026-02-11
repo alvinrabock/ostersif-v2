@@ -75,13 +75,15 @@ async function discoverOstersLeagues() {
     try {
       // Fetch teams for this league
       const teamsResponse: TeamResponse = await fetchFromSMC(`/leagues/${league.LeagueId}/teams`)
+      const teams = teamsResponse.team || []
 
       // Find Östers IF team in this league
-      const ostersTeam = teamsResponse.team?.find(
+      const ostersTeam = teams.find(
         team =>
           team['team-id'] === OSTERS_TEAM_ID ||
           team['external-id'] === OSTERS_EXTERNAL_ID ||
-          team.name === 'Östers IF'
+          team.name === 'Östers IF' ||
+          team.name.toLowerCase().includes('öster')
       )
 
       if (ostersTeam) {
@@ -101,7 +103,7 @@ async function discoverOstersLeagues() {
         console.log(`✅ Found Östers IF in: ${league.LeagueName} (${seasonYear}) - Team ID: ${ostersTeam['team-id']}`)
       }
     } catch (error) {
-      console.error(`⚠️  Error checking league ${league.LeagueId}:`, error)
+      console.error(`⚠️  Error checking league ${league.LeagueId} (${league.LeagueName}):`, error)
       // Continue with other leagues even if one fails
     }
   }

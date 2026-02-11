@@ -166,7 +166,9 @@ export async function POST(request: NextRequest) {
     const allContentTypes = [
       'nyheter', 'lag', 'partners', 'personal', 'jobb', 'dokument',
       'nyhetskategorier', 'spelare', 'stab', 'pages', 'menus', 'footer', 'forms',
-      'homepage', 'matcher'
+      'homepage', 'matcher',
+      // Superadmin API cache tags
+      'squad', 'team-stats', 'superadmin'
     ];
 
     // Track what we revalidate for logging
@@ -278,7 +280,9 @@ export async function GET(request: NextRequest) {
     const allContentTypes = [
       'nyheter', 'lag', 'partners', 'personal', 'jobb', 'dokument',
       'nyhetskategorier', 'spelare', 'stab', 'pages', 'menus', 'footer', 'forms',
-      'homepage', 'matcher'
+      'homepage', 'matcher',
+      // Superadmin API cache tags
+      'squad', 'team-stats', 'superadmin'
     ];
 
     // Revalidate all tags

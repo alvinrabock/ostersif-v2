@@ -41,6 +41,30 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [
     const [matches, setMatches] = useState<MatchCardData[]>(hasFilters ? [] : initialMatches);
     const [loading, setLoading] = useState(hasFilters ? true : false);
     const [calendarOpen, setCalendarOpen] = useState(false);
+    const [mobileCalendarOpen, setMobileCalendarOpen] = useState(false);
+
+    // Sync calendar state between desktop/mobile on resize
+    useEffect(() => {
+        const XL_BREAKPOINT = 1280; // Tailwind xl breakpoint
+
+        const handleResize = () => {
+            const isMobile = window.innerWidth < XL_BREAKPOINT;
+
+            if (isMobile && calendarOpen) {
+                // Switching to mobile with desktop popover open -> open drawer instead
+                setCalendarOpen(false);
+                setMobileCalendarOpen(true);
+            } else if (!isMobile && mobileCalendarOpen) {
+                // Switching to desktop with mobile drawer open -> open popover instead
+                setMobileCalendarOpen(false);
+                setCalendarOpen(true);
+            }
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, [calendarOpen, mobileCalendarOpen]);
+
     const [selectedRange, setSelectedRange] = useState<DateRange | undefined>(() => {
         if (dateFromParam && dateToParam) {
             return {
@@ -215,38 +239,82 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [
                         />
                     </div>
 
-                    <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant="outline"
-                                className={`p-2 text-xs sm:text-sm flex gap-2 items-center ${calendarOpen ? "!bg-custom_white bg-white/20   " : ""
-                                    }`}
+                    {/* Desktop: Popover with 2 months */}
+                    <div className="hidden xl:block">
+                        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    className={`p-2 text-xs sm:text-sm flex gap-2 items-center ${calendarOpen ? "!bg-custom_white bg-white/20" : ""}`}
+                                >
+                                    <CalenderIcon className="h-4 w-4" />
+                                    {selectedRange?.from && selectedRange?.to
+                                        ? `${format(selectedRange.from, 'yyyy-MM-dd')} – ${format(selectedRange.to, 'yyyy-MM-dd')}`
+                                        : 'Välj datum'}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                                className="w-auto bg-custom_dark_dark_red border-slate-400 text-white"
+                                side="bottom"
+                                align="start"
+                                avoidCollisions
+                                sideOffset={8}
                             >
-                                <CalenderIcon className=" hidden xs:block h-2 w-2 sm:h-4 sm:w-4" />
-                                {selectedRange?.from && selectedRange?.to
-                                    ? `${format(selectedRange.from, 'yyyy-MM-dd')} – ${format(selectedRange.to, 'yyyy-MM-dd')}`
-                                    : 'Välj datum'}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                            className="w-auto bg-custom_dark_dark_red border-slate-400 text-white"
-                            side="bottom"
-                            align="start"
-                            avoidCollisions
-                            sideOffset={8} // adds space from the trigger
-                        >
-                            <MatchCalendar
-                                mode="range"
-                                defaultMonth={selectedRange?.from}
-                                selected={selectedRange}
-                                onSelect={handleDateChange}
-                                numberOfMonths={2}
-                                className="text-white"
-                                matches={matches}
-                            />
-                        </PopoverContent>
+                                <MatchCalendar
+                                    mode="range"
+                                    defaultMonth={selectedRange?.from}
+                                    selected={selectedRange}
+                                    onSelect={handleDateChange}
+                                    numberOfMonths={2}
+                                    className="text-white"
+                                    matches={initialMatches}
+                                />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
 
-                    </Popover>
+                    {/* Mobile/Tablet: Drawer with 1 month */}
+                    <div className="xl:hidden w-full">
+                        <Drawer open={mobileCalendarOpen} onOpenChange={setMobileCalendarOpen}>
+                            <DrawerTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    className={`p-2 text-xs sm:text-sm flex gap-2 items-center w-full ${mobileCalendarOpen ? "!bg-custom_white bg-white/20" : ""}`}
+                                >
+                                    <CalenderIcon className="h-4 w-4" />
+                                    {selectedRange?.from && selectedRange?.to
+                                        ? `${format(selectedRange.from, 'yyyy-MM-dd')} – ${format(selectedRange.to, 'yyyy-MM-dd')}`
+                                        : 'Välj datum'}
+                                </Button>
+                            </DrawerTrigger>
+                            <DrawerContent className="p-4 bg-custom_dark_dark_red border-none max-h-[90vh]">
+                                <DrawerHeader className="p-0 pt-4 pb-6 text-center">
+                                    <DrawerTitle className="text-white text-2xl font-bold">Välj datumintervall</DrawerTitle>
+                                </DrawerHeader>
+                                <div className="flex-1 flex flex-col items-center justify-center overflow-auto py-4">
+                                    <MatchCalendar
+                                        mode="range"
+                                        defaultMonth={selectedRange?.from}
+                                        selected={selectedRange}
+                                        onSelect={(range) => {
+                                            handleDateChange(range);
+                                            if (range?.from && range?.to) {
+                                                setMobileCalendarOpen(false);
+                                            }
+                                        }}
+                                        numberOfMonths={1}
+                                        className="text-white"
+                                        matches={initialMatches}
+                                    />
+                                </div>
+                                <DrawerFooter className="p-0 pt-6">
+                                    <DrawerClose asChild>
+                                        <Button variant="outline" className="w-full text-white border-white hover:bg-white/10">Stäng</Button>
+                                    </DrawerClose>
+                                </DrawerFooter>
+                            </DrawerContent>
+                        </Drawer>
+                    </div>
                 </div>
 
                 {/* === Mobile filter trigger with Drawer === */}

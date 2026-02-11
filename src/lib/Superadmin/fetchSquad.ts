@@ -2,6 +2,11 @@
 
 import { TruppPlayers } from "@/types";
 
+/**
+ * Fetch squad data from Superadmin API
+ * Uses Next.js fetch cache with tag-based revalidation (same as nyheter)
+ * Cached indefinitely, revalidated via webhook or on-demand
+ */
 export async function fetchSquadData() {
     // Add timeout to prevent hanging during build
     const controller = new AbortController();
@@ -16,8 +21,10 @@ export async function fetchSquadData() {
                     Accept: 'application/json',
                     'x-api-key': process.env.SUPERADMIN_KEY || '',
                 },
-                cache: 'no-store',
                 signal: controller.signal,
+                next: {
+                    tags: ['squad', 'superadmin'], // Cache tags for revalidation
+                },
             }
         );
 

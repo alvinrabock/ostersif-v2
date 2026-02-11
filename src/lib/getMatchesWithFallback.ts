@@ -20,6 +20,7 @@ import {
   type WhereClause,
 } from "./frontspace/client";
 import { getMatches as fetchMatchesFromSMC } from "./fetchMatches";
+import { sortMatches } from "@/utils/sortMatches";
 
 // League IDs for Östers IF matches (from existing implementation)
 const DEFAULT_LEAGUE_IDS = [
@@ -34,8 +35,16 @@ const DEFAULT_LEAGUE_IDS = [
 function combineDateTime(datum?: string, tid?: string): string {
   if (!datum) return '';
   // datum format: YYYY-MM-DD, tid format: HH:mm or HH:mm:ss
-  const timePart = tid || '00:00';
-  return `${datum}T${timePart}:00`;
+  // Sanitize time: replace dots with colons (handles "15.00" → "15:00")
+  let timePart = tid || '00:00';
+  timePart = timePart.replace(/\./g, ':');
+
+  // Ensure time has seconds
+  if (timePart.split(':').length === 2) {
+    timePart = `${timePart}:00`;
+  }
+
+  return `${datum}T${timePart}`;
 }
 
 /**
@@ -197,10 +206,15 @@ function transformCMSMatchToCardData(cmsMatch: any): MatchCardData {
     leagueId: content.externalleagueid || '', // Keep as string (supports ULID from SMC API 2.0)
     leagueName: content.leaguename || '',
     season: content.sasong || '',
-    homeTeam: content.hemmalag || '',
-    awayTeam: content.bortalag || '',
-    homeTeamLogo: content.logotyp_hemmalag?.url || undefined,
-    awayTeamLogo: content.logotype_bortalag?.url || undefined,
+    homeTeam: (content.hemmalag || '').trim(),
+    awayTeam: (content.bortalag || '').trim(),
+    // Handle both string URLs and object with .url property
+    homeTeamLogo: typeof content.logotyp_hemmalag === 'string'
+      ? content.logotyp_hemmalag
+      : content.logotyp_hemmalag?.url || undefined,
+    awayTeamLogo: typeof content.logotype_bortalag === 'string'
+      ? content.logotype_bortalag
+      : content.logotype_bortalag?.url || undefined,
     isCustomGame: content.iscustomgame === 'true' || content.iscustomgame === true,
     cmsSlug: cmsMatch.slug || undefined, // CMS slug for URL routing
     cmsId: cmsMatch.id, // CMS post UUID (always unique)
@@ -339,10 +353,10 @@ export async function getMatchesWithFallback(options?: {
 export async function getUpcomingMatches(limit = 10): Promise<MatchCardData[]> {
   const today = new Date().toISOString().split('T')[0];
 
-  // Use same approach as /matcher page - fetch more, sort, then limit
-  // This ensures we get the soonest matches regardless of API sort order
+  // Fetch slightly more than needed to account for any edge cases
+  // CMS already filters by datum >= today and status != 'over'
   const allUpcoming = await getMatchesWithFallback({
-    limit: 50, // Fetch more to ensure we get all upcoming matches
+    limit: Math.max(limit * 2, 20),
     dateFrom: today,
   });
 
@@ -351,7 +365,6 @@ export async function getUpcomingMatches(limit = 10): Promise<MatchCardData[]> {
     .filter(m => m.status !== 'Over')
     .sort((a, b) => new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime());
 
-  // Return only the requested number
   return upcoming.slice(0, limit);
 }
 
@@ -622,29 +635,3 @@ export async function getMatchById(matchId: string, leagueId?: string): Promise<
   }
 }
 
-/**
- * Sort matches by status priority and kickoff date
- * Order: Live first, Scheduled second, Played (Over) last
- * Within status: Upcoming/Live by soonest first, Played by most recent first
- */
-function sortMatches(matches: MatchCardData[]): MatchCardData[] {
-  return matches.sort((a, b) => {
-    // Status priority: In progress > Scheduled > Over
-    const statusPriority: Record<string, number> = {
-      'In progress': 0,
-      'Scheduled': 1,
-      'Over': 2,
-    };
-
-    const statusDiff = (statusPriority[a.status] ?? 1) - (statusPriority[b.status] ?? 1);
-    if (statusDiff !== 0) return statusDiff;
-
-    // Within same status, sort by date
-    // Played matches: most recent first (descending)
-    if (a.status === 'Over') {
-      return new Date(b.kickoff).getTime() - new Date(a.kickoff).getTime();
-    }
-    // Upcoming/Live: soonest first (ascending)
-    return new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime();
-  });
-}

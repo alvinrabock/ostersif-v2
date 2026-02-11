@@ -1028,7 +1028,7 @@ export async function fetchUpcomingMatchesCached(limit = 10) {
         match_status: { not_equals: 'over' },
       },
     },
-    sortBy: 'datum',
+    sortBy: 'content.datum',
     sortDirection: 'asc',
   });
 }
@@ -1046,7 +1046,7 @@ export async function fetchRecentMatchesCached(limit = 10) {
         match_status: { equals: 'over' },
       },
     },
-    sortBy: 'datum',
+    sortBy: 'content.datum',
     sortDirection: 'desc',
   });
 }

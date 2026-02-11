@@ -110,7 +110,7 @@ export default function LagSenastSpeladeMatcher({ initialMatches }: LagSenastSpe
                 <div className="flex flex-col gap-4">
                     {latestPlayedMatches.map((match) => (
                         <MatchCard
-                            key={match.matchId}
+                            key={match.cmsId || match.externalMatchId || match.matchId}
                             match={match}
                             colorTheme="outline"
                         />

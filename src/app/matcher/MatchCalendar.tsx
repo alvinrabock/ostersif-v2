@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/app/components/ui/Button";
 import { MatchCardData } from "@/types";
 import { lowercase } from "@/utillities/lowercase";
+import { getKnownLogoPath } from "@/lib/logoManifest";
 
 type MatchCalendarProps = DayPickerProps & {
   matches?: MatchCardData[];
@@ -28,8 +29,11 @@ export function MatchCalendar({
     matches.forEach((match) => {
       try {
         // Parse kickoff consistently - extract just the date portion (YYYY-MM-DD)
+        // Handles both "2025-11-09 15:00" and "2025-11-09T15:00:00" formats
         const kickoffStr = match.kickoff || '';
-        const dateKey = kickoffStr.split(' ')[0]; // Extract "2025-11-09" from "2025-11-09 15:00"
+        const dateKey = kickoffStr.split(/[T ]/)[0]; // Split by T or space
+
+        if (!dateKey) return;
 
         if (!grouped.has(dateKey)) {
           grouped.set(dateKey, []);
@@ -43,22 +47,42 @@ export function MatchCalendar({
     return grouped;
   }, [matches]);
 
-  // Supported logo formats in order of preference
-  const LOGO_FORMATS = ['svg', 'png'] as const;
+  // Fallback formats when logo not in manifest
+  const FALLBACK_FORMATS = ['svg', 'png', 'webp'] as const;
 
-  const getTeamLogoPath = (teamName: string, format: string = 'svg') => {
+  // Get logo path - uses manifest first for known logos
+  const getTeamLogoPath = (teamName: string, formatIndex: number = 0) => {
     const formattedName = lowercase(teamName);
+    // Check manifest first - if logo is known, use it directly
+    const knownPath = getKnownLogoPath(formattedName);
+    if (knownPath && formatIndex === 0) {
+      return knownPath;
+    }
+    // Fallback: try formats in order
+    const format = FALLBACK_FORMATS[formatIndex] || 'svg';
     return `/logos/${formattedName}.${format}`;
   };
 
-  // TeamLogo component with format fallback
+  // Check if team has a known logo in manifest
+  const hasKnownLogo = (teamName: string) => {
+    const formattedName = lowercase(teamName);
+    return getKnownLogoPath(formattedName) !== null;
+  };
+
+  // TeamLogo component - uses manifest for known logos, fallback for unknown
   const TeamLogo = ({ teamName }: { teamName: string }) => {
     const [formatIndex, setFormatIndex] = React.useState(0);
     const [hasError, setHasError] = React.useState(false);
 
     const handleError = () => {
+      // If logo is in manifest and failed, go directly to error state
+      if (hasKnownLogo(teamName) && formatIndex === 0) {
+        setHasError(true);
+        return;
+      }
+      // Try next fallback format
       const nextIndex = formatIndex + 1;
-      if (nextIndex < LOGO_FORMATS.length) {
+      if (nextIndex < FALLBACK_FORMATS.length) {
         setFormatIndex(nextIndex);
       } else {
         setHasError(true);
@@ -71,7 +95,7 @@ export function MatchCalendar({
 
     return (
       <Image
-        src={getTeamLogoPath(teamName, LOGO_FORMATS[formatIndex])}
+        src={getTeamLogoPath(teamName, formatIndex)}
         alt={teamName}
         fill
         className="object-contain p-0.5"
@@ -163,12 +187,12 @@ export function MatchCalendar({
           "h-16 w-16 p-1 font-normal aria-selected:opacity-100"
         ),
         day_range_start:
-          "day-range-start aria-selected:bg-white aria-selected:text-black",
+          "day-range-start aria-selected:bg-white/30 aria-selected:text-white",
         day_range_end:
-          "day-range-end aria-selected:bg-white aria-selected:text-black",
+          "day-range-end aria-selected:bg-white/30 aria-selected:text-white",
         day_selected:
-          "bg-white text-black hover:bg-white hover:text-black focus:bg-white focus:text-black",
-        day_today: "bg-accent text-accent-foreground",
+          "bg-white/30 text-white hover:bg-white/40 hover:text-white focus:bg-white/30 focus:text-white",
+        day_today: "bg-white/20 text-white",
         day_outside:
           "day-outside text-muted-foreground aria-selected:text-muted-foreground",
         day_disabled: "text-muted-foreground opacity-50",
@@ -179,10 +203,10 @@ export function MatchCalendar({
       }}
       components={{
         IconLeft: ({ className, ...props }) => (
-          <ChevronLeft className={cn("size-4", className)} {...props} />
+          <ChevronLeft className={cn("size-4 text-white", className)} {...props} />
         ),
         IconRight: ({ className, ...props }) => (
-          <ChevronRight className={cn("size-4", className)} {...props} />
+          <ChevronRight className={cn("size-4 text-white", className)} {...props} />
         ),
         DayContent: renderDayContent,
       }}

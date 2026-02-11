@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { lowercase } from "@/utillities/lowercase";
 import { Lag, MatchCardData } from "@/types";
+import { getKnownLogoPath } from "@/lib/logoManifest";
 
 interface MatchCardProps {
     match: MatchCardData;
@@ -12,22 +13,39 @@ interface MatchCardProps {
     teamsWithSEF?: Lag[];
 }
 
-// Supported logo formats in order of preference
-const LOGO_FORMATS = ['svg', 'png'] as const;
+// Fallback formats when logo not in manifest
+const FALLBACK_FORMATS = ['svg', 'png', 'webp'] as const;
 
-// TeamLogo component with fallback through multiple formats and fade-in animation
+// TeamLogo component - uses manifest for known logos, fallback for unknown
 const TeamLogo = ({ teamName, className }: { teamName: string; className?: string }) => {
     const [formatIndex, setFormatIndex] = useState(0);
     const [hasError, setHasError] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
 
-    const getLogoPath = (format: string) => `/logos/${lowercase(teamName)}.${format}`;
+    const formattedName = lowercase(teamName);
+    const knownPath = getKnownLogoPath(formattedName);
+    const hasKnown = knownPath !== null;
+
+    // Get logo path - uses manifest first for known logos
+    const getLogoPath = (idx: number) => {
+        if (hasKnown && idx === 0) {
+            return knownPath;
+        }
+        const format = FALLBACK_FORMATS[idx] || 'svg';
+        return `/logos/${formattedName}.${format}`;
+    };
 
     const handleError = () => {
+        // If logo is in manifest and failed, go directly to error state
+        if (hasKnown && formatIndex === 0) {
+            setHasError(true);
+            return;
+        }
+        // Try next fallback format
         const nextIndex = formatIndex + 1;
-        if (nextIndex < LOGO_FORMATS.length) {
+        if (nextIndex < FALLBACK_FORMATS.length) {
             setFormatIndex(nextIndex);
-            setIsLoaded(false); // Reset loaded state for new format
+            setIsLoaded(false);
         } else {
             setHasError(true);
         }
@@ -51,7 +69,7 @@ const TeamLogo = ({ teamName, className }: { teamName: string; className?: strin
 
     return (
         <Image
-            src={getLogoPath(LOGO_FORMATS[formatIndex])}
+            src={getLogoPath(formatIndex)}
             alt={teamName}
             fill
             className={`object-contain transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
@@ -66,11 +84,21 @@ const MiniMatchCard = ({ match, colorTheme = "blue" }: MatchCardProps) => {
     const showScore = match.status === "Over";
 
     const formatDate = (date: string) => {
-        const formattedDate = new Date(date).toLocaleDateString("sv-SE", {
+        // Handle empty or invalid dates
+        if (!date || date === '') {
+            return { formattedDate: 'Datum ej satt', formattedTime: 'TBD' };
+        }
+
+        const dateObj = new Date(date);
+        if (isNaN(dateObj.getTime())) {
+            return { formattedDate: 'Datum ej satt', formattedTime: 'TBD' };
+        }
+
+        const formattedDate = dateObj.toLocaleDateString("sv-SE", {
             month: "long",
             day: "numeric",
         });
-        const formattedTime = new Date(date).toLocaleTimeString("sv-SE", {
+        const formattedTime = dateObj.toLocaleTimeString("sv-SE", {
             hour: "2-digit",
             minute: "2-digit",
             hour12: false,

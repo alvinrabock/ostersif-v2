@@ -78,7 +78,7 @@ export default function SpeladeMatcherClient({ matches }: SpeladeMatcherClientPr
                     }}
                 >
                     {matches.map((match) => (
-                        <SwiperSlide key={match.matchId}>
+                        <SwiperSlide key={match.cmsId || match.externalMatchId || match.matchId}>
                             <MiniMatchCard
                                 match={match}
                                 colorTheme="outline"
