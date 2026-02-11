@@ -27,6 +27,10 @@ import { Match, MatchLineup } from '@/types';
 interface MatchClientProps {
     initialMatchDetails?: Match | null;
     initialLineupData?: MatchLineup | null;
+    // Optional props for catch-all route - if provided, use these instead of useParams
+    leagueIdProp?: string;
+    matchIdProp?: string;
+    isCustomGame?: boolean;
 }
 
 // Valid tab values
@@ -73,22 +77,25 @@ const ErrorDisplay = React.memo(({ message }: { message: string }) => (
 ));
 ErrorDisplay.displayName = "ErrorDisplay";
 
-function MatchClient({ initialMatchDetails, initialLineupData }: MatchClientProps) {
-    const { leagueID, id } = useParams();
+function MatchClient({ initialMatchDetails, initialLineupData, leagueIdProp, matchIdProp, isCustomGame }: MatchClientProps) {
+    const urlParams = useParams();
     const router = useRouter();
     const searchParams = useSearchParams();
 
-    // Get tab from URL params, fallback to 'lineups'
+    // Get tab from URL params, fallback to 'lineups' (or 'standings' for custom games without lineup)
     const urlTab = searchParams.get('tab');
-    const initialTab: ValidTab = urlTab && isValidTab(urlTab) ? urlTab : 'lineups';
+    const defaultTab: ValidTab = isCustomGame ? 'standings' : 'lineups';
+    const initialTab: ValidTab = urlTab && isValidTab(urlTab) ? urlTab : defaultTab;
 
     const [activeTab, setActiveTab] = useState<ValidTab>(initialTab);
     const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
 
-    // Support both string IDs (SMC API 2.0 ULIDs) and numeric IDs (Fogis)
-    const leagueId = (leagueID as string) || '';
-    const matchId = (id as string) || '';
-    const validParams = !!leagueId && !!matchId;
+    // Support both catch-all route (props) and legacy route (useParams)
+    // Props take precedence if provided
+    const leagueId = leagueIdProp || (urlParams.leagueID as string) || '';
+    const matchId = matchIdProp || (urlParams.id as string) || '';
+    // For custom games, we only need matchId (CMS ID) to be valid
+    const validParams = isCustomGame ? !!matchId : (!!leagueId && !!matchId);
 
     // Sync activeTab with URL on mount and when URL changes
     useEffect(() => {

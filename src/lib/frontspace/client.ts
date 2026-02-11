@@ -566,10 +566,10 @@ export async function fetchPostById<T>(
   postType: string,
   id: string
 ): Promise<T | null> {
-  // Try fetching by ID using the posts query with ID in where clause
+  // Try fetching by ID using postById query (without postTypeSlug - not supported)
   const query = `
-    query GetPostById($storeId: String!, $postTypeSlug: String!, $id: String!) {
-      postById(storeId: $storeId, postTypeSlug: $postTypeSlug, id: $id) {
+    query GetPostById($storeId: String!, $id: String!) {
+      postById(storeId: $storeId, id: $id) {
         id
         title
         slug
@@ -590,12 +590,14 @@ export async function fetchPostById<T>(
   try {
     const data = await frontspaceGraphQLFetch<any>(query, {
       storeId: FRONTSPACE_STORE_ID,
-      postTypeSlug: postType,
       id
     }, getPostTypeCacheTags(postType));
 
     if (data.postById && data.postById.status === 'published') {
-      return data.postById as T;
+      // Verify the post type matches what we're looking for
+      if (data.postById.postType?.slug === postType) {
+        return data.postById as T;
+      }
     }
   } catch {
     // postById query might not exist, try alternative approach

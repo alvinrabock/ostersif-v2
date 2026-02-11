@@ -474,7 +474,7 @@ export default function MatchHero({
                                 <div className="flex items-center gap-1">
                                     <FootballIcon className="w-6 h-6 fill-white" />
                                     <p className="text-xs md:text-lg">
-                                        {matchDetails.leagueName} Runda {matchDetails.roundNumber}
+                                        {matchDetails.leagueName}{matchDetails.roundNumber ? ` Runda ${matchDetails.roundNumber}` : ''}
                                     </p>
                                 </div>
                                 {/* Show date with calendar icon for started/finished matches */}

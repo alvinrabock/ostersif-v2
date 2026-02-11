@@ -346,23 +346,32 @@ export async function getMatchesWithFallback(options?: {
 
 /**
  * Get upcoming matches using the same logic as /matcher page
- * Uses getMatchesWithFallback which works correctly
- * Filters: datum >= today (not 'over' matches)
+ * Uses season-based filtering (same as /matcher) to include all match types
+ * including Träningsmatcher and custom games
+ * Filters: current season, then excludes completed matches client-side
  * Sorted by kickoff date ascending (soonest first), then limited
  */
 export async function getUpcomingMatches(limit = 10): Promise<MatchCardData[]> {
   const today = new Date().toISOString().split('T')[0];
+  const currentSeason = new Date().getFullYear().toString();
 
-  // Fetch slightly more than needed to account for any edge cases
-  // CMS already filters by datum >= today and status != 'over'
-  const allUpcoming = await getMatchesWithFallback({
-    limit: Math.max(limit * 2, 20),
-    dateFrom: today,
+  // Use season-based filtering (same as /matcher page) to include all match types
+  // This ensures Träningsmatcher and custom games are included
+  const allMatches = await getMatchesWithFallback({
+    limit: 100, // Fetch more to filter client-side
+    season: currentSeason,
   });
 
-  // Filter out completed matches and sort by kickoff ascending
-  const upcoming = allUpcoming
-    .filter(m => m.status !== 'Over')
+  // Filter for upcoming matches:
+  // 1. Not completed (status !== 'Over')
+  // 2. Kickoff date is today or in the future
+  const upcoming = allMatches
+    .filter(m => {
+      if (m.status === 'Over') return false;
+      // Include matches with kickoff today or later
+      const kickoffDate = m.kickoff?.split('T')[0] || '';
+      return kickoffDate >= today;
+    })
     .sort((a, b) => new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime());
 
   return upcoming.slice(0, limit);
@@ -576,61 +585,18 @@ export async function getFilteredMatches(options: {
 }
 
 /**
- * Get a single match by external match ID (from SMC) or CMS slug
- * This is used for the single match page /matcher/[leagueID]/[id]
+ * Get a single match by CMS ID
+ * Single query lookup - all matches should be in CMS
  */
-export async function getMatchById(matchId: string, leagueId?: string): Promise<MatchCardData | null> {
+export async function getMatchById(matchId: string): Promise<MatchCardData | null> {
   try {
-    // Try CMS first - search by externalmatchid
-    const { posts: cmsMatches } = await fetchMatcherCached({
-      limit: 1,
-      where: {
-        content: {
-          externalmatchid: { equals: matchId },
-        },
-      },
-    });
-
-    if (cmsMatches && cmsMatches.length > 0) {
-      return transformCMSMatchToCardData(cmsMatches[0]);
-    }
-
-    // Try by CMS post ID (UUID/ULID) - for matches linked via cmsId in URL
-    try {
-      const matchById = await frontspace.matcher.getById(matchId);
-      if (matchById) {
-        return transformCMSMatchToCardData(matchById);
-      }
-    } catch {
-      // ID lookup failed, continue
-    }
-
-    // Try by slug as fallback (for custom matches)
-    try {
-      const matchBySlug = await frontspace.matcher.getBySlug(matchId);
-      if (matchBySlug) {
-        return transformCMSMatchToCardData(matchBySlug);
-      }
-    } catch {
-      // Slug lookup failed, continue to SMC fallback
-    }
-  } catch (error) {
-    console.error('CMS match fetch failed:', error);
-  }
-
-  // Fallback: fetch from SMC API
-  try {
-    const leagueIds = leagueId ? [leagueId] : DEFAULT_LEAGUE_IDS;
-    const allMatches = await fetchMatchesFromSMC(leagueIds);
-    const match = allMatches.find(m => m.matchId.toString() === matchId);
-
+    const match = await frontspace.matcher.getById(matchId);
     if (match) {
-      return match;
+      return transformCMSMatchToCardData(match);
     }
-
     return null;
   } catch (error) {
-    console.error('SMC fallback also failed:', error);
+    console.error('CMS match fetch failed:', error);
     return null;
   }
 }
