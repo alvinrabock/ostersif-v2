@@ -9,6 +9,21 @@ import { frontspace } from '../client';
 export interface FrontspaceDokumentContent {
   beskrivning?: string;
   fil?: string; // URL to the file (resolved from media object)
+  kategori?: string | string[] | any; // Category relation field (can be ID, array of IDs, or populated objects)
+}
+
+// Dokumentkategori type
+export interface FrontspaceDokumentkategori {
+  id: string;
+  title: string;
+  slug: string;
+  content?: {
+    beskrivning?: string;
+  };
+  status: string;
+  created_at: string;
+  updated_at: string;
+  published_at: string;
 }
 
 export interface FrontspaceDokument {
@@ -91,7 +106,11 @@ function transformDokument(doc: any): FrontspaceDokument {
  */
 export async function fetchAllDokument(limit = 100): Promise<FrontspaceDokument[]> {
   try {
-    const { posts } = await frontspace.dokument.getAll({ limit });
+    const { posts } = await frontspace.dokument.getAll({
+      limit,
+      sortBy: 'sort_order',
+      sortDirection: 'asc',
+    });
     return posts.map(transformDokument);
   } catch (error) {
     console.error('Error fetching dokument from Frontspace:', error);
@@ -111,5 +130,66 @@ export async function fetchSingleDokument(slug: string): Promise<FrontspaceDokum
   } catch (error) {
     console.error(`Error fetching dokument ${slug} from Frontspace:`, error);
     return null;
+  }
+}
+
+/**
+ * Fetch all document categories
+ */
+export async function fetchAllDokumentkategorier(limit = 100): Promise<FrontspaceDokumentkategori[]> {
+  try {
+    const { posts } = await frontspace.dokumentkategorier.getAll({
+      limit,
+      sortBy: 'sort_order',
+      sortDirection: 'asc',
+    });
+    console.log('[fetchAllDokumentkategorier] Categories with sort_order:', posts.map((p: any) => ({
+      title: p.title,
+      sort_order: p.sort_order,
+    })));
+    return posts as FrontspaceDokumentkategori[];
+  } catch (error) {
+    console.error('Error fetching dokumentkategorier from Frontspace:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetch documents by category
+ * Uses where clause with contains operator for array relation fields
+ */
+export async function fetchDokumentByCategory(
+  categorySlug: string,
+  limit = 100,
+  page = 1
+): Promise<FrontspaceDokument[]> {
+  try {
+    // Step 1: Get the category UUID from the slug
+    const category = await frontspace.dokumentkategorier.getBySlug(categorySlug) as any;
+
+    if (!category || !category.id) {
+      console.warn(`[fetchDokumentByCategory] Category not found: ${categorySlug}`);
+      return [];
+    }
+
+    // Step 2: Fetch documents filtered by category UUID using where clause
+    const offset = (page - 1) * limit;
+
+    const { posts } = await frontspace.dokument.getAll({
+      limit,
+      offset,
+      sortBy: 'sort_order',
+      sortDirection: 'asc',
+      where: {
+        content: {
+          kategori: { contains: category.id },
+        },
+      },
+    });
+
+    return posts.map(transformDokument);
+  } catch (error) {
+    console.error(`Error fetching dokument by category ${categorySlug}:`, error);
+    return [];
   }
 }

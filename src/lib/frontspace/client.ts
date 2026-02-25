@@ -37,6 +37,7 @@ export const CACHE_TAGS = {
   JOBB: 'jobb',
   DOKUMENT: 'dokument',
   NYHETSKATEGORIER: 'nyhetskategorier',
+  DOKUMENTKATEGORIER: 'dokumentkategorier',
   PAGES: 'pages',
   MENUS: 'menus',
   FOOTER: 'footer',
@@ -760,6 +761,12 @@ export const frontspace = {
       fetchPosts('dokument', options),
     getBySlug: (slug: string) =>
       fetchPostBySlug('dokument', slug),
+  },
+  dokumentkategorier: {
+    getAll: (options?: Parameters<typeof fetchPosts>[1]) =>
+      fetchPosts('dokumentkategorier', options),
+    getBySlug: (slug: string) =>
+      fetchPostBySlug('dokumentkategorier', slug),
   },
   jobb: {
     getAll: (options?: Parameters<typeof fetchPosts>[1]) =>
