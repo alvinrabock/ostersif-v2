@@ -3,7 +3,6 @@ import {
   fetchAllDokumentkategorier,
   fetchDokumentByCategory,
   type FrontspaceDokument,
-  type FrontspaceDokumentkategori,
 } from '@/lib/frontspace/adapters/dokument';
 import Link from 'next/link';
 import MaxWidthWrapper from '../components/MaxWidthWrapper';
