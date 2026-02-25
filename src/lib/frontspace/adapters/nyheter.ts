@@ -227,7 +227,7 @@ export async function fetchNyheterByCategory(
       sort: '-publishedAt',
       where: {
         content: {
-          kategori: { equals: category.id },
+          kategori: { contains: category.id },
         },
       },
     });
