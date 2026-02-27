@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import OsterhjartatClient from './OsterhjartatClient';
 
 export const metadata: Metadata = {
@@ -10,6 +11,18 @@ export const metadata: Metadata = {
   },
 };
 
+function LoadingState() {
+  return (
+    <div className="min-h-screen bg-[#1e0101] flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+    </div>
+  );
+}
+
 export default function OsterhjartatPage() {
-  return <OsterhjartatClient />;
+  return (
+    <Suspense fallback={<LoadingState />}>
+      <OsterhjartatClient />
+    </Suspense>
+  );
 }

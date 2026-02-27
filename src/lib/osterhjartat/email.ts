@@ -4,26 +4,37 @@
  */
 
 import nodemailer from 'nodemailer';
+import type { Transporter } from 'nodemailer';
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 465,
-  secure: Number(process.env.SMTP_PORT) === 465, // Port 465 requires SSL
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+let transporter: Transporter | null = null;
+
+function getTransporter(): Transporter {
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT) || 465,
+      secure: Number(process.env.SMTP_PORT) === 465, // Port 465 requires SSL
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+  }
+  return transporter;
+}
 
 const FROM_EMAIL = 'Österhjärtat <noreply@ostersif.se>';
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+
+function getBaseUrl(): string {
+  return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+}
 
 /**
  * Send registration confirmation email
  */
 export async function sendRegistrationConfirmation(email: string, name: string) {
   try {
-    await transporter.sendMail({
+    await getTransporter().sendMail({
       from: FROM_EMAIL,
       to: email,
       subject: 'Välkommen till Österhjärtat!',
@@ -58,7 +69,7 @@ export async function sendRegistrationConfirmation(email: string, name: string) 
                         Tillsammans gör vi Östers IF starkare!
                       </p>
                       <div style="text-align: center;">
-                        <a href="${BASE_URL}/osterhjartat" style="display: inline-block; background-color: #ffffff; color: #1e0101; padding: 14px 28px; border-radius: 50px; text-decoration: none; font-weight: 600;">
+                        <a href="${getBaseUrl()}/osterhjartat" style="display: inline-block; background-color: #ffffff; color: #1e0101; padding: 14px 28px; border-radius: 50px; text-decoration: none; font-weight: 600;">
                           Besök Österhjärtat
                         </a>
                       </div>
@@ -90,7 +101,7 @@ export async function sendRegistrationConfirmation(email: string, name: string) 
  */
 export async function sendUpdateCardEmail(email: string, updateUrl: string) {
   try {
-    await transporter.sendMail({
+    await getTransporter().sendMail({
       from: FROM_EMAIL,
       to: email,
       subject: 'Uppdatera dina kortuppgifter - Österhjärtat',
@@ -153,7 +164,7 @@ export async function sendUpdateCardEmail(email: string, updateUrl: string) {
  */
 export async function sendUnsubscribeEmail(email: string, unsubscribeUrl: string) {
   try {
-    await transporter.sendMail({
+    await getTransporter().sendMail({
       from: FROM_EMAIL,
       to: email,
       subject: 'Avregistrera från Österhjärtat',
@@ -216,7 +227,7 @@ export async function sendUnsubscribeEmail(email: string, unsubscribeUrl: string
  */
 export async function sendUnsubscribeConfirmation(email: string) {
   try {
-    await transporter.sendMail({
+    await getTransporter().sendMail({
       from: FROM_EMAIL,
       to: email,
       subject: 'Du är nu avregistrerad från Österhjärtat',
@@ -244,7 +255,7 @@ export async function sendUnsubscribeConfirmation(email: string) {
                         Vi hoppas att vi ses igen! Du är alltid välkommen tillbaka.
                       </p>
                       <div style="text-align: center;">
-                        <a href="${BASE_URL}/osterhjartat" style="display: inline-block; background-color: #ffffff; color: #1e0101; padding: 14px 28px; border-radius: 50px; text-decoration: none; font-weight: 600;">
+                        <a href="${getBaseUrl()}/osterhjartat" style="display: inline-block; background-color: #ffffff; color: #1e0101; padding: 14px 28px; border-radius: 50px; text-decoration: none; font-weight: 600;">
                           Registrera dig igen
                         </a>
                       </div>
@@ -276,7 +287,7 @@ export async function sendUnsubscribeConfirmation(email: string) {
  */
 export async function sendUpdateConfirmation(email: string) {
   try {
-    await transporter.sendMail({
+    await getTransporter().sendMail({
       from: FROM_EMAIL,
       to: email,
       subject: 'Kortuppgifter uppdaterade - Österhjärtat',
@@ -304,7 +315,7 @@ export async function sendUpdateConfirmation(email: string) {
                         Tack för att du fortsätter stötta Östers IF!
                       </p>
                       <div style="text-align: center;">
-                        <a href="${BASE_URL}/osterhjartat" style="display: inline-block; background-color: #ffffff; color: #1e0101; padding: 14px 28px; border-radius: 50px; text-decoration: none; font-weight: 600;">
+                        <a href="${getBaseUrl()}/osterhjartat" style="display: inline-block; background-color: #ffffff; color: #1e0101; padding: 14px 28px; border-radius: 50px; text-decoration: none; font-weight: 600;">
                           Besök Österhjärtat
                         </a>
                       </div>

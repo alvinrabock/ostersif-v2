@@ -22,7 +22,7 @@ export async function POST(request: Request) {
         type: 'osterhjartat',
       },
       success_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/osterhjartat/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/osterhjartat`,
+      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/osterhjartat?avbruten=true`,
     });
 
     return NextResponse.json({ url: session.url });
