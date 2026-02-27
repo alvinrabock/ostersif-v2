@@ -2,12 +2,15 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { sendUpdateCardEmail, sendUnsubscribeEmail } from '@/lib/osterhjartat/email';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET!, {
-  apiVersion: '2026-02-25.clover',
-});
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET!, {
+    apiVersion: '2026-02-25.clover',
+  });
+}
 
 export async function POST(request: Request) {
   try {
+    const stripe = getStripe();
     const { email, action } = await request.json();
 
     if (!email || !action) {
