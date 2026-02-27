@@ -389,6 +389,11 @@ export default function OsterhjartatClient() {
       <div className="min-h-screen bg-[#1e0101] flex items-center justify-center px-4">
         <div className="max-w-md w-full">
           <div className="text-center mb-8">
+            <img
+              src="/Österhjärtat.png"
+              alt="Österhjärtat"
+              className="h-24 mx-auto mb-4"
+            />
             <h1 className="text-4xl font-bold text-white mb-2 font-heading">Österhjärtat</h1>
             <p className="text-white/60">Logga in för att fortsätta</p>
           </div>
@@ -480,6 +485,11 @@ export default function OsterhjartatClient() {
               Logga ut
             </button>
           </div>
+          <img
+            src="/Österhjärtat.png"
+            alt="Österhjärtat"
+            className="h-32 mx-auto mb-6"
+          />
           <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 font-heading">
             Välkommen till Österhjärtat
           </h1>
