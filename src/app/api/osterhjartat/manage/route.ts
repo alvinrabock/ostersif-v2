@@ -43,7 +43,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const baseUrl = 'https://ostersif.se';
 
     if (action === 'update') {
       // Create a Checkout session in setup mode to update payment method

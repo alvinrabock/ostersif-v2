@@ -26,7 +26,7 @@ function getTransporter(): Transporter {
 const FROM_EMAIL = 'Österhjärtat <noreply@ostersif.se>';
 
 function getBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  return 'https://ostersif.se';
 }
 
 /**
