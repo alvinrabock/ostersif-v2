@@ -1,20 +1,25 @@
 "use server"
 
 import { TruppPlayers } from "@/types";
+import { getCurrentSeason } from "@/lib/season";
 
 /**
  * Fetch squad data from Superadmin API
  * Uses Next.js fetch cache with tag-based revalidation (same as nyheter)
  * Cached indefinitely, revalidated via webhook or on-demand
+ *
+ * @param season - Optional season year (e.g., "2025"). Defaults to current season.
  */
-export async function fetchSquadData() {
+export async function fetchSquadData(season?: string) {
+    const targetSeason = season || getCurrentSeason();
+
     // Add timeout to prevent hanging during build
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
     try {
         const res = await fetch(
-            'https://api.sportomedia.se/v1/squad/OIF/2025?full=true',
+            `https://api.sportomedia.se/v1/squad/OIF/${targetSeason}?full=true`,
             {
                 method: 'GET',
                 headers: {

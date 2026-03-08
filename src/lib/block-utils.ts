@@ -172,7 +172,7 @@ export function generateBlockCSS(
   responsiveStyles: ResponsiveStyles = {},
   visibility?: BlockVisibility
 ): string {
-  const className = `.block-${blockId}`
+  const className = `[data-block-id="${blockId}"]`
   let css = `${className} {\n`
 
   // Extract linkColor from responsiveStyles for special handling

@@ -14,7 +14,7 @@ interface SpacerBlockProps {
 export default function SpacerBlock({ blockId }: SpacerBlockProps) {
   return (
     <div
-      className={`spacer-block block-${blockId}`}
+      className="spacer-block"
       data-block-id={blockId}
     />
   )

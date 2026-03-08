@@ -23,6 +23,12 @@ const nextConfig = {
         pathname: "/api/media/**",
       },
       {
+        protocol: "http",
+        hostname: "localhost",
+        port: "3002",
+        pathname: "/v1/image",
+      },
+      {
         protocol: "https",
         hostname: process.env.NEXT_PUBLIC_BACKEND_URL
           ? new URL(process.env.NEXT_PUBLIC_BACKEND_URL).hostname
@@ -65,6 +71,12 @@ const nextConfig = {
         protocol: "https",
         hostname: "supabasekong-mkssw0ooo80kowwskgggscw4.coolify.frontspace.se",
         pathname: "/storage/**",
+      },
+      // Frontspace image proxy (production)
+      {
+        protocol: "https",
+        hostname: "api.frontspace.se",
+        pathname: "/v1/image",
       },
     ],
   },

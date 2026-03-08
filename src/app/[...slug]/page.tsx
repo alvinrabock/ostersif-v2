@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { BlockRenderer } from '@/app/components/BlockRenderer';
-import { fetchAllPagesCached, fetchAllPages } from '@/lib/frontspace/client';
+import { fetchAllPagesCached, fetchAllPages, fetchPageBundleCached, fetchPageSlugs } from '@/lib/frontspace/client';
 import { buildPagePaths, findPageByPath } from '@/utils/pageRouting';
 
 // On-demand revalidation only via webhook - no time-based polling
@@ -15,39 +15,41 @@ export default async function Page({ params }: PageProps) {
 
   // Construct full path from URL segments
   const fullPath = '/' + resolvedParams.slug.join('/');
+  const bundleSlug = fullPath.slice(1);
 
-  // Try cached data first, fall back to fresh fetch if cache returns empty
-  // This handles the race condition during cache revalidation
-  let pages = await fetchAllPagesCached();
+  // Try pageBundle first (optimized path: pre-computed CSS, single fetch)
+  const bundle = await fetchPageBundleCached(bundleSlug);
+  const consolidatedCSS: string | null = bundle?.consolidatedCSS ?? null;
+  let blocks = bundle?.page?.content?.blocks ?? null;
 
-  // If cache returned empty (during revalidation), fetch fresh data
-  if (!pages || pages.length === 0) {
-    pages = await fetchAllPages();
+  // Fall back to classic path if pageBundle not available (e.g. page not yet re-published)
+  if (!blocks) {
+    let pages = await fetchAllPagesCached();
+    if (!pages || pages.length === 0) {
+      pages = await fetchAllPages();
+    }
+    const page = findPageByPath(buildPagePaths(pages), fullPath);
+    if (!page) {
+      notFound();
+    }
+    blocks = page.content?.blocks || [];
   }
-
-  const pagesWithPaths = buildPagePaths(pages);
-
-  // Find matching page
-  const page = findPageByPath(pagesWithPaths, fullPath);
-
-  if (!page) {
-    notFound();
-  }
-
-  // Extract blocks from page content
-  const blocks = page.content?.blocks || [];
 
   return (
     <article className="min-h-screen pb-20">
-      <BlockRenderer blocks={blocks} />
+      {consolidatedCSS && (
+        // React 19 hoists <style precedence> to <head> automatically
+        <style precedence="default" dangerouslySetInnerHTML={{ __html: consolidatedCSS }} />
+      )}
+      <BlockRenderer blocks={blocks} skipStyleInjection={!!consolidatedCSS} />
     </article>
   );
 }
 
-// Generate static paths at build time
+// Generate static paths at build time — lightweight query, slugs only
 export async function generateStaticParams() {
-  const pages = await fetchAllPages();
-  const pagesWithPaths = buildPagePaths(pages);
+  const slugs = await fetchPageSlugs();
+  const pagesWithPaths = buildPagePaths(slugs);
 
   // Filter out single-level pages (handled by [slug]/page.tsx)
   // Only include nested pages with at least 2 segments
@@ -64,37 +66,37 @@ export async function generateStaticParams() {
 // Generate metadata for SEO
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const resolvedParams = await params;
-
-  // Construct full path from URL segments
   const fullPath = '/' + resolvedParams.slug.join('/');
+  const bundleSlug = fullPath.slice(1);
 
-  // Try cached data first, fall back to fresh fetch if cache returns empty
-  let pages = await fetchAllPagesCached();
-  if (!pages || pages.length === 0) {
-    pages = await fetchAllPages();
-  }
-  const pagesWithPaths = buildPagePaths(pages);
+  // Try pageBundle first — already has pageSettings, no extra fetch needed
+  const bundle = await fetchPageBundleCached(bundleSlug);
+  const pageSettings = bundle?.page?.content?.pageSettings;
+  const pageTitle = bundle?.page?.title;
 
-  // Find matching page
-  const page = findPageByPath(pagesWithPaths, fullPath);
-
-  if (!page) {
+  // Fall back to fetchAllPages if no bundle
+  if (!bundle?.page) {
+    let pages = await fetchAllPagesCached();
+    if (!pages || pages.length === 0) pages = await fetchAllPages();
+    const page = findPageByPath(buildPagePaths(pages), fullPath);
+    if (!page) {
+      return { title: 'Sidan hittades inte - Östers IF', description: 'Vi är Östers IF' };
+    }
+    const seoTitle = page.content?.pageSettings?.seoTitle || page.title;
+    const seoDescription = page.content?.pageSettings?.seoDescription || '';
     return {
-      title: 'Sidan hittades inte - Östers IF',
-      description: 'Vi är Östers IF',
+      title: seoTitle + ' - Östers IF',
+      description: seoDescription || 'Vi är Östers IF',
+      openGraph: { title: seoTitle, description: seoDescription || 'Vi är Östers IF', url: fullPath },
     };
   }
 
-  const seoTitle = page.content?.pageSettings?.seoTitle || page.title;
-  const seoDescription = page.content?.pageSettings?.seoDescription || '';
+  const seoTitle = pageSettings?.seoTitle || pageTitle || bundleSlug;
+  const seoDescription = pageSettings?.seoDescription || '';
 
   return {
     title: seoTitle + ' - Östers IF',
     description: seoDescription || 'Vi är Östers IF',
-    openGraph: {
-      title: seoTitle,
-      description: seoDescription || 'Vi är Östers IF',
-      url: fullPath,
-    },
+    openGraph: { title: seoTitle, description: seoDescription || 'Vi är Östers IF', url: fullPath },
   };
 }

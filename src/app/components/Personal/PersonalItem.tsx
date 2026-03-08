@@ -2,15 +2,28 @@ import React from 'react';
 import Image from 'next/image';
 import { Personal } from '@/types';
 
+/** Extract inner URL from Frontspace image proxy (api.frontspace.se/v1/image?url=...) */
+function resolveImageSrc(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.pathname === '/v1/image') {
+      const inner = parsed.searchParams.get('url');
+      if (inner) return decodeURIComponent(inner);
+    }
+  } catch {}
+  return url;
+}
+
 interface PersonalItemProps {
   person: Personal;
 }
 
 const PersonalItem: React.FC<PersonalItemProps> = ({ person }) => {
   // Extract photo URL - handle both string and object cases
-  const photoUrl = typeof person.photo === 'string'
+  const rawPhotoUrl = typeof person.photo === 'string'
     ? person.photo
     : person.photo?.url;
+  const photoUrl = rawPhotoUrl ? resolveImageSrc(rawPhotoUrl) : undefined;
   const photoAlt = typeof person.photo === 'object' && person.photo?.alt
     ? person.photo.alt
     : person.title;

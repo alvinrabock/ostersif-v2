@@ -7,6 +7,7 @@ import NyheterItem from "@/app/components/Nyheter/nyheterItem";
 import MiniNyheterItem from "@/app/components/Nyheter/miniNyheterItem";
 import { PlayerCardCMS } from "@/app/components/Player/PlayerCardCMS";
 import { StaffSection } from "@/app/components/Player/StaffSection";
+import SeasonSelector from "@/app/components/SeasonSelector";
 import type { Post, TruppPlayers, SuperAdminTeamStats, MatchCardData } from "@/types";
 import { Newspaper, Clock, Users, Calendar, BarChart3, Trophy } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
@@ -65,6 +66,8 @@ interface TeamTabsProps {
     // Pre-fetched match data from server
     upcomingMatches?: MatchCardData[];
     playedMatches?: MatchCardData[];
+    // Season selection
+    selectedSeason?: string;
 }
 
 // Tab trigger class for consistency
@@ -96,6 +99,7 @@ export default function TeamTabs({
     teamStats,
     upcomingMatches = [],
     playedMatches = [],
+    selectedSeason,
 }: TeamTabsProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -383,7 +387,13 @@ export default function TeamTabs({
                 {isSEFTeam && (
                     <TabsContent value="statistik" className="mt-0">
                         <MaxWidthWrapper>
-                            <div className="grid grid-cols-1 lg:grid-cols-3 lg:gap-10 mt-10 mb-10">
+                            <div className="flex justify-between items-center mt-10 mb-6">
+                                <h2 className="text-3xl font-bold text-white">Statistik</h2>
+                                {selectedSeason && (
+                                    <SeasonSelector currentSeason={selectedSeason} />
+                                )}
+                            </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-3 lg:gap-10 mb-10">
                                 {squad.length > 0 && (
                                     <Suspense fallback={<TabContentSkeleton />}>
                                         <FunStats players={squad} />
@@ -411,9 +421,15 @@ export default function TeamTabs({
                     <TabsContent value="tabell" className="mt-0">
                         <MaxWidthWrapper>
                             <div className="pt-10 pb-20">
-                                <h2 className="text-3xl font-bold mb-8 text-white">Tabell</h2>
+                                <div className="flex justify-between items-center mb-8">
+                                    <h2 className="text-3xl font-bold text-white">Tabell</h2>
+                                    {selectedSeason && (
+                                        <SeasonSelector currentSeason={selectedSeason} />
+                                    )}
+                                </div>
                                 <Suspense fallback={<TabContentSkeleton />}>
                                     <StandingsTable
+                                        season={selectedSeason}
                                         config={{
                                             highlightTeams: smcTeamId ? [parseInt(smcTeamId, 10)] : [19],
                                             theme: 'dark',

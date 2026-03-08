@@ -62,7 +62,7 @@ export default function TextBlock({ block, blockId }: TextBlockProps) {
 
   return (
     <Element
-      className={`text-block block-${blockId} leading-relaxed`}
+      className="text-block leading-relaxed"
       data-block-id={blockId}
       dangerouslySetInnerHTML={{ __html: text }}
     />

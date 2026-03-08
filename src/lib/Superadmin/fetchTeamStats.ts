@@ -1,18 +1,23 @@
 import { SuperAdminTeamStats } from "@/types";
+import { getCurrentSeason } from "@/lib/season";
 
 /**
  * Fetch team stats from Superadmin API
  * Uses Next.js fetch cache with tag-based revalidation (same as nyheter)
  * Cached indefinitely, revalidated via webhook or on-demand
+ *
+ * @param season - Optional season year (e.g., "2025"). Defaults to current season.
  */
-export async function fetchTeamStats(): Promise<SuperAdminTeamStats | null> {
+export async function fetchTeamStats(season?: string): Promise<SuperAdminTeamStats | null> {
+    const targetSeason = season || getCurrentSeason();
+
     // Add timeout to prevent hanging during build
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
     try {
         const res = await fetch(
-            'https://api.sportomedia.se/v1/statistics/teams/allsvenskan/2025',
+            `https://api.sportomedia.se/v1/statistics/teams/allsvenskan/${targetSeason}`,
             {
                 method: 'GET',
                 headers: {

@@ -14,7 +14,7 @@ interface DividerBlockProps {
 export default function DividerBlock({ blockId }: DividerBlockProps) {
   return (
     <hr
-      className={`divider-block block-${blockId}`}
+      className="divider-block"
       data-block-id={blockId}
     />
   )

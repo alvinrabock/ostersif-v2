@@ -1,6 +1,6 @@
 import React from 'react';
 import { fetchAllNyheter } from '@/lib/frontspace/adapters/nyheter';
-import SenasteNyheterClient from './ComponentClient';
+import SenasteNyheterClientWrapper from './ComponentClientWrapper';
 
 interface SenasteNyheterBlockProps {
     maxPosts?: number;
@@ -15,5 +15,5 @@ export default async function SenasteNyheterBlock({ maxPosts = 3 }: SenasteNyhet
         return null;
     }
 
-    return <SenasteNyheterClient posts={posts} />;
+    return <SenasteNyheterClientWrapper posts={posts} />;
 }

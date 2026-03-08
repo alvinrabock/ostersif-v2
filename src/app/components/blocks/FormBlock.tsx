@@ -43,13 +43,13 @@ export default async function FormBlock({ block, blockId }: FormBlockProps) {
 
     return (
       <div
-        className={`form-block block-${blockId}`}
+        className="form-block"
         data-block-id={blockId}
       >
         <FormComponent
           form={form}
           blockId={blockId}
-          className={`block-${blockId}`}
+          className="form-block-inner"
           submitButtonText={content.submitButtonText}
           confirmationMessage={content.confirmationMessage}
           fieldBackgroundColor={content.fieldBackgroundColor}

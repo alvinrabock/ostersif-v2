@@ -1,4 +1,6 @@
 "use server"
+import { getCurrentSeason } from "@/lib/season";
+
 export interface MatchForm {
     matchResult: 'W' | 'D' | 'L';
     homeTeamAbbrv: string;
@@ -24,9 +26,9 @@ export interface MatchForm {
   }
   
   export const fetchStandings = async (league?: string, season?: string): Promise<TeamStats[]> => {
-    // Default to Allsvenskan 2025 if not specified
+    // Default to Allsvenskan and current season if not specified
     const leagueParam = league || 'allsvenskan';
-    const seasonParam = season || '2025';
+    const seasonParam = season || getCurrentSeason();
 
     console.log('fetchStandings: Fetching standings for', { league: leagueParam, season: seasonParam });
 

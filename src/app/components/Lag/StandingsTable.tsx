@@ -1,6 +1,7 @@
 'use client';
 
 import { fetchStandings } from '@/lib/Superadmin/fetchStandings';
+import { getCurrentSeason } from '@/lib/season';
 import { StandingsTeamStats, StandingsTypes } from '@/types';
 import Image from 'next/image';
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
@@ -59,6 +60,7 @@ interface StandingsTableProps {
   onError?: (error: string) => void;
   refreshInterval?: number;
   className?: string;
+  season?: string;
 }
 
 // Default configuration
@@ -144,7 +146,8 @@ const StandingsTable = ({
   onTeamClick,
   onError,
   refreshInterval,
-  className = ''
+  className = '',
+  season: seasonProp
 }: StandingsTableProps) => {
   const [teams, setTeams] = useState<StandingsTypes | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -170,7 +173,7 @@ const StandingsTable = ({
       // Extract league name and season from leagueId
       // leagueId format examples: "allsvenskan", "superettan", or ULID from SMC API
       let league = 'allsvenskan'; // default
-      const season = '2025'; // default
+      const season = seasonProp || getCurrentSeason(); // use prop or default to current season
 
       if (leagueId) {
         // Normalize league name to lowercase
@@ -207,7 +210,7 @@ const StandingsTable = ({
     } finally {
       setLoading(false);
     }
-  }, [leagueId, onError]);
+  }, [leagueId, onError, seasonProp]);
 
   useEffect(() => {
     loadStandings();

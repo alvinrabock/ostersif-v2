@@ -1,30 +1,17 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from "react";
+import React from "react";
 import Link from "next/link";
 import { Post } from "@/types";
 import { Play } from "lucide-react";
 
-// Reusable fade-in image component
 function FadeImage({ src, alt, className, loading }: { src: string; alt: string; className: string; loading: 'lazy' | 'eager' }) {
-  const [loaded, setLoaded] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
-
-  useEffect(() => {
-    if (imgRef.current?.complete && imgRef.current?.naturalHeight > 0) {
-      setLoaded(true);
-    }
-  }, []);
-
   return (
     <img
-      ref={imgRef}
       src={src}
       alt={alt}
-      className={`${className} transition-opacity duration-500 ease-out ${loaded ? 'opacity-100' : 'opacity-0'}`}
+      className={className}
       loading={loading}
-      onLoad={() => setLoaded(true)}
-      onError={() => setLoaded(true)}
     />
   );
 }

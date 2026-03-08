@@ -6,6 +6,7 @@ import { fetchStabByTeam } from "@/lib/frontspace/adapters/stab";
 import { fetchSquadData } from "@/lib/Superadmin/fetchSquad";
 import { fetchTeamStats } from "@/lib/Superadmin/fetchTeamStats";
 import { getUpcomingMatches, getRecentMatches } from "@/lib/getMatchesWithFallback";
+import { getCurrentSeason, isValidSeason } from "@/lib/season";
 import { notFound } from "next/navigation";
 import type { MatchCardData } from "@/types";
 import { ArrowRight } from "lucide-react";
@@ -61,7 +62,7 @@ function formatTrainingSessions(sessions: TrainingSession[] | undefined) {
 
 type PageProps = {
     params: Promise<{ slug: string }>;
-    searchParams: Promise<{ tab?: string }>;
+    searchParams: Promise<{ tab?: string; season?: string }>;
 };
 
 // Generate dynamic metadata
@@ -119,6 +120,10 @@ export default async function Page({ params, searchParams }: PageProps) {
     const { slug } = resolvedParams;
     const currentTab = resolvedSearchParams.tab || 'nyheter';
 
+    // Get season from URL or use default (current season based on date)
+    const seasonParam = resolvedSearchParams.season;
+    const selectedSeason = isValidSeason(seasonParam) ? seasonParam! : getCurrentSeason();
+
     // Fetch team data from Frontspace
     const teamData: FrontspaceLag | null = await fetchSingleLag(slug);
     if (!teamData) {
@@ -136,9 +141,9 @@ export default async function Page({ params, searchParams }: PageProps) {
         fetchNyheterByTeam(teamData.id, 6),
         fetchSpelareByTeam(teamData.id),
         fetchStabByTeam(teamData.id),
-        // Only fetch SMC data for SEF teams
-        isSEFTeam ? fetchSquadData().catch(() => []) : Promise.resolve([]),
-        isSEFTeam ? fetchTeamStats().catch(() => null) : Promise.resolve(null),
+        // Only fetch SMC data for SEF teams (with selected season)
+        isSEFTeam ? fetchSquadData(selectedSeason).catch(() => []) : Promise.resolve([]),
+        isSEFTeam ? fetchTeamStats(selectedSeason).catch(() => null) : Promise.resolve(null),
         // Pre-fetch matches for SEF teams (server-side, non-blocking)
         isSEFTeam ? fetchTeamMatches() : Promise.resolve({ upcoming: [], played: [] }),
     ]);
@@ -199,6 +204,7 @@ export default async function Page({ params, searchParams }: PageProps) {
                 teamStats={teamStats}
                 upcomingMatches={teamMatches.upcoming}
                 playedMatches={teamMatches.played}
+                selectedSeason={selectedSeason}
             />
 
             {/* Sportadmin Link Section */}

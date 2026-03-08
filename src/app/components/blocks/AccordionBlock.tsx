@@ -85,7 +85,7 @@ export default function AccordionBlock({ block, blockId }: AccordionBlockProps) 
       {/* Inject dynamic styles */}
       <style dangerouslySetInnerHTML={{ __html: buildDynamicStyles() }} />
 
-      <div className={`accordion-block block-${blockId} flex flex-col gap-2`}>
+      <div className="accordion-block flex flex-col gap-2" data-block-id={blockId}>
         {items.map((item, index) => {
           const isOpen = openItems.has(item.id);
           const isLast = index === items.length - 1;

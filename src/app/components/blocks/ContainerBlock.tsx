@@ -23,6 +23,7 @@ export interface Block {
 interface ContainerBlockProps {
   block: Block
   blockId: string
+  skipStyleInjection?: boolean
 }
 
 /**
@@ -35,11 +36,12 @@ function generateBackgroundCSS(blockId: string, background: any): string {
 
   // Add position relative for pseudo-elements (::before, ::after)
   // Children get z-index to appear above background/overlay
+  // Use [data-block-id] attribute selector to match same specificity as consolidatedCSS
   css += `
-    #${blockId} {
+    [data-block-id="${blockId}"] {
       position: relative;
     }
-    #${blockId} > * {
+    [data-block-id="${blockId}"] > * {
       z-index: 2;
     }
   `
@@ -88,7 +90,7 @@ function generateSingleBackgroundCSS(
   if (background.type === 'image' && background.imageUrl) {
     // Background image using ::before pseudo-element
     css += `${wrapStart}
-      #${blockId}::before {
+      [data-block-id="${blockId}"]::before {
         content: '';
         position: absolute;
         top: 0;
@@ -107,7 +109,7 @@ function generateSingleBackgroundCSS(
     // Overlay using ::after pseudo-element
     if (background.overlay && background.overlay.enabled) {
       css += `${wrapStart}
-        #${blockId}::after {
+        [data-block-id="${blockId}"]::after {
           content: '';
           position: absolute;
           top: 0;
@@ -141,7 +143,7 @@ function getMediaQueryForBreakpoint(breakpoint: string): string {
   }
 }
 
-export default async function ContainerBlock({ block, blockId }: ContainerBlockProps) {
+export default async function ContainerBlock({ block, blockId, skipStyleInjection = false }: ContainerBlockProps) {
   const content = block.content || {}
 
   // Build background object from Frontspace format (backgroundType, backgroundImage, backgroundVideo, etc.)
@@ -237,7 +239,7 @@ export default async function ContainerBlock({ block, blockId }: ContainerBlockP
         />
       )}
       {content.children && content.children.length > 0 && (
-        <BlockRenderer blocks={content.children} />
+        <BlockRenderer blocks={content.children} skipStyleInjection={skipStyleInjection} />
       )}
     </>
   )
@@ -245,7 +247,7 @@ export default async function ContainerBlock({ block, blockId }: ContainerBlockP
   // Common props for both clickable and non-clickable containers
   const commonProps = {
     id: blockId,
-    className: `container-block ${containerTypeClass} block-${blockId} relative`,
+    className: `container-block ${containerTypeClass} relative`,
     'data-block-id': blockId
   }
 

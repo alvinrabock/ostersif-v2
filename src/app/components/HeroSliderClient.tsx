@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect } from 'react'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import {
   Navigation,
@@ -23,26 +23,12 @@ interface HeroSliderClientProps {
   posts: Post[];
 }
 
-// Individual hero image component with fade-in effect
 function HeroImage({ src, alt }: { src: string; alt: string }) {
-  const [loaded, setLoaded] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
-
-  // Check if image is already loaded (cached) on mount
-  useEffect(() => {
-    if (imgRef.current?.complete && imgRef.current?.naturalHeight > 0) {
-      setLoaded(true);
-    }
-  }, []);
-
   return (
     <img
-      ref={imgRef}
       src={src}
       alt={alt}
-      className={`w-full h-full object-cover transition-opacity duration-700 ease-out ${loaded ? 'opacity-100' : 'opacity-0'}`}
-      onLoad={() => setLoaded(true)}
-      onError={() => setLoaded(true)}
+      className="w-full h-full object-cover"
     />
   );
 }

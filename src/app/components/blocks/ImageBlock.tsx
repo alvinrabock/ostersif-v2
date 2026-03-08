@@ -45,7 +45,7 @@ export default function ImageBlock({ block, blockId }: ImageBlockProps) {
 
   return (
     <div
-      className={`image-block block-${blockId} overflow-hidden`}
+      className="image-block overflow-hidden"
       data-block-id={blockId}
       data-logo-on-scroll={logoOnScroll || undefined}
     >

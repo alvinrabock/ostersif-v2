@@ -282,6 +282,56 @@ export async function fetchFooter(): Promise<any> {
 }
 
 /**
+ * Fetch page bundle — returns consolidatedCSS (pre-computed by backend) + page blocks.
+ * Returns null on error or if the backend does not support pageBundle yet, so callers
+ * can fall back to the classic per-block fetchAllPages approach.
+ */
+export async function fetchPageBundle(slug: string): Promise<any> {
+  const query = `
+    query PageBundle($storeId: String!, $slug: String!) {
+      pageBundle(storeId: $storeId, slug: $slug, optimizeBlocks: true) {
+        consolidatedCSS
+        page {
+          title
+          slug
+          content {
+            blocks {
+              id
+              type
+              content
+              styles
+            }
+            pageSettings {
+              seoTitle
+              seoDescription
+              ogImage
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  try {
+    const data = await frontspaceGraphQLFetch<{ pageBundle: any }>(
+      query,
+      { storeId: FRONTSPACE_STORE_ID, slug },
+      [CACHE_TAGS.PAGES, CACHE_TAGS.FRONTSPACE, `frontspace-${FRONTSPACE_STORE_ID}`]
+    );
+    return data.pageBundle ?? null;
+  } catch {
+    // pageBundle not supported or failed — caller will fall back to old path
+    return null;
+  }
+}
+
+export const fetchPageBundleCached = unstable_cache(
+  fetchPageBundle,
+  ['page-bundle'],
+  { tags: [CACHE_TAGS.PAGES, CACHE_TAGS.FRONTSPACE] }
+);
+
+/**
  * Fetch page by slug
  */
 export async function fetchPageBySlug(slug: string): Promise<any> {
@@ -327,6 +377,34 @@ export async function fetchPageBySlug(slug: string): Promise<any> {
 }
 
 /**
+ * Fetch page slugs only — lightweight query used by generateStaticParams at build time.
+ * Only fetches id, slug, parent_id — no blocks or styles.
+ */
+export async function fetchPageSlugs(): Promise<Array<{ id: string; slug: string; parent_id: string | null; status: string }>> {
+  const query = `
+    query GetPageSlugs($storeId: String!, $limit: Int) {
+      pages(storeId: $storeId, limit: $limit) {
+        id
+        slug
+        parent_id
+        status
+      }
+    }
+  `;
+
+  try {
+    const data = await frontspaceGraphQLFetch<{ pages: any[] }>(query, {
+      storeId: FRONTSPACE_STORE_ID,
+      limit: 500,
+    }, [CACHE_TAGS.PAGES, CACHE_TAGS.FRONTSPACE, `frontspace-${FRONTSPACE_STORE_ID}`]);
+    return (data.pages || []).filter((p: any) => p.status === 'published');
+  } catch (error) {
+    console.error('Error fetching page slugs:', error);
+    return [];
+  }
+}
+
+/**
  * Fetch all pages (for routing)
  */
 export async function fetchAllPages(options?: {
@@ -368,7 +446,6 @@ export async function fetchAllPages(options?: {
       storeId: FRONTSPACE_STORE_ID,
       limit,
     }, [CACHE_TAGS.PAGES, CACHE_TAGS.FRONTSPACE, `frontspace-${FRONTSPACE_STORE_ID}`]);
-    // Filter to only published pages on the client side
     const publishedPages = (data.pages || []).filter((page: any) => page.status === 'published');
     return publishedPages;
   } catch (error) {
@@ -609,6 +686,19 @@ export async function fetchPostById<T>(
     return await fetchPostBySlug<T>(postType, id);
   } catch {
     // Slug lookup failed
+  }
+
+  // Last resort: scan posts to find by UUID (when postById isn't supported by the backend)
+  try {
+    const result = await fetchPosts<T>(postType, {
+      where: { id: { equals: id } },
+      limit: 500,
+    });
+    // Verify the returned post actually has the right ID (in case backend ignores the id filter)
+    const found = result.posts.find((p: any) => p.id === id);
+    if (found && (found as any).status === 'published') return found as T;
+  } catch {
+    // id filter not supported by backend
   }
 
   return null;

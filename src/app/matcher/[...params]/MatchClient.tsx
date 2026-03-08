@@ -84,7 +84,7 @@ function MatchClient({ initialMatchDetails, initialLineupData, leagueIdProp, mat
 
     // Get tab from URL params, fallback to 'lineups' (or 'standings' for custom games without lineup)
     const urlTab = searchParams.get('tab');
-    const defaultTab: ValidTab = isCustomGame ? 'standings' : 'lineups';
+    const defaultTab: ValidTab = 'lineups';
     const initialTab: ValidTab = urlTab && isValidTab(urlTab) ? urlTab : defaultTab;
 
     const [activeTab, setActiveTab] = useState<ValidTab>(initialTab);
@@ -94,8 +94,8 @@ function MatchClient({ initialMatchDetails, initialLineupData, leagueIdProp, mat
     // Props take precedence if provided
     const leagueId = leagueIdProp || (urlParams.leagueID as string) || '';
     const matchId = matchIdProp || (urlParams.id as string) || '';
-    // For custom games, we only need matchId (CMS ID) to be valid
-    const validParams = isCustomGame ? !!matchId : (!!leagueId && !!matchId);
+    // matchId is always required; leagueId is only needed for SMC API enhancement (fails gracefully if missing)
+    const validParams = !!matchId;
 
     // Sync activeTab with URL on mount and when URL changes
     useEffect(() => {
@@ -389,7 +389,8 @@ function MatchClient({ initialMatchDetails, initialLineupData, leagueIdProp, mat
 
     // Check if we should show the standings tab based on league
     const hasStandings = useMemo(() => {
-        if (!matchDetails?.leagueName && !leagueId) return true; // Show by default if no league info
+        if (isCustomGame) return false; // Custom games have no standings
+        if (!matchDetails?.leagueName && !leagueId) return false; // No league info = no standings
 
         // List of supported leagues for standings
         const supportedLeagues = ['allsvenskan', 'superettan', 'ettan'];

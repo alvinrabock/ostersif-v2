@@ -130,7 +130,7 @@ export async function PostListBlock({ block, blockId }: PostListBlockProps) {
 
   return (
     <div
-      className={`post-list-block block-${blockId} ${containerClass}`}
+      className={`post-list-block ${containerClass}`}
       data-block-id={blockId}
       style={stylesWithoutPadding}
     >

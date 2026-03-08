@@ -5,11 +5,11 @@
 
 interface Page {
   id: string;
-  title: string;
+  title?: string;
   slug: string;
   parent_id?: string | null;
   parentId?: string | null;
-  content: any;
+  content?: any;
 }
 
 export interface PageWithPath extends Page {
@@ -81,7 +81,7 @@ export function getBreadcrumbs(page: Page, pages: Page[]): Array<{ title: string
     visitedIds.add(current.id);
 
     breadcrumbs.unshift({
-      title: current.title,
+      title: current.title ?? current.slug,
       path: pathMap.get(current.id) || '/'
     });
     // Support both parent_id (snake_case from GraphQL) and parentId (camelCase)

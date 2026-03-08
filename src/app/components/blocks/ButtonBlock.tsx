@@ -51,7 +51,7 @@ export default function ButtonBlock({ block, blockId }: ButtonBlockProps) {
   if (!href) {
     return (
       <button
-        className={`button-block block-${blockId}`}
+        className="button-block"
         data-block-id={blockId}
         type="button"
       >
@@ -70,7 +70,7 @@ export default function ButtonBlock({ block, blockId }: ButtonBlockProps) {
       <Link
         href={href}
         {...linkProps}
-        className={`button-block block-${blockId}`}
+        className="button-block"
         data-block-id={blockId}
       >
         {text || 'Button'}
@@ -87,7 +87,7 @@ export default function ButtonBlock({ block, blockId }: ButtonBlockProps) {
     <a
       href={href}
       {...linkProps}
-      className={`button-block block-${blockId}`}
+      className="button-block"
       data-block-id={blockId}
     >
       {text || 'Button'}

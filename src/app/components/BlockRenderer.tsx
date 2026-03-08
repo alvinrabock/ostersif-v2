@@ -44,6 +44,11 @@ function isBlockHidden(block: Block): boolean {
 
 interface BlockRendererProps {
   blocks: Block[]
+  /**
+   * When true, skips per-block CSS generation and <style> injection.
+   * Used when the parent page has already injected consolidatedCSS from pageBundle.
+   */
+  skipStyleInjection?: boolean
 }
 
 /**
@@ -51,7 +56,7 @@ interface BlockRendererProps {
  * Uses Promise.allSettled to prevent one failing block from crashing all blocks
  * Filters out hidden blocks before rendering
  */
-export async function BlockRenderer({ blocks }: BlockRendererProps) {
+export async function BlockRenderer({ blocks, skipStyleInjection = false }: BlockRendererProps) {
   if (!blocks || blocks.length === 0) return null
 
   // Filter out hidden blocks before rendering
@@ -63,18 +68,16 @@ export async function BlockRenderer({ blocks }: BlockRendererProps) {
   const results = await Promise.allSettled(
     visibleBlocks.map(async (block) => ({
       id: block.id,
-      element: await BlockComponent({ block })
+      element: await BlockComponent({ block, skipStyleInjection })
     }))
   )
 
   return (
     <>
-      {results.map((result, index) => {
+      {results.map((result) => {
         if (result.status === 'fulfilled') {
           return <React.Fragment key={result.value.id}>{result.value.element}</React.Fragment>
         } else {
-          // Log error but don't crash - render nothing for this block
-          console.error(`[BlockRenderer] Block ${visibleBlocks[index]?.id} failed:`, result.reason)
           return null
         }
       })}
@@ -85,16 +88,19 @@ export async function BlockRenderer({ blocks }: BlockRendererProps) {
 /**
  * Individual block component - routes to specific block type
  */
-async function BlockComponent({ block }: { block: Block }) {
+async function BlockComponent({ block, skipStyleInjection }: { block: Block; skipStyleInjection: boolean }) {
   // Use the block ID directly from CMS (already has 'block-' prefix)
   const blockId = block.id
 
-  const css = generateBlockCSS(blockId, block.styles, block.responsiveStyles, block.visibility)
+  // Skip CSS generation when consolidatedCSS has already been injected by the page
+  const css = skipStyleInjection
+    ? null
+    : generateBlockCSS(blockId, block.styles, block.responsiveStyles, block.visibility)
 
   return (
     <>
       {css && <style key={`style-${blockId}`} dangerouslySetInnerHTML={{ __html: css }} />}
-      {await renderBlock(block, blockId)}
+      {await renderBlock(block, blockId, skipStyleInjection)}
     </>
   )
 }
@@ -102,11 +108,11 @@ async function BlockComponent({ block }: { block: Block }) {
 /**
  * Render specific block type
  */
-async function renderBlock(block: Block, blockId: string) {
+async function renderBlock(block: Block, blockId: string, skipStyleInjection: boolean) {
   switch (block.type) {
     case 'container': {
       const { default: ContainerBlock } = await import('@/app/components/blocks/ContainerBlock')
-      return <ContainerBlock block={block} blockId={blockId} />
+      return <ContainerBlock block={block} blockId={blockId} skipStyleInjection={skipStyleInjection} />
     }
 
     case 'text': {
@@ -193,6 +199,10 @@ async function MapBlockRenderer({ block, blockId }: { block: Block; blockId: str
   // Dynamically import MapBlock to avoid tainting this module with 'use client'
   const { default: MapBlock } = await import('@/app/components/blocks/MapBlockWrapper')
 
-  return <MapBlock id={blockId} markers={markers} zoom={zoom} width={width} height={height} tileProvider={tileProvider} className={`map-block ${blockId}`} />
+  return (
+    <div data-block-id={blockId} className="map-block">
+      <MapBlock id={blockId} markers={markers} zoom={zoom} width={width} height={height} tileProvider={tileProvider} />
+    </div>
+  )
 }
 

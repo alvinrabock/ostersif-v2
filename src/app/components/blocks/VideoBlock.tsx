@@ -85,7 +85,7 @@ export default function VideoBlock({ block, blockId }: VideoBlockProps) {
 
   return (
     <div
-      className={`video-block block-${blockId}`}
+      className="video-block"
       data-block-id={blockId}
     >
       <div className="relative w-full aspect-[16/9]">

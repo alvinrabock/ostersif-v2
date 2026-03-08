@@ -118,7 +118,7 @@ const MiniMatchCard = ({ match, colorTheme = "blue" }: MatchCardProps) => {
                 : "bg-transparent";
 
     return (
-        <Link href={`/matcher/${match.leagueId}/${match.matchId}`}>
+        <Link href={`/matcher/${match.cmsId || match.cmsSlug || match.matchId}`}>
             <div
                 key={match.matchId}
                 className={`relative rounded-lg flex flex-col gap-4 items-center justify-center p-4 cursor-pointer transition-colors duration-200 hover:bg-white/10 ${darkBackgroundColor} ${textColor}`}

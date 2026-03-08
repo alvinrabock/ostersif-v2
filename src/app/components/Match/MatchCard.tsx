@@ -395,7 +395,7 @@ const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) =
             </div>
 
             <div className={`grid ${gridCols} gap-2 w-full lg:w-fit mt-4 lg:mt-0`}>
-                <Link href={`/matcher/${match.leagueId}/${match.externalMatchId || match.cmsId || match.cmsSlug || match.matchId}`}>
+                <Link href={`/matcher/${match.cmsId || match.cmsSlug || match.matchId}`}>
                     <Button
                         variant="outline"
                         className={`w-full ${colorTheme === 'outline-blue'

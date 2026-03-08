@@ -34,7 +34,7 @@ export default async function MenuBlock({ block, blockId }: MenuBlockProps) {
 
   return (
     <div
-      className={`menu-block block-${blockId}`}
+      className="menu-block"
       data-block-id={blockId}
       style={{ position: 'relative', overflow: 'visible' }}
     >
@@ -43,7 +43,7 @@ export default async function MenuBlock({ block, blockId }: MenuBlockProps) {
         orientation={orientation}
         alignment={alignment}
         textColor={textColor}
-        className={`block-${blockId}`}
+        className="menu-block-inner"
       />
     </div>
   )

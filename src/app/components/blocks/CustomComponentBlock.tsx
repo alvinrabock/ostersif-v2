@@ -48,7 +48,7 @@ async function renderCustomComponent(componentName: string, props: any, blockId:
 
       return (
         <div
-          className={`custom-component-block senast-spelade-matcher block-${blockId}`}
+          className={`custom-component-block senast-spelade-matcher`}
           data-block-id={blockId}
         >
           <Suspense fallback={
@@ -71,7 +71,7 @@ async function renderCustomComponent(componentName: string, props: any, blockId:
 
       return (
         <div
-          className={`custom-component-block tabell-block block-${blockId}`}
+          className={`custom-component-block tabell-block`}
           data-block-id={blockId}
         >
           <TabellBlock />
@@ -101,7 +101,7 @@ async function renderCustomComponent(componentName: string, props: any, blockId:
 
       return (
         <div
-          className={`custom-component-block kommande-matcher block-${blockId}`}
+          className={`custom-component-block kommande-matcher`}
           data-block-id={blockId}
         >
           <Suspense fallback={
@@ -129,7 +129,7 @@ async function renderCustomComponent(componentName: string, props: any, blockId:
 
       return (
         <div
-          className={`custom-component-block kontakt-section block-${blockId}`}
+          className={`custom-component-block kontakt-section`}
           data-block-id={blockId}
         >
           <KontaktSection columns={props.columns || 3} />
@@ -143,7 +143,7 @@ async function renderCustomComponent(componentName: string, props: any, blockId:
 
       return (
         <div
-          className={`custom-component-block styrelse-section block-${blockId}`}
+          className={`custom-component-block styrelse-section`}
           data-block-id={blockId}
         >
           <StyrelseSection columns={props.columns || 3} />
@@ -157,7 +157,7 @@ async function renderCustomComponent(componentName: string, props: any, blockId:
 
       return (
         <div
-          className={`custom-component-block partner-section block-${blockId}`}
+          className={`custom-component-block partner-section`}
           data-block-id={blockId}
         >
           <PartnerSection />
@@ -171,7 +171,7 @@ async function renderCustomComponent(componentName: string, props: any, blockId:
 
       return (
         <div
-          className={`custom-component-block partners-affarsnatverket block-${blockId}`}
+          className={`custom-component-block partners-affarsnatverket`}
           data-block-id={blockId}
         >
           <PartnersIAffarsnatverket />
@@ -185,7 +185,7 @@ async function renderCustomComponent(componentName: string, props: any, blockId:
 
       return (
         <div
-          className={`custom-component-block partnerpaket block-${blockId}`}
+          className={`custom-component-block partnerpaket`}
           data-block-id={blockId}
         >
           <Partnerpaket />
@@ -199,7 +199,7 @@ async function renderCustomComponent(componentName: string, props: any, blockId:
 
       return (
         <div
-          className={`custom-component-block partnernivaer block-${blockId}`}
+          className={`custom-component-block partnernivaer`}
           data-block-id={blockId}
         >
           <PartnernivaerComponent />
@@ -213,7 +213,7 @@ async function renderCustomComponent(componentName: string, props: any, blockId:
 
       return (
         <div
-          className={`custom-component-block partnerpaket-affarsnatverk block-${blockId}`}
+          className={`custom-component-block partnerpaket-affarsnatverk`}
           data-block-id={blockId}
         >
           <PartnerpaketAffarsnatverk />
@@ -227,7 +227,7 @@ async function renderCustomComponent(componentName: string, props: any, blockId:
 
       return (
         <div
-          className={`custom-component-block partnerpaket-privatloge block-${blockId}`}
+          className={`custom-component-block partnerpaket-privatloge`}
           data-block-id={blockId}
         >
           <PartnerpaketPrivatloge />
@@ -241,7 +241,7 @@ async function renderCustomComponent(componentName: string, props: any, blockId:
 
       return (
         <div
-          className={`custom-component-block partnerpaket-stigsvensson block-${blockId}`}
+          className={`custom-component-block partnerpaket-stigsvensson`}
           data-block-id={blockId}
         >
           <PartnerpaketStigsvensson />
@@ -255,7 +255,7 @@ async function renderCustomComponent(componentName: string, props: any, blockId:
 
       return (
         <div
-          className={`custom-component-block partnerpaket-osterisamhallet block-${blockId}`}
+          className={`custom-component-block partnerpaket-osterisamhallet`}
           data-block-id={blockId}
         >
           <PartnerpaketOsterisamhallet />
@@ -269,7 +269,7 @@ async function renderCustomComponent(componentName: string, props: any, blockId:
 
       return (
         <div
-          className={`custom-component-block huvudpartner-footer block-${blockId}`}
+          className={`custom-component-block huvudpartner-footer`}
           data-block-id={blockId}
         >
           <HuvudpartnerComponentFooter />
@@ -282,7 +282,7 @@ async function renderCustomComponent(componentName: string, props: any, blockId:
       console.warn('Available components: SenastSpeladeMatcher, TabellBlock, SenasteNyheter, LatestNewsBlock, HistoriaPostsComponent, KommandeMatcher, UpcomingMatchesBlock, HeroSlider, KontaktSection, StyrelseSection, PartnerSection, PartnersIAffarsnatverket, Partnerpaket, PartnernivaerComponent, PartnerpaketAffarsnatverk, PartnerpaketPrivatloge, PartnerpaketStigsvensson, PartnerpaketOsterisamhallet, HuvudpartnerComponentFooter');
       return (
         <div
-          className={`custom-component-block block-${blockId}`}
+          className={`custom-component-block`}
           data-block-id={blockId}
         >
           <p>Custom component not configured: {componentName}</p>
