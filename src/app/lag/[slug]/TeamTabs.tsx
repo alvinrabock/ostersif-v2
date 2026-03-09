@@ -34,6 +34,33 @@ const TabContentSkeleton = () => (
     </div>
 );
 
+const TableSkeleton = () => (
+    <div className="animate-pulse rounded-xl overflow-hidden shadow-md">
+        <div className="bg-custom_dark_red/50 p-4">
+            <div className="h-6 bg-white/10 rounded w-1/3"></div>
+        </div>
+        <div className="w-full">
+            <div className="bg-custom_dark_red/30 px-4 py-3 flex gap-4">
+                {Array.from({ length: 9 }).map((_, i) => (
+                    <div key={i} className={`h-4 bg-white/10 rounded ${i === 1 ? 'w-32' : 'w-8'}`}></div>
+                ))}
+            </div>
+            {Array.from({ length: 10 }).map((_, i) => (
+                <div key={i} className={`px-4 py-3 flex gap-4 ${i % 2 === 0 ? 'bg-custom_dark_red/15' : ''}`}>
+                    <div className="h-4 bg-white/10 rounded w-8"></div>
+                    <div className="flex items-center gap-2 w-32">
+                        <div className="w-5 h-5 bg-white/10 rounded-full flex-shrink-0"></div>
+                        <div className="h-4 bg-white/10 rounded w-24"></div>
+                    </div>
+                    {Array.from({ length: 7 }).map((_, j) => (
+                        <div key={j} className="h-4 bg-white/10 rounded w-8"></div>
+                    ))}
+                </div>
+            ))}
+        </div>
+    </div>
+);
+
 // Formatted training session type (after processing in page.tsx)
 interface FormattedTrainingSession {
     _entryId?: string;
@@ -428,7 +455,7 @@ export default function TeamTabs({
                     <TabsContent value="tabell" className="mt-0">
                         <MaxWidthWrapper>
                             <div className="pt-10 pb-20">
-                                <Suspense fallback={<TabContentSkeleton />}>
+                                <Suspense fallback={<TableSkeleton />}>
                                     {svffStandings ? (
                                         <SvFFStandingsTable standings={svffStandings} teamName={teamTitle} />
                                     ) : (
