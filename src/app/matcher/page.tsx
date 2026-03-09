@@ -12,7 +12,7 @@ import { MatchCardData } from "@/types";
 // On-demand revalidation only via webhook - no time-based polling
 
 export const metadata: Metadata = {
-  title: 'Matcher - Östers IF',
+  title: 'Matcher',
   description: 'Se kommande och avslutade matcher för Östers IF. Följ matchresultat, spelschema och tabellställning för våra A-lag och ungdomslag.',
   keywords: 'Östers IF, matcher, spelschema, fotboll, resultat, kommande matcher, Växjö, Superettan, tabellställning',
   openGraph: {
@@ -24,9 +24,6 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: '/matcher',
-    languages: {
-      'sv-SE': '/matcher',
-    },
   },
 };
 

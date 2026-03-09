@@ -11,6 +11,8 @@ import { NextResponse } from 'next/server'
 export async function GET() {
   const storeId = process.env.FRONTSPACE_STORE_ID
   const apiBaseUrl = (process.env.FRONTSPACE_ENDPOINT || '').replace('/v1/graphql', '')
+  const siteUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.ostersif.se'
+  const sitemapLine = `Sitemap: ${siteUrl}/sitemap.xml`
 
   try {
     // Try CMS API first
@@ -19,7 +21,11 @@ export async function GET() {
     })
 
     if (response.ok) {
-      const content = await response.text()
+      let content = await response.text()
+      // Ensure Sitemap line is always present
+      if (!content.toLowerCase().includes('sitemap:')) {
+        content = content.trimEnd() + '\n\n' + sitemapLine
+      }
       return new NextResponse(content, {
         headers: {
           'Content-Type': 'text/plain; charset=utf-8',
@@ -31,8 +37,6 @@ export async function GET() {
   }
 
   // Fallback to default robots.txt
-  const siteUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://ostersif.se'
-
   const defaultRobots = `User-agent: *
 Allow: /
 
@@ -42,7 +46,7 @@ Disallow: /api/
 Disallow: /next/
 
 # Sitemap
-Sitemap: ${siteUrl}/sitemap.xml`
+${sitemapLine}`
 
   return new NextResponse(defaultRobots, {
     headers: {

@@ -1,0 +1,175 @@
+{
+  "generated": "2026-03-09",
+  "domain": "ostersif.se",
+  "cms_actions": [
+    {
+      "id": 1,
+      "category": "media",
+      "priority": "critical",
+      "title": "Ladda upp klubblogotyp som kvadratisk PNG",
+      "description": "Google kräver en kvadratisk logotyp (minst 112x112px, helst 512x512px) för Knowledge Panel. Nuvarande oster-black-logo.png (610x767) fungerar men är inte kvadratisk. Skapa en kvadratisk version av klubbemblemet (512x512px, transparent bakgrund) och ladda upp som /oif-emblem-512.png i public/. Uppdatera sedan logo.url i src/components/JsonLd.tsx och openGraph.images i src/app/layout.tsx.",
+      "estimated_effort": "30 minuter",
+      "status": "pending"
+    },
+    {
+      "id": 2,
+      "category": "settings",
+      "priority": "critical",
+      "title": "Sätt NEXT_PUBLIC_FRONTEND_URL till https://www.ostersif.se",
+      "description": "Miljövariabeln NEXT_PUBLIC_FRONTEND_URL måste sättas till https://www.ostersif.se (med www) i produktionsmiljön (Vercel/hosting). Detta styr alla URL:er i schema.org, sitemap, canonical-taggar och og:url. Fallback i koden är redan www.ostersif.se men env-variabeln bör matcha.",
+      "estimated_effort": "5 minuter",
+      "status": "pending"
+    },
+    {
+      "id": 3,
+      "category": "settings",
+      "priority": "high",
+      "title": "Konfigurera www → non-www redirect (eller tvärtom)",
+      "description": "Bestäm om www.ostersif.se eller ostersif.se ska vara den kanoniska domänen. Konfigurera sedan en 301-redirect från den andra varianten. Om sajten hostas på Vercel: gå till Settings > Domains och ställ in en redirect. Koden pekar nu mot www.ostersif.se som standard.",
+      "estimated_effort": "10 minuter",
+      "status": "pending"
+    },
+    {
+      "id": 4,
+      "category": "content",
+      "priority": "high",
+      "title": "Fixa H1 på startsidan i CMS",
+      "description": "Startsidans H1 styrs av CMS-block (page slug='home'). Kontrollera att det finns ETT tydligt H1-element, t.ex. 'Välkommen till Östers IF' eller liknande. Om bildspelet (slider) genererar H1-taggar bör dessa ändras till H2/H3 i blocket. Kontrollera i BlockRenderer och relevanta CMS-block.",
+      "estimated_effort": "15 minuter",
+      "status": "pending"
+    },
+    {
+      "id": 5,
+      "category": "external",
+      "priority": "medium",
+      "title": "Verifiera och uppdatera sameAs-profiler",
+      "description": "Kontrollera att alla sociala medie-URL:er i schema.org (sameAs) stämmer: Facebook (facebook.com/ostersIF), X/Twitter (x.com/OstersIF), Instagram (instagram.com/ostersif/), TikTok (tiktok.com/@ostersif). Om TikTok-kontot har annat användarnamn, uppdatera i src/components/JsonLd.tsx.",
+      "estimated_effort": "10 minuter",
+      "status": "pending"
+    },
+    {
+      "id": 6,
+      "category": "external",
+      "priority": "medium",
+      "title": "Uppdatera Wikipedia/Wikidata med korrekt liga",
+      "description": "Om Östers IF:s Wikipedia-artikel eller Wikidata-post visar fel liga (Allsvenskan istället för Superettan), uppdatera detta. Googles Knowledge Panel hämtar data därifrån. Kontrollera https://www.wikidata.org/wiki/Q188361 och uppdatera 'league' (P118) om nödvändigt.",
+      "estimated_effort": "20 minuter",
+      "status": "pending"
+    },
+    {
+      "id": 7,
+      "category": "content",
+      "priority": "low",
+      "title": "Lägg till og:image-bilder för statiska sidor",
+      "description": "Skapa OG-bilder (1200x630px) för sektioner som inte har egna bilder: /nyheter, /lag, /matcher, /jobb, /dokument. Dessa kan vara generiska bilder med klubblogotyp + sektionsnamn. Ladda upp i public/ och uppdatera openGraph.images i respektive page.tsx.",
+      "estimated_effort": "1-2 timmar",
+      "status": "pending"
+    }
+  ],
+  "code_fixes_applied": [
+    {
+      "issue": "#1 + #6: Schema.org logotyp 404 + saknar Organization-typ",
+      "description": "Ändrade @type till ['SportsTeam', 'Organization'], fixade logo URL från obefintlig oif_emblem_rgb.png till existerande oster-black-logo.png, lade till 'image'-fält",
+      "files_changed": ["src/components/JsonLd.tsx"]
+    },
+    {
+      "issue": "#2: Canonical-mismatch nyhet/nyheter",
+      "description": "Ändrade canonical och og:url från /nyheter/{slug} till /nyhet/{slug} (matchar faktisk route)",
+      "files_changed": ["src/app/nyhet/[slug]/page.tsx"]
+    },
+    {
+      "issue": "#3: Saknar canonical-tagg på alla sidor",
+      "description": "Lade till alternates.canonical på alla sidor: [slug], [...slug], nyheter, lag, jobb, dokument, matcher. Satt metadataBase i root layout så relativa URL:er auto-resolvas till absoluta",
+      "files_changed": [
+        "src/app/layout.tsx",
+        "src/app/[slug]/page.tsx",
+        "src/app/[...slug]/page.tsx",
+        "src/app/nyheter/page.tsx",
+        "src/app/lag/page.tsx",
+        "src/app/jobb/page.tsx",
+        "src/app/dokument/page.tsx"
+      ]
+    },
+    {
+      "issue": "#4: Saknar og:image",
+      "description": "Lade till default og:image (oster-black-logo.png) i root layout metadata som fallback för alla sidor. Nyhetsartiklar hade redan artikelbilder som og:image",
+      "files_changed": ["src/app/layout.tsx"]
+    },
+    {
+      "issue": "#5: Saknar NewsArticle-schema",
+      "description": "Skapade NewsArticleJsonLd-komponent och lade till på nyhetsartiklar med headline, datePublished, dateModified, author, publisher, image, articleSection",
+      "files_changed": ["src/components/JsonLd.tsx", "src/app/nyhet/[slug]/page.tsx"]
+    },
+    {
+      "issue": "#7: www vs non-www inkonsistens",
+      "description": "Ändrade alla fallback-URL:er från https://ostersif.se till https://www.ostersif.se (sitemap, robots.txt, schema, metadata)",
+      "files_changed": [
+        "src/app/layout.tsx",
+        "src/components/JsonLd.tsx",
+        "src/app/sitemap.xml/route.ts",
+        "src/app/robots.txt/route.ts"
+      ]
+    },
+    {
+      "issue": "#8: Dubbel 'Östers IF' i title-tagg",
+      "description": "Införde title.template '%s - Östers IF' i root layout och tog bort manuell ' - Östers IF'-suffix från alla sidors title. Förhindrar dubbla 'Östers IF'",
+      "files_changed": [
+        "src/app/layout.tsx",
+        "src/app/[slug]/page.tsx",
+        "src/app/[...slug]/page.tsx",
+        "src/app/nyheter/page.tsx",
+        "src/app/nyheter/[...slug]/page.tsx",
+        "src/app/lag/page.tsx",
+        "src/app/lag/[slug]/page.tsx",
+        "src/app/jobb/page.tsx",
+        "src/app/jobb/[slug]/page.tsx",
+        "src/app/matcher/page.tsx",
+        "src/app/matcher/[...params]/page.tsx",
+        "src/app/nyhet/[slug]/page.tsx"
+      ]
+    },
+    {
+      "issue": "#10: og:url pekar på relativ path",
+      "description": "metadataBase i root layout gör att alla relativa URL:er i metadata (canonical, og:url) automatiskt resolvas till fullständiga URL:er",
+      "files_changed": ["src/app/layout.tsx"]
+    },
+    {
+      "issue": "#11: robots.txt saknar Sitemap-referens",
+      "description": "Robots.txt-fallback hade redan Sitemap-rad. Lade till logik som ALLTID lägger till Sitemap-raden om CMS-svaret saknar den",
+      "files_changed": ["src/app/robots.txt/route.ts"]
+    },
+    {
+      "issue": "#13: sameAs pekar på twitter.com, saknar TikTok",
+      "description": "Uppdaterade twitter.com till x.com och lade till TikTok-profil i sameAs-arrayen",
+      "files_changed": ["src/components/JsonLd.tsx"]
+    },
+    {
+      "issue": "#14: Saknar BreadcrumbList-schema",
+      "description": "Skapade BreadcrumbListJsonLd-komponent och lade till på nyhetsartiklar (Hem > Nyheter > Kategori > Artikel)",
+      "files_changed": ["src/components/JsonLd.tsx", "src/app/nyhet/[slug]/page.tsx"]
+    },
+    {
+      "issue": "Root layout description var 'Generated by create next app'",
+      "description": "Uppdaterade till beskrivande text om Östers IF",
+      "files_changed": ["src/app/layout.tsx"]
+    },
+    {
+      "issue": "Root layout robots meta var 'index' utan 'follow'",
+      "description": "Tog bort manuell <meta name='robots'> tagg, använder istället Next.js metadata API med default index+follow",
+      "files_changed": ["src/app/layout.tsx"]
+    },
+    {
+      "issue": "Default Twitter card metadata saknades",
+      "description": "Lade till twitter.card: 'summary' och twitter.site: '@ostersif' som default i root layout",
+      "files_changed": ["src/app/layout.tsx"]
+    }
+  ],
+  "notes": {
+    "issue_9_h1_homepage": "Startsidans H1 styrs av CMS-block (slug='home'), inte av kod. Behöver åtgärdas i CMS-innehållet.",
+    "issue_12_soft_404": "Kodbasen hanterar redan 404 korrekt via notFound() i [slug] och [...slug] page-filer. Next.js returnerar HTTP 404 automatiskt. Om problemet kvarstår, undersök specifika URL:er som returnerar 200."
+  },
+  "summary": {
+    "total_cms_actions": 7,
+    "total_code_fixes": 14
+  }
+}

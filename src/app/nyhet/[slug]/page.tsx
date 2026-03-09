@@ -7,6 +7,7 @@ import { fetchSingleNyhet, fetchNyheterByCategory, fetchAllNyheter } from "@/lib
 import { Category, Media as MediaType } from "@/types";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { NewsArticleJsonLd, BreadcrumbListJsonLd } from "@/components/JsonLd";
 
 type PageProps = {
   params: Promise<{ categorySlug: string[]; slug: string }>;
@@ -21,7 +22,7 @@ export async function generateMetadata({ params }: PageProps) {
 
   if (!post) {
     return {
-      title: 'Artikel inte hittad - Östers IF',
+      title: 'Artikel inte hittad',
       description: 'Den begärda artikeln kunde inte hittas.',
     };
   }
@@ -87,14 +88,14 @@ export async function generateMetadata({ params }: PageProps) {
     .join(', ') || '';
 
   return {
-    title: `${title} - Östers IF`,
+    title: title,
     description,
     keywords: `Östers IF, ${categoryKeywords}, fotboll, Växjö, Superettan, nyheter`,
     openGraph: {
       title: `${title} - Östers IF`,
       description,
       type: 'article',
-      url: `/nyheter/${slug}`,
+      url: `/nyhet/${slug}`,
       siteName: 'Östers IF',
       locale: 'sv_SE',
       publishedTime: post.publishedAt,
@@ -119,7 +120,7 @@ export async function generateMetadata({ params }: PageProps) {
       images: imageUrl ? [imageUrl] : [],
     },
     alternates: {
-      canonical: `/nyheter/${slug}`,
+      canonical: `/nyhet/${slug}`,
     },
     robots: {
       index: true,
@@ -203,8 +204,45 @@ export default async function Page({ params }: PageProps) {
       : [])
   ];
 
+  // Build image URL for JSON-LD
+  const heroImageUrl = post.heroImage && typeof post.heroImage !== 'string' && post.heroImage.url
+    ? (post.heroImage.sizes?.large?.url || post.heroImage.sizes?.medium?.url || post.heroImage.url)
+    : null;
+
+  // Category names for JSON-LD
+  const categoryNames = post.categories
+    ?.map(cat => typeof cat !== 'string' ? cat.title : cat)
+    .filter((c): c is string => !!c) || [];
+
+  // Build description for JSON-LD
+  const articleDescription = post.meta?.description ||
+    `Läs mer om ${post.title} från Östers IF.`;
+
+  // Breadcrumb items for JSON-LD
+  const breadcrumbItems = [
+    { name: 'Hem', url: '/' },
+    { name: 'Nyheter', url: '/nyheter' },
+    ...(post.categories && post.categories.length > 0
+      ? post.categories.slice(0, 1).map(cat => ({
+          name: typeof cat !== 'string' ? cat.title : cat,
+          url: `/nyheter/${typeof cat !== 'string' ? cat.slug : cat}`,
+        }))
+      : []),
+    { name: post.title, url: `/nyhet/${slug}` },
+  ];
+
   return (
     <div className="w-full py-36 bg-custom_dark_dark_red text-white">
+      <NewsArticleJsonLd
+        headline={post.title}
+        description={articleDescription}
+        url={`/nyhet/${slug}`}
+        imageUrl={heroImageUrl}
+        publishedTime={post.publishedAt || undefined}
+        modifiedTime={post.updatedAt || post.publishedAt || undefined}
+        categories={categoryNames}
+      />
+      <BreadcrumbListJsonLd items={breadcrumbItems} />
       <MaxWidthWrapper>
         <nav className="mb-4">
           <ol className="list-none p-0">

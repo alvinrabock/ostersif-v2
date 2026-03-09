@@ -70,7 +70,7 @@ ${urls}
 }
 
 export async function GET() {
-  const siteUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://ostersif.se'
+  const siteUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.ostersif.se'
 
   try {
     // Fetch all data in parallel for efficiency

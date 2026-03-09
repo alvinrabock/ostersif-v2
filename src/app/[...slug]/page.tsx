@@ -80,14 +80,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     if (!pages || pages.length === 0) pages = await fetchAllPages();
     const page = findPageByPath(buildPagePaths(pages), fullPath);
     if (!page) {
-      return { title: 'Sidan hittades inte - Östers IF', description: 'Vi är Östers IF' };
+      return { title: 'Sidan hittades inte', description: 'Vi är Östers IF' };
     }
     const seoTitle = page.content?.pageSettings?.seoTitle || page.title;
     const seoDescription = page.content?.pageSettings?.seoDescription || '';
     return {
-      title: seoTitle + ' - Östers IF',
+      title: seoTitle,
       description: seoDescription || 'Vi är Östers IF',
-      openGraph: { title: seoTitle, description: seoDescription || 'Vi är Östers IF', url: fullPath },
+      openGraph: { title: `${seoTitle} - Östers IF`, description: seoDescription || 'Vi är Östers IF', url: fullPath },
+      alternates: { canonical: fullPath },
     };
   }
 
@@ -95,8 +96,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const seoDescription = pageSettings?.seoDescription || '';
 
   return {
-    title: seoTitle + ' - Östers IF',
+    title: seoTitle,
     description: seoDescription || 'Vi är Östers IF',
-    openGraph: { title: seoTitle, description: seoDescription || 'Vi är Östers IF', url: fullPath },
+    openGraph: { title: `${seoTitle} - Östers IF`, description: seoDescription || 'Vi är Östers IF', url: fullPath },
+    alternates: { canonical: fullPath },
   };
 }

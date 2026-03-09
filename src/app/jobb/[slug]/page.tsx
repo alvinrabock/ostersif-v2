@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
     if (!job) {
       return {
-        title: 'Jobb hittades inte - Östers IF',
+        title: 'Jobb hittades inte',
         description: 'Det begärda jobbet kunde inte hittas.',
       };
     }
@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const description = `Ansök för ${job.title}. Läs mer om denna spännande karriärmöjlighet hos Östers IF.`;
 
     return {
-      title: `${job.title} - Lediga Jobb - Östers IF`,
+      title: `${job.title} - Lediga Jobb`,
       description,
       keywords: `${job.title}, lediga jobb, karriär, anställning, Östers IF, Växjö`,
       openGraph: {
@@ -52,7 +52,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   } catch (error) {
     console.error('Error generating metadata:', error);
     return {
-      title: 'Jobb - Östers IF',
+      title: 'Jobb',
       description: 'Jobbsida för Östers IF',
     };
   }

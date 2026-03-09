@@ -2,32 +2,34 @@
  * JSON-LD Structured Data Components
  *
  * Provides Schema.org structured data for SEO
- * Includes Organization and WebSite schemas for Östers IF
+ * Includes Organization, WebSite, NewsArticle, and BreadcrumbList schemas
  */
+
+const siteUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.ostersif.se'
 
 /**
- * Organization schema for Östers IF (SportsOrganization)
+ * Organization + SportsTeam schema for Östers IF
  */
 export function OrganizationJsonLd() {
-  const siteUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://ostersif.se'
-
   const organizationSchema = {
     '@context': 'https://schema.org',
-    '@type': 'SportsTeam',
+    '@type': ['SportsTeam', 'Organization'],
     '@id': `${siteUrl}/#organization`,
     name: 'Östers IF',
     alternateName: 'Östers Idrottsförening',
     url: siteUrl,
     logo: {
       '@type': 'ImageObject',
-      url: `${siteUrl}/oif_emblem_rgb.png`,
-      width: 200,
-      height: 200,
+      url: `${siteUrl}/oster-black-logo.png`,
+      width: 610,
+      height: 767,
     },
+    image: `${siteUrl}/oster-black-logo.png`,
     sameAs: [
       'https://www.facebook.com/ostersIF',
-      'https://twitter.com/OstersIF',
+      'https://x.com/OstersIF',
       'https://www.instagram.com/ostersif/',
+      'https://www.tiktok.com/@ostersif',
     ],
     sport: 'Football',
     memberOf: {
@@ -70,8 +72,6 @@ export function OrganizationJsonLd() {
  * WebSite schema with search action
  */
 export function WebSiteJsonLd() {
-  const siteUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://ostersif.se'
-
   const webSiteSchema = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
@@ -103,7 +103,6 @@ export function WebSiteJsonLd() {
 
 /**
  * Combined JSON-LD component for root layout
- * Includes both Organization and WebSite schemas
  */
 export function SiteJsonLd() {
   return (
@@ -111,5 +110,99 @@ export function SiteJsonLd() {
       <OrganizationJsonLd />
       <WebSiteJsonLd />
     </>
+  )
+}
+
+/**
+ * NewsArticle JSON-LD for individual news articles
+ */
+export function NewsArticleJsonLd({
+  headline,
+  description,
+  url,
+  imageUrl,
+  publishedTime,
+  modifiedTime,
+  categories,
+}: {
+  headline: string
+  description: string
+  url: string
+  imageUrl?: string | null
+  publishedTime?: string
+  modifiedTime?: string
+  categories?: string[]
+}) {
+  const articleSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'NewsArticle',
+    headline,
+    description,
+    url: `${siteUrl}${url}`,
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `${siteUrl}${url}`,
+    },
+    ...(imageUrl && {
+      image: {
+        '@type': 'ImageObject',
+        url: imageUrl,
+      },
+    }),
+    datePublished: publishedTime,
+    dateModified: modifiedTime || publishedTime,
+    author: {
+      '@type': 'Organization',
+      name: 'Östers IF',
+      '@id': `${siteUrl}/#organization`,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Östers IF',
+      '@id': `${siteUrl}/#organization`,
+      logo: {
+        '@type': 'ImageObject',
+        url: `${siteUrl}/oster-black-logo.png`,
+      },
+    },
+    inLanguage: 'sv-SE',
+    ...(categories && categories.length > 0 && {
+      articleSection: categories[0],
+      keywords: categories.join(', '),
+    }),
+  }
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+    />
+  )
+}
+
+/**
+ * BreadcrumbList JSON-LD
+ */
+export function BreadcrumbListJsonLd({
+  items,
+}: {
+  items: { name: string; url: string }[]
+}) {
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.name,
+      item: `${siteUrl}${item.url}`,
+    })),
+  }
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+    />
   )
 }

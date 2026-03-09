@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 import MaxWidthWrapper from '../components/MaxWidthWrapper';
 
 export const metadata: Metadata = {
-  title: 'Lediga Jobb - Östers IF',
+  title: 'Lediga Jobb',
   description: 'Utforska våra lediga tjänster och hitta din nästa karriärmöjlighet hos Östers IF.',
   keywords: 'lediga jobb, karriär, anställning, Östers IF, Växjö, fotboll',
   openGraph: {
@@ -13,6 +13,9 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'sv_SE',
     siteName: 'Östers IF',
+  },
+  alternates: {
+    canonical: '/jobb',
   },
 };
 

@@ -213,7 +213,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
     if (!urlParams || urlParams.length === 0 || urlParams.length > 2) {
         return {
-            title: 'Match inte hittad - Östers IF',
+            title: 'Match inte hittad',
             description: 'Den begärda matchen kunde inte hittas.',
         };
     }
@@ -223,7 +223,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
         if (!matchDetails) {
             return {
-                title: 'Match inte hittad - Östers IF',
+                title: 'Match inte hittad',
                 description: 'Den begärda matchen kunde inte hittas.',
             };
         }
@@ -294,7 +294,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
             : `/matcher/${leagueId}/${matchId}`;
 
         return {
-            title: `${matchTitle}${titleSuffix}`,
+            title: { absolute: `${matchTitle}${titleSuffix}` },
             description,
             keywords: `${homeTeam}, ${awayTeam}, fotboll, match, ${leagueName || ''}, ${isOstersMatch ? 'Östers IF, Växjö, Superettan,' : ''} laguppställning, liverapportering, statistik`,
             openGraph: {
@@ -306,9 +306,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
             },
             alternates: {
                 canonical: canonicalPath,
-                languages: {
-                    'sv-SE': canonicalPath,
-                },
             },
             other: {
                 'match:home_team': homeTeam,
@@ -321,7 +318,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     } catch (error) {
         console.error('Error generating metadata:', error);
         return {
-            title: 'Match - Östers IF',
+            title: 'Match',
             description: 'Matchinformation från Östers IF',
         };
     }

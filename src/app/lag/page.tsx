@@ -6,7 +6,7 @@ import { ArrowRight } from 'lucide-react';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Våra Lag - Östers IF',
+  title: 'Våra Lag',
   description: 'Upptäck alla lag inom Östers IF, en av Sveriges mest traditionsrika fotbollsföreningar. Se våra A-lag och ungdomslag från Växjö.',
   keywords: 'Östers IF, fotboll, lag, Växjö, Sverige, fotbollslag, A-lag, ungdomslag, sport',
   openGraph: {
@@ -15,6 +15,9 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'sv_SE',
     siteName: 'Östers IF',
+  },
+  alternates: {
+    canonical: '/lag',
   },
 };
 

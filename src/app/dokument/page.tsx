@@ -10,7 +10,7 @@ import { Button } from '../components/ui/Button';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Dokument - Östers IF',
+  title: 'Dokument',
   description: 'Ladda ner dokument och filer från Östers IF.',
   openGraph: {
     title: 'Dokument - Östers IF',
@@ -18,6 +18,9 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'sv_SE',
     siteName: 'Östers IF',
+  },
+  alternates: {
+    canonical: '/dokument',
   },
 };
 

@@ -75,7 +75,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
         if (!teamData) {
             return {
-                title: 'Lag hittades inte - Östers IF',
+                title: 'Lag hittades inte',
                 description: 'Det begärda laget kunde inte hittas.',
             };
         }
@@ -83,7 +83,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
         const description = `${teamData.title} inom Östers IF. Se information om ${teamData.title}.`;
 
         return {
-            title: `${teamData.title} - Östers IF`,
+            title: teamData.title,
             description,
             keywords: `${teamData.title}, Östers IF, fotboll, Växjö, Sverige, lag`,
             openGraph: {
@@ -108,7 +108,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     } catch (error) {
         console.error('Error generating metadata:', error);
         return {
-            title: 'Lag - Östers IF',
+            title: 'Lag',
             description: 'Lagsida för Östers IF',
         };
     }

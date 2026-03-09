@@ -7,7 +7,7 @@ import MaxWidthWrapper from '@/app/components/MaxWidthWrapper';
 // On-demand revalidation only via webhook - no time-based polling
 
 export const metadata = {
-  title: 'Nyheter - Östers IF',
+  title: 'Nyheter',
   description: 'Håll dig uppdaterad med de senaste nyheterna från Östers IF. Läs om matcher, spelare, träningar och allt som händer i klubben.',
   keywords: 'Östers IF, nyheter, fotboll, Växjö, Superettan, matcher, spelare, träning, klubbnyheter',
   openGraph: {
@@ -17,6 +17,9 @@ export const metadata = {
     url: '/nyheter',
     siteName: 'Östers IF',
     locale: 'sv_SE',
+  },
+  alternates: {
+    canonical: '/nyheter',
   },
   category: 'sport',
 };

@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
 
         if (!currentCategory) {
             return {
-                title: 'Kategori hittades inte - Östers IF',
+                title: 'Kategori hittades inte',
                 description: 'Den begärda kategorin kunde inte hittas.',
             };
         }
@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
         const description = `Läs de senaste nyheterna inom ${categoryName} från Östers IF. Håll dig uppdaterad med allt som händer inom ${categoryName.toLowerCase()}.`;
 
         return {
-            title: `${categoryName} - Nyheter - Östers IF`,
+            title: `${categoryName} - Nyheter`,
             description,
             keywords: `${categoryName}, nyheter, Östers IF, fotboll, Växjö, Sverige, sport, ${finalSlug}`,
             openGraph: {
@@ -44,15 +44,12 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
             },
             alternates: {
                 canonical: `/nyheter/${slugParts.join('/')}`,
-                languages: {
-                    'sv-SE': `/nyheter/${slugParts.join('/')}`,
-                },
             },
         };
     } catch (error) {
         console.error('Error generating metadata:', error);
         return {
-            title: 'Nyheter - Östers IF',
+            title: 'Nyheter',
             description: 'Senaste nyheterna från Östers IF',
         };
     }
