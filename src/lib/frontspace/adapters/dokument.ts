@@ -38,6 +38,23 @@ export interface FrontspaceDokument {
 }
 
 /**
+ * Extract the direct (non-proxied) URL from a Frontspace media URL.
+ * The Frontspace proxy format is: https://api.frontspace.se/v1/image?url=<encoded>
+ * or locally: http://localhost:3002/v1/image?url=<encoded>
+ * For documents/files we always want the inner direct URL so users can download them.
+ */
+function resolveDirectUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.pathname === '/v1/image') {
+      const inner = parsed.searchParams.get('url');
+      if (inner) return decodeURIComponent(inner);
+    }
+  } catch {}
+  return url;
+}
+
+/**
  * Extract file URL from Frontspace media field
  * The fil field can be:
  * - A string URL directly
@@ -49,14 +66,11 @@ function extractFileUrl(fil: any): string | undefined {
 
   // If it's already a string URL
   if (typeof fil === 'string') {
-    // Check if it's a full URL or just a path
     if (fil.startsWith('http')) {
-      return fil;
+      return resolveDirectUrl(fil);
     }
-    // Could be an ID or a relative path
     // If it looks like a UUID, we can't resolve it here
     if (fil.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-      // It's likely an ID reference - construct URL from Frontspace endpoint
       const baseUrl = (process.env.FRONTSPACE_ENDPOINT || 'http://localhost:3000').replace('/api/graphql', '');
       return `${baseUrl}/api/media/${fil}`;
     }
@@ -67,9 +81,8 @@ function extractFileUrl(fil: any): string | undefined {
   if (typeof fil === 'object' && fil.url) {
     const url = fil.url;
     if (url.startsWith('http')) {
-      return url;
+      return resolveDirectUrl(url);
     }
-    // Relative URL - prepend base URL
     const baseUrl = (process.env.FRONTSPACE_ENDPOINT || 'http://localhost:3000').replace('/api/graphql', '');
     return `${baseUrl}${url}`;
   }
