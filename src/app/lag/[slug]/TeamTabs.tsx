@@ -13,9 +13,11 @@ import { Newspaper, Clock, Users, Calendar, BarChart3, Trophy } from "lucide-rea
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
 import type { FrontspaceSpelare } from "@/lib/frontspace/adapters/spelare";
 import type { FrontspaceStab } from "@/lib/frontspace/adapters/stab";
+import type { SvFFTeamStandingsResponse } from "@/lib/svff/fetchTeamStandings";
 
 // Lazy load heavy components for better performance
 const StandingsTable = lazy(() => import('@/app/components/Lag/StandingsTable'));
+const SvFFStandingsTable = lazy(() => import('@/app/components/Lag/SvFFStandingsTable'));
 const KommandeMatcher = lazy(() => import('@/app/components/KommandeMatcher'));
 const LagSenastSpeladeMatcher = lazy(() => import('@/app/components/LagSenastSpeladeMatcher'));
 const FunStats = lazy(() => import('@/app/components/Player/FunStats'));
@@ -68,6 +70,8 @@ interface TeamTabsProps {
     playedMatches?: MatchCardData[];
     // Season selection
     selectedSeason?: string;
+    // SvFF standings data
+    svffStandings?: SvFFTeamStandingsResponse | null;
 }
 
 // Tab trigger class for consistency
@@ -100,6 +104,7 @@ export default function TeamTabs({
     upcomingMatches = [],
     playedMatches = [],
     selectedSeason,
+    svffStandings,
 }: TeamTabsProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -213,12 +218,14 @@ export default function TeamTabs({
                                     <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8" />
                                     Statistik
                                 </TabsTrigger>
-
-                                <TabsTrigger value="tabell" className={tabTriggerClass}>
-                                    <Trophy className="w-6 h-6 sm:w-8 sm:h-8" />
-                                    Tabell
-                                </TabsTrigger>
                             </>
+                        )}
+
+                        {(isSEFTeam || svffStandings) && (
+                            <TabsTrigger value="tabell" className={tabTriggerClass}>
+                                <Trophy className="w-6 h-6 sm:w-8 sm:h-8" />
+                                Tabell
+                            </TabsTrigger>
                         )}
                     </TabsList>
                 </MaxWidthWrapper>
@@ -416,25 +423,23 @@ export default function TeamTabs({
                     </TabsContent>
                 )}
 
-                {/* Tabell Tab (SEF Teams only) */}
-                {isSEFTeam && (
+                {/* Tabell Tab */}
+                {(isSEFTeam || svffStandings) && (
                     <TabsContent value="tabell" className="mt-0">
                         <MaxWidthWrapper>
                             <div className="pt-10 pb-20">
-                                <div className="flex justify-between items-center mb-8">
-                                    <h2 className="text-3xl font-bold text-white">Tabell</h2>
-                                    {selectedSeason && (
-                                        <SeasonSelector currentSeason={selectedSeason} />
-                                    )}
-                                </div>
                                 <Suspense fallback={<TabContentSkeleton />}>
-                                    <StandingsTable
-                                        season={selectedSeason}
-                                        config={{
-                                            highlightTeams: smcTeamId ? [parseInt(smcTeamId, 10)] : [19],
-                                            theme: 'dark',
-                                        }}
-                                    />
+                                    {svffStandings ? (
+                                        <SvFFStandingsTable standings={svffStandings} teamName={teamTitle} />
+                                    ) : (
+                                        <StandingsTable
+                                            season={selectedSeason}
+                                            config={{
+                                                highlightTeams: smcTeamId ? [parseInt(smcTeamId, 10)] : [19],
+                                                theme: 'dark',
+                                            }}
+                                        />
+                                    )}
                                 </Suspense>
                             </div>
                         </MaxWidthWrapper>

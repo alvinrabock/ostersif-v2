@@ -78,6 +78,12 @@ const nextConfig = {
         hostname: "api.frontspace.se",
         pathname: "/v1/image",
       },
+      // Frontspace image proxy (Coolify)
+      {
+        protocol: "https",
+        hostname: "api.coolify.frontspace.se",
+        pathname: "/v1/image",
+      },
     ],
   },
 };

@@ -7,6 +7,7 @@ import { fetchSquadData } from "@/lib/Superadmin/fetchSquad";
 import { fetchTeamStats } from "@/lib/Superadmin/fetchTeamStats";
 import { getUpcomingMatches, getRecentMatches } from "@/lib/getMatchesWithFallback";
 import { getCurrentSeason, isValidSeason } from "@/lib/season";
+import { fetchSvFFTeamStandings } from "@/lib/svff/fetchTeamStandings";
 import { notFound } from "next/navigation";
 import type { MatchCardData } from "@/types";
 import { ArrowRight } from "lucide-react";
@@ -137,7 +138,7 @@ export default async function Page({ params, searchParams }: PageProps) {
     const fogisTeamSlug = teamData.content.fogis_teamslug;
 
     // Fetch data in parallel
-    const [teamNews, players, staff, squad, teamStats, teamMatches] = await Promise.all([
+    const [teamNews, players, staff, squad, teamStats, teamMatches, svffStandings] = await Promise.all([
         fetchNyheterByTeam(teamData.id, 6),
         fetchSpelareByTeam(teamData.id),
         fetchStabByTeam(teamData.id),
@@ -146,6 +147,8 @@ export default async function Page({ params, searchParams }: PageProps) {
         isSEFTeam ? fetchTeamStats(selectedSeason).catch(() => null) : Promise.resolve(null),
         // Pre-fetch matches for SEF teams (server-side, non-blocking)
         isSEFTeam ? fetchTeamMatches() : Promise.resolve({ upcoming: [], played: [] }),
+        // Fetch SvFF standings if team has fogis_teamid
+        fogisTeamId ? fetchSvFFTeamStandings(fogisTeamId).catch(() => null) : Promise.resolve(null),
     ]);
 
     // Get upcoming training sessions
@@ -205,6 +208,7 @@ export default async function Page({ params, searchParams }: PageProps) {
                 upcomingMatches={teamMatches.upcoming}
                 playedMatches={teamMatches.played}
                 selectedSeason={selectedSeason}
+                svffStandings={svffStandings}
             />
 
             {/* Sportadmin Link Section */}

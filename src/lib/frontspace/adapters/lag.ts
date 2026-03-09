@@ -30,6 +30,10 @@ export interface FrontspaceLagContent {
   fogis_teamid?: string;
   fogis_teamslug?: string;
   smc_teamid?: string;
+  lastsync?: string;
+  display_on_games?: string;
+  gender?: string;
+  agecategoryname?: string;
 }
 
 export interface FrontspaceLag {
