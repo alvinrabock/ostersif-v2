@@ -22,15 +22,20 @@ export async function GET() {
 
     if (response.ok) {
       let content = await response.text()
-      // Ensure Sitemap line is always present
-      if (!content.toLowerCase().includes('sitemap:')) {
-        content = content.trimEnd() + '\n\n' + sitemapLine
+      // Validate that CMS response has proper User-agent rules, not just a Sitemap line
+      const hasUserAgent = content.toLowerCase().includes('user-agent:')
+      if (hasUserAgent) {
+        // Ensure Sitemap line is always present
+        if (!content.toLowerCase().includes('sitemap:')) {
+          content = content.trimEnd() + '\n\n' + sitemapLine
+        }
+        return new NextResponse(content, {
+          headers: {
+            'Content-Type': 'text/plain; charset=utf-8',
+          },
+        })
       }
-      return new NextResponse(content, {
-        headers: {
-          'Content-Type': 'text/plain; charset=utf-8',
-        },
-      })
+      // If CMS response is incomplete (no User-agent rules), fall through to default
     }
   } catch (error) {
     console.error('[robots.txt] API error:', error)

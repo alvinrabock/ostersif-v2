@@ -80,11 +80,12 @@ const SwiperHeroClient: React.FC<SwiperHeroProps> = ({ posts }) => {
         }}
         className="w-full h-full"
       >
-        {posts.map((post) => {
+        {posts.map((post, index) => {
           const youtubeId = post.youtubeLink?.split('v=')[1]?.split('&')[0]
           const youtubeThumbnail = youtubeId
             ? `https://i.ytimg.com/vi/${youtubeId}/hq720.jpg`
             : null
+          const Heading = index === 0 ? 'h1' : 'h2'
 
           return (
             <SwiperSlide key={post.id}>
@@ -118,9 +119,9 @@ const SwiperHeroClient: React.FC<SwiperHeroProps> = ({ posts }) => {
                 <div className="absolute inset-0 z-60 flex items-end justify-center min-h-[700px] pb-60">
                   <MaxWidthWrapper>
                     <div className="flex flex-col text-center w-full relative z-50 justify-center items-center"> {/* add z-50 */}
-                      <h1 className="text-white text-2xl sm:text-4xl lg:text-5xl font-bold mb-4 leading-tight sm:leading-tight lg:leading-[1.2] drop-shadow-md">
+                      <Heading className="text-white text-2xl sm:text-4xl lg:text-5xl font-bold mb-4 leading-tight sm:leading-tight lg:leading-[1.2] drop-shadow-md">
                         {post.title}
-                      </h1>
+                      </Heading>
 
                       <Link href={`/nyhet/${post.slug}`}
                         passHref

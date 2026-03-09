@@ -85,7 +85,7 @@ export default function HeroSliderClient({ posts }: HeroSliderClientProps) {
         }}
         className="w-full h-full"
       >
-        {posts.map((post) => {
+        {posts.map((post, index) => {
           const imageResource =
             post.heroImage && typeof post.heroImage !== 'string' ? post.heroImage : null;
           const imageUrl = imageResource?.url;
@@ -96,6 +96,7 @@ export default function HeroSliderClient({ posts }: HeroSliderClientProps) {
             : null;
 
           const displayImage = imageUrl || youtubeThumbnail || '/oster-placeholder-image.jpg';
+          const Heading = index === 0 ? 'h1' : 'h2';
 
           return (
             <SwiperSlide key={post.id}>
@@ -115,9 +116,9 @@ export default function HeroSliderClient({ posts }: HeroSliderClientProps) {
                 <div className="absolute inset-0 z-60 flex items-end justify-center min-h-[500px] pb-60">
                   <div className="w-full max-w-[1500px] mx-auto px-4">
                     <div className="flex flex-col text-center w-full relative z-50 justify-center items-center gap-6 sm:gap-8">
-                      <h1 className="text-white text-2xl sm:text-4xl lg:text-5xl font-bold leading-tight sm:leading-tight lg:leading-[1.2] drop-shadow-md">
+                      <Heading className="text-white text-2xl sm:text-4xl lg:text-5xl font-bold leading-tight sm:leading-tight lg:leading-[1.2] drop-shadow-md">
                         {post.title}
-                      </h1>
+                      </Heading>
 
                       <Link
                         href={`/nyhet/${post.slug}`}

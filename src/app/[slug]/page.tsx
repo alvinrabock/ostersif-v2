@@ -82,10 +82,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const seoTitle = page.content?.pageSettings?.seoTitle || page.title;
     const seoDescription = page.content?.pageSettings?.seoDescription || '';
     const canonicalPath = slug === 'home' ? '/' : fullPath;
+    const isHomePage = slug === 'home';
+    const ogTitle = isHomePage ? seoTitle : `${seoTitle} - Östers IF`;
     return {
-      title: seoTitle,
+      title: isHomePage ? { absolute: seoTitle } : seoTitle,
       description: seoDescription || 'Vi är Östers IF',
-      openGraph: { title: `${seoTitle} - Östers IF`, description: seoDescription || 'Vi är Östers IF', url: canonicalPath },
+      openGraph: {
+        title: ogTitle,
+        description: seoDescription || 'Vi är Östers IF',
+        url: canonicalPath,
+        images: [{ url: '/oster-black-logo.png', width: 610, height: 767, alt: 'Östers IF' }],
+      },
       alternates: { canonical: canonicalPath },
     };
   }
@@ -93,11 +100,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const seoTitle = pageSettings?.seoTitle || pageTitle || slug;
   const seoDescription = pageSettings?.seoDescription || '';
   const canonicalPath = slug === 'home' ? '/' : fullPath;
+  const isHomePage = slug === 'home';
+  const ogTitle = isHomePage ? seoTitle : `${seoTitle} - Östers IF`;
 
   return {
-    title: seoTitle,
+    title: isHomePage ? { absolute: seoTitle } : seoTitle,
     description: seoDescription || 'Vi är Östers IF',
-    openGraph: { title: `${seoTitle} - Östers IF`, description: seoDescription || 'Vi är Östers IF', url: canonicalPath },
+    openGraph: {
+      title: ogTitle,
+      description: seoDescription || 'Vi är Östers IF',
+      url: canonicalPath,
+      images: [{ url: '/oster-black-logo.png', width: 610, height: 767, alt: 'Östers IF' }],
+    },
     alternates: { canonical: canonicalPath },
   };
 }

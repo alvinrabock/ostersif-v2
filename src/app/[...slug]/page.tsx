@@ -87,7 +87,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return {
       title: seoTitle,
       description: seoDescription || 'Vi är Östers IF',
-      openGraph: { title: `${seoTitle} - Östers IF`, description: seoDescription || 'Vi är Östers IF', url: fullPath },
+      openGraph: {
+        title: `${seoTitle} - Östers IF`,
+        description: seoDescription || 'Vi är Östers IF',
+        url: fullPath,
+        images: [{ url: '/oster-black-logo.png', width: 610, height: 767, alt: 'Östers IF' }],
+      },
       alternates: { canonical: fullPath },
     };
   }
@@ -98,7 +103,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: seoTitle,
     description: seoDescription || 'Vi är Östers IF',
-    openGraph: { title: `${seoTitle} - Östers IF`, description: seoDescription || 'Vi är Östers IF', url: fullPath },
+    openGraph: {
+      title: `${seoTitle} - Östers IF`,
+      description: seoDescription || 'Vi är Östers IF',
+      url: fullPath,
+      images: [{ url: '/oster-black-logo.png', width: 610, height: 767, alt: 'Östers IF' }],
+    },
     alternates: { canonical: fullPath },
   };
 }

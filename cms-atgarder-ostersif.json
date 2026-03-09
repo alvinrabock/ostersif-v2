@@ -34,9 +34,9 @@
       "category": "content",
       "priority": "high",
       "title": "Fixa H1 på startsidan i CMS",
-      "description": "Startsidans H1 styrs av CMS-block (page slug='home'). Kontrollera att det finns ETT tydligt H1-element, t.ex. 'Välkommen till Östers IF' eller liknande. Om bildspelet (slider) genererar H1-taggar bör dessa ändras till H2/H3 i blocket. Kontrollera i BlockRenderer och relevanta CMS-block.",
-      "estimated_effort": "15 minuter",
-      "status": "pending"
+      "description": "ÅTGÄRDAT I KOD: Slider-komponenterna (HeroSliderClient, SwiperHeroClient) renderar nu bara första sliden som H1, resterande som H2. Kontrollera även att inga andra CMS-block på startsidan genererar ytterligare H1-taggar.",
+      "estimated_effort": "5 minuter",
+      "status": "done_in_code"
     },
     {
       "id": 5,
@@ -162,14 +162,34 @@
       "issue": "Default Twitter card metadata saknades",
       "description": "Lade till twitter.card: 'summary' och twitter.site: '@ostersif' som default i root layout",
       "files_changed": ["src/app/layout.tsx"]
+    },
+    {
+      "issue": "v2: og:image saknas på startsidan/CMS-sidor",
+      "description": "Child-sidors openGraph överskrev förälderns images. Lade till explicit og:image (oster-black-logo.png) i [slug] och [...slug] generateMetadata",
+      "files_changed": ["src/app/[slug]/page.tsx", "src/app/[...slug]/page.tsx"]
+    },
+    {
+      "issue": "v2: og:title dubbel 'Östers IF' på startsidan",
+      "description": "Startsidan (slug='home') fick 'Östers IF - Officiell hemsida - Östers IF'. Fixat med title: { absolute: seoTitle } och ogTitle utan suffix för startsidan",
+      "files_changed": ["src/app/[slug]/page.tsx"]
+    },
+    {
+      "issue": "v2: robots.txt saknade User-agent/Disallow-regler",
+      "description": "CMS-svaret innehöll bara Sitemap-rad utan User-agent-regler. Lade till validering: om CMS-svar saknar 'User-agent:' faller det igenom till default robots.txt",
+      "files_changed": ["src/app/robots.txt/route.ts"]
+    },
+    {
+      "issue": "v2: Flera H1-taggar på startsidan (slider)",
+      "description": "Slider-komponenterna renderade H1 på varje slide. Fixat: första sliden = H1, övriga = H2",
+      "files_changed": ["src/app/components/HeroSliderClient.tsx", "src/app/components/Heros/SwiperHeroClient.tsx"]
     }
   ],
   "notes": {
-    "issue_9_h1_homepage": "Startsidans H1 styrs av CMS-block (slug='home'), inte av kod. Behöver åtgärdas i CMS-innehållet.",
+    "issue_9_h1_homepage": "FIXAT I KOD (v2): Slider renderar nu H1 bara på första sliden, H2 på resterande.",
     "issue_12_soft_404": "Kodbasen hanterar redan 404 korrekt via notFound() i [slug] och [...slug] page-filer. Next.js returnerar HTTP 404 automatiskt. Om problemet kvarstår, undersök specifika URL:er som returnerar 200."
   },
   "summary": {
     "total_cms_actions": 7,
-    "total_code_fixes": 14
+    "total_code_fixes": 18
   }
 }
