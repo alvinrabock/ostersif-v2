@@ -206,7 +206,15 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [
 
     return (
         <div className="space-y-6 text-white">
-            <h1 className="text-6xl font-bold mb-6">{getHeadingText()}</h1>
+            <div className="flex flex-wrap items-end justify-between gap-4">
+                <h1 className="text-6xl font-bold">{getHeadingText()}</h1>
+                <Button variant="ghost" asChild className="text-white/70 hover:text-white hover:bg-white/10 [&_svg]:fill-current">
+                    <a href="webcal://calendar.sportomedia.se/team/OIF">
+                        <CalenderIcon className="h-4 w-4 shrink-0" />
+                        Lägg till i kalender (Herrar)
+                    </a>
+                </Button>
+            </div>
             <div className='flex flex-wrap xl:flex-nowrap gap-4 xl:gap-10 flex-row items-center justify-between  border-t pt-6 mt-6 border-slate-400 pt-4'>
                 <div className='grid grid-cols-2 xl:flex w-full gap-4 justify-between'>
                     <div>

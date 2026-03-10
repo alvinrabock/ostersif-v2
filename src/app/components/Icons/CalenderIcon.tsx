@@ -7,6 +7,7 @@ const CalenderIcon = (props: React.SVGProps<SVGSVGElement>) => {
             width={512}
             height={512}
             viewBox="0 0 32 32"
+            fill="currentColor"
             {...props}
         >
             <path
