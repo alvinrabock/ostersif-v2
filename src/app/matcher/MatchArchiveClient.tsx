@@ -116,21 +116,13 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [
         ? calendarLinksProp
         : [{ label: 'Herrar', url: 'webcal://calendar.sportomedia.se/team/OIF' }];
 
-    // League IDs that actually have matches in the current result set
-    const leagueIdsWithMatches = useMemo(() => {
-        const ids = new Set<string>();
-        matches.forEach(m => ids.add(String(m.leagueId)));
-        return ids;
-    }, [matches]);
-
-    // League options for selected season (filtered by gender if active, only show if matches exist)
+    // League options for selected season (filtered by gender if active)
     const leagueOptions = selectedSeasonTournaments
         .filter(t => {
             if (genderFilter === 'herrar') return !t.kon || t.kon === 'herr';
             if (genderFilter === 'damer') return t.kon === 'dam';
             return true;
         })
-        .filter(t => leagueIdsWithMatches.has(String(t.leagueId)) || t.altLeagueIds?.some(id => leagueIdsWithMatches.has(id)))
         .map(t => ({ id: String(t.leagueId), name: t.LeagueName }));
 
     // Check if we can use initialMatches (optimization)
