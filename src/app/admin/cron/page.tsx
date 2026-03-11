@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
 
 interface CronEndpoint {
   name: string
@@ -80,7 +81,6 @@ function CronCard({ endpoint }: { endpoint: CronEndpoint }) {
     const start = Date.now()
 
     try {
-      // Build query string from params
       const queryParts: string[] = []
       for (const [key, value] of Object.entries(params)) {
         if (value && value !== 'false') {
@@ -114,7 +114,6 @@ function CronCard({ endpoint }: { endpoint: CronEndpoint }) {
         <code className="text-xs text-gray-500 mt-1 block">{endpoint.path}</code>
       </div>
 
-      {/* Parameters */}
       {endpoint.params && endpoint.params.length > 0 && (
         <div className="grid gap-3 sm:grid-cols-2">
           {endpoint.params.map(p => (
@@ -146,7 +145,6 @@ function CronCard({ endpoint }: { endpoint: CronEndpoint }) {
         </div>
       )}
 
-      {/* Run button */}
       <button
         onClick={runEndpoint}
         disabled={result.loading}
@@ -155,7 +153,6 @@ function CronCard({ endpoint }: { endpoint: CronEndpoint }) {
         {result.loading ? 'Running...' : 'Run Sync'}
       </button>
 
-      {/* Result */}
       {(result.data || result.error) && (
         <div className="space-y-2">
           <div className="flex items-center gap-4 text-xs">
@@ -170,14 +167,12 @@ function CronCard({ endpoint }: { endpoint: CronEndpoint }) {
             )}
           </div>
 
-          {/* Summary message */}
           {result.data?.message && (
             <div className={`text-sm px-3 py-2 rounded ${result.data.success ? 'bg-green-900/30 text-green-300' : 'bg-red-900/30 text-red-300'}`}>
               {result.data.message}
             </div>
           )}
 
-          {/* Errors list */}
           {result.data?.errors?.length > 0 && (
             <div className="bg-red-900/20 rounded p-3">
               <h4 className="text-red-400 text-xs font-medium mb-2">Errors ({result.data.errors.length})</h4>
@@ -194,7 +189,6 @@ function CronCard({ endpoint }: { endpoint: CronEndpoint }) {
             </div>
           )}
 
-          {/* Details */}
           {result.data?.details && (
             <details className="text-xs">
               <summary className="text-gray-400 cursor-pointer hover:text-gray-300">Full response</summary>
@@ -204,7 +198,6 @@ function CronCard({ endpoint }: { endpoint: CronEndpoint }) {
             </details>
           )}
 
-          {/* Raw error */}
           {result.error && !result.data && (
             <div className="text-sm text-red-400 bg-red-900/20 rounded p-3">
               {result.error}
@@ -216,33 +209,67 @@ function CronCard({ endpoint }: { endpoint: CronEndpoint }) {
   )
 }
 
-export default function CronDebugPage() {
-  return (
-    <div>
-      <h1 className="text-3xl font-bold mb-2">Cron / Sync Endpoints</h1>
-      <p className="text-gray-400 mb-8">
-        Test and trigger sync endpoints. Use &quot;Dry Run&quot; to preview without making changes.
-      </p>
+export default function CronAdminPage() {
+  const [isLocalhost, setIsLocalhost] = useState<boolean | null>(null)
 
-      <div className="space-y-6">
-        {CRON_ENDPOINTS.map(endpoint => (
-          <CronCard key={endpoint.path} endpoint={endpoint} />
-        ))}
+  useEffect(() => {
+    const hostname = window.location.hostname
+    setIsLocalhost(hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.'))
+  }, [])
+
+  if (isLocalhost === null) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-gray-400">Checking access...</div>
       </div>
+    )
+  }
 
-      {/* Production setup info */}
-      <div className="mt-12 bg-gray-800/50 border border-gray-700 rounded-lg p-6">
-        <h2 className="text-lg font-semibold mb-3">Production Setup</h2>
-        <p className="text-gray-400 text-sm mb-4">
-          In production, cron endpoints require the <code className="text-yellow-300">CRON_SECRET</code> environment variable.
-        </p>
-        <div className="bg-gray-900 rounded p-4 text-sm font-mono text-gray-300 space-y-2">
-          <div className="text-gray-500"># POST with header auth (recommended)</div>
-          <div>curl -s -X POST \</div>
-          <div className="pl-4">-H &quot;x-cron-secret: $CRON_SECRET&quot; \</div>
-          <div className="pl-4">&quot;https://your-domain.com/api/cron/sync-svff-games&quot;</div>
-          <div className="mt-3 text-gray-500"># GET with query param (for manual testing)</div>
-          <div>curl -s &quot;https://your-domain.com/api/cron/sync-svff-games?secret=$CRON_SECRET&quot;</div>
+  if (!isLocalhost) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-500 mb-4">Access Denied</h1>
+          <p className="text-gray-400">This page is only available on localhost.</p>
+          <Link href="/" className="mt-4 inline-block text-blue-400 hover:text-blue-300">Back to Home</Link>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-900 text-white">
+      <div className="max-w-4xl mx-auto px-6 py-12">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold">Cron / Sync</h1>
+            <p className="text-gray-400 mt-1">Test and trigger sync endpoints. Use Dry Run to preview.</p>
+          </div>
+          <div className="flex gap-3">
+            <Link href="/admin/matcher" className="text-sm text-gray-400 hover:text-white">League Cache</Link>
+            <Link href="/admin/debug" className="text-sm text-gray-400 hover:text-white">API Debug</Link>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          {CRON_ENDPOINTS.map(endpoint => (
+            <CronCard key={endpoint.path} endpoint={endpoint} />
+          ))}
+        </div>
+
+        <div className="mt-12 bg-gray-800/50 border border-gray-700 rounded-lg p-6">
+          <h2 className="text-lg font-semibold mb-3">Production Setup</h2>
+          <p className="text-gray-400 text-sm mb-4">
+            In production, cron endpoints require the <code className="text-yellow-300">CRON_SECRET</code> environment variable.
+          </p>
+          <div className="bg-gray-900 rounded p-4 text-sm font-mono text-gray-300 space-y-2">
+            <div className="text-gray-500"># POST with header auth (recommended)</div>
+            <div>curl -s -X POST \</div>
+            <div className="pl-4">-H &quot;x-cron-secret: $CRON_SECRET&quot; \</div>
+            <div className="pl-4">&quot;https://your-domain.com/api/cron/sync-svff-games&quot;</div>
+            <div className="mt-3 text-gray-500"># GET with query param (for manual testing)</div>
+            <div>curl -s &quot;https://your-domain.com/api/cron/sync-svff-games?secret=$CRON_SECRET&quot;</div>
+          </div>
         </div>
       </div>
     </div>

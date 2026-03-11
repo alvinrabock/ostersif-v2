@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 const debugRoutes = [
-  { path: '/admin/debug/cron', label: 'Cron / Sync', description: 'Sync endpoints & testing' },
   { path: '/admin/debug/smc', label: 'SMC API', description: 'Match data, leagues, teams' },
   { path: '/admin/debug/sportomedia', label: 'Sportomedia', description: 'Lineups, standings' },
   { path: '/admin/debug/ebiljett', label: 'eBiljett', description: 'Ticket events' },
