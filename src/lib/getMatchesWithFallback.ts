@@ -203,7 +203,7 @@ function transformCMSMatchToCardData(cmsMatch: any): MatchCardData {
     modifiedDate: cmsMatch.updated_at || '',
     status: normalizeMatchStatus(content.match_status, kickoff),
     arenaName: content.arena || '',
-    leagueId: content.externalleagueid || '', // Keep as string (supports ULID from SMC API 2.0)
+    leagueId: content.externalleagueid || content.svff_competition_id || '', // Supports ULID from SMC and competition ID from SvFF
     leagueName: content.leaguename || '',
     season: content.sasong || '',
     homeTeam: (content.hemmalag || '').trim(),
@@ -475,9 +475,10 @@ export async function getFilteredMatches(options: {
   season?: string;
   location?: 'home' | 'away';
   leagueId?: string;
+  fogisTeamId?: string;
   limit?: number;
 }): Promise<MatchCardData[]> {
-  const { status, dateFrom, dateTo, season, location, leagueId, limit = 200 } = options;
+  const { status, dateFrom, dateTo, season, location, leagueId, fogisTeamId, limit = 200 } = options;
 
   // Build content filters in Frontspace format: { content: { field: { operator: value } } }
   const contentFilters: Record<string, any> = {};
@@ -509,6 +510,11 @@ export async function getFilteredMatches(options: {
   // League filter
   if (leagueId) {
     contentFilters.externalleagueid = { equals: leagueId };
+  }
+
+  // Team filter (FOGIS team ID — set by SvFF sync on each match)
+  if (fogisTeamId) {
+    contentFilters.fogis_team_id = { equals: fogisTeamId };
   }
 
   // Build final where clause

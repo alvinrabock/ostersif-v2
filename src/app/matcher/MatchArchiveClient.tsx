@@ -23,9 +23,10 @@ import { SortIcon } from '../components/Icons/SortIcon';
 interface MatchFiltersProps {
     seasons: SeasonGroup[];
     initialMatches?: MatchCardData[];
+    calendarLinks?: { label: string; url: string }[];
 }
 
-const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [] }) => {
+const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [], calendarLinks: calendarLinksProp }) => {
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -35,9 +36,10 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [
     const dateFromParam = searchParams.get('dateFrom');
     const dateToParam = searchParams.get('dateTo');
     const seasonFilter = searchParams.get('season');
+    const genderFilter = searchParams.get('gender'); // 'herrar' | 'damer' | null
 
     // Use initial matches if no filters are applied, avoiding initial fetch
-    const hasFilters = isPlayedFilter || locationFilter || leagueFilter || dateFromParam || dateToParam || seasonFilter;
+    const hasFilters = isPlayedFilter || locationFilter || leagueFilter || dateFromParam || dateToParam || seasonFilter || genderFilter;
     const [matches, setMatches] = useState<MatchCardData[]>(hasFilters ? [] : initialMatches);
     const [loading, setLoading] = useState(hasFilters ? true : false);
     const [calendarOpen, setCalendarOpen] = useState(false);
@@ -51,11 +53,9 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [
             const isMobile = window.innerWidth < XL_BREAKPOINT;
 
             if (isMobile && calendarOpen) {
-                // Switching to mobile with desktop popover open -> open drawer instead
                 setCalendarOpen(false);
                 setMobileCalendarOpen(true);
             } else if (!isMobile && mobileCalendarOpen) {
-                // Switching to desktop with mobile drawer open -> open popover instead
                 setMobileCalendarOpen(false);
                 setCalendarOpen(true);
             }
@@ -86,25 +86,58 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [
     const defaultSeason = seasons[0]?.seasonYear || currentYear;
     const selectedSeason = seasonFilter || defaultSeason;
 
-    // League options for selected season
-    const leagueOptions = selectedSeason
-        ? seasons
-            .find(s => s.seasonYear === selectedSeason)
-            ?.tournaments.map(t => ({
-                id: String(t.leagueId),
-                name: t.LeagueName,
-            })) || []
-        : [];
+    // Tournaments for selected season
+    const selectedSeasonTournaments = seasons.find(s => s.seasonYear === selectedSeason)?.tournaments || [];
+
+    // Gender detection for the current season
+    const hasHerrar = selectedSeasonTournaments.some(t => !t.kon || t.kon === 'herr');
+    const hasDamer = selectedSeasonTournaments.some(t => t.kon === 'dam');
+
+    // League IDs grouped by gender for client-side filtering (include altLeagueIds for cross-system matches)
+    const herrarLeagueIds = useMemo(() => {
+        const ids = new Set<string>();
+        selectedSeasonTournaments.filter(t => !t.kon || t.kon === 'herr').forEach(t => {
+            ids.add(String(t.leagueId));
+            t.altLeagueIds?.forEach(id => ids.add(id));
+        });
+        return ids;
+    }, [selectedSeasonTournaments]);
+    const damerLeagueIds = useMemo(() => {
+        const ids = new Set<string>();
+        selectedSeasonTournaments.filter(t => t.kon === 'dam').forEach(t => {
+            ids.add(String(t.leagueId));
+            t.altLeagueIds?.forEach(id => ids.add(id));
+        });
+        return ids;
+    }, [selectedSeasonTournaments]);
+
+    // Calendar links from lag posts (passed from server) with fallback
+    const calendarLinks = calendarLinksProp && calendarLinksProp.length > 0
+        ? calendarLinksProp
+        : [{ label: 'Herrar', url: 'webcal://calendar.sportomedia.se/team/OIF' }];
+
+    // League IDs that actually have matches in the current result set
+    const leagueIdsWithMatches = useMemo(() => {
+        const ids = new Set<string>();
+        matches.forEach(m => ids.add(String(m.leagueId)));
+        return ids;
+    }, [matches]);
+
+    // League options for selected season (filtered by gender if active, only show if matches exist)
+    const leagueOptions = selectedSeasonTournaments
+        .filter(t => {
+            if (genderFilter === 'herrar') return !t.kon || t.kon === 'herr';
+            if (genderFilter === 'damer') return t.kon === 'dam';
+            return true;
+        })
+        .filter(t => leagueIdsWithMatches.has(String(t.leagueId)) || t.altLeagueIds?.some(id => leagueIdsWithMatches.has(id)))
+        .map(t => ({ id: String(t.leagueId), name: t.LeagueName }));
 
     // Check if we can use initialMatches (optimization)
-    // initialMatches are for the current year, so we can use them if:
-    // - No filters at all, OR
-    // - Only season filter is set AND it matches current year
-    const onlySeasonFilter = seasonFilter && !isPlayedFilter && !locationFilter && !leagueFilter && !dateFromParam && !dateToParam;
+    const onlySeasonFilter = seasonFilter && !isPlayedFilter && !locationFilter && !leagueFilter && !dateFromParam && !dateToParam && !genderFilter;
     const canUseInitialMatches = (!hasFilters || (onlySeasonFilter && seasonFilter === currentYear)) && initialMatches.length > 0;
 
     useEffect(() => {
-        // When we can use initialMatches, skip fetching
         if (canUseInitialMatches) {
             setMatches(initialMatches);
             setLoading(false);
@@ -112,7 +145,6 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [
         }
 
         const fetchMatchesInternal = async () => {
-            // Only show loading skeleton if we have NO data at all
             if (matches.length === 0) {
                 setLoading(true);
             }
@@ -140,6 +172,12 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [
         fetchMatchesInternal();
     }, [seasons, isPlayedFilter, locationFilter, leagueFilter, selectedRange, dateFromParam, dateToParam, selectedSeason, canUseInitialMatches, initialMatches]);
 
+    // Apply gender filter client-side (matches are already fetched for the season)
+    const displayedMatches = useMemo(() => {
+        if (!genderFilter) return matches;
+        const ids = genderFilter === 'herrar' ? herrarLeagueIds : damerLeagueIds;
+        return matches.filter(m => ids.has(String(m.leagueId)));
+    }, [matches, genderFilter, herrarLeagueIds, damerLeagueIds]);
 
     const updateQueryParam = (key: string, value?: string) => {
         const current = new URLSearchParams(searchParams.toString());
@@ -154,11 +192,13 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [
     const handlePlayedFilterClick = () => updateQueryParam('status', 'Over');
     const handleLocationFilterClick = (value: 'home' | 'away') => updateQueryParam('location', value);
     const handleLeagueChange = (value: string) => updateQueryParam('league', value === 'clear' ? undefined : value);
+    const handleGenderFilterClick = (value: 'herrar' | 'damer') => updateQueryParam('gender', value);
     const handleSeasonChange = (value: string) => {
         const current = new URLSearchParams(searchParams.toString());
         if (value) current.set('season', value);
         else current.delete('season');
         current.delete('league');
+        current.delete('gender');
         router.push(`/matcher?${current.toString()}`);
     };
 
@@ -190,30 +230,69 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [
             return league ? league.name : leagueFilter;
         }
         if (locationFilter) return `${locationFilter === 'home' ? 'Hemma' : 'Borta'}matcher`;
+        if (genderFilter === 'herrar') return 'Herrmatchar';
+        if (genderFilter === 'damer') return 'Dammatcher';
         return 'Kommande matcher';
     };
 
-    // OPTIMIZATION 3: Memoize league name lookups to avoid recalculating on every render
     const leagueNameMap = useMemo(() => {
         const map = new Map<string, string>();
         seasons.forEach(s => {
             s.tournaments.forEach(t => {
                 map.set(String(t.leagueId), t.LeagueName);
+                t.altLeagueIds?.forEach(id => map.set(id, t.LeagueName));
             });
         });
         return map;
     }, [seasons]);
 
+    const leagueGenderMap = useMemo(() => {
+        const map = new Map<string, 'Herrar' | 'Damer'>();
+        seasons.forEach(s => {
+            s.tournaments.forEach(t => {
+                const label = t.kon === 'dam' ? 'Damer' as const : 'Herrar' as const;
+                map.set(String(t.leagueId), label);
+                t.altLeagueIds?.forEach(id => map.set(id, label));
+            });
+        });
+        return map;
+    }, [seasons]);
+
+    const sharedFilterProps = {
+        isPlayedFilter,
+        locationFilter,
+        leagueFilter,
+        genderFilter,
+        selectedSeason,
+        seasonOptions,
+        leagueOptions,
+        hasHerrar,
+        hasDamer,
+        calendarOpen,
+        selectedRange,
+        setCalendarOpen,
+        handlePlayedFilterClick,
+        handleLocationFilterClick,
+        handleLeagueChange,
+        handleSeasonChange,
+        handleDateChange,
+        handleGenderFilterClick,
+    };
+
     return (
         <div className="space-y-6 text-white">
             <div className="flex flex-wrap items-end justify-between gap-4">
                 <h1 className="text-6xl font-bold">{getHeadingText()}</h1>
-                <Button variant="ghost" asChild className="text-white/70 hover:text-white hover:bg-white/10 [&_svg]:fill-current">
-                    <a href="webcal://calendar.sportomedia.se/team/OIF">
-                        <CalenderIcon className="h-4 w-4 shrink-0" />
-                        Lägg till i kalender (Herrar)
-                    </a>
-                </Button>
+                <div className="flex gap-2">
+                    {calendarLinks.map(link => (
+                        <Button key={link.label} variant="ghost" asChild className="text-white/70 hover:text-white hover:bg-white/10 [&_svg]:fill-current">
+                            <a href={link.url}>
+                                <CalenderIcon className="h-4 w-4 shrink-0" />
+                                Lägg till i kalender ({link.label})
+                            </a>
+                        </Button>
+                    ))}
+                </div>
             </div>
             <div className='flex flex-wrap xl:flex-nowrap gap-4 xl:gap-10 flex-row items-center justify-between  border-t pt-6 mt-6 border-slate-400 pt-4'>
                 <div className='grid grid-cols-2 xl:flex w-full gap-4 justify-between'>
@@ -229,22 +308,7 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [
 
                     {/* === Desktop static sidebar === */}
                     <div className="hidden xl:block">
-                        <MatchFilter
-                            isPlayedFilter={isPlayedFilter}
-                            locationFilter={locationFilter}
-                            leagueFilter={leagueFilter}
-                            selectedSeason={selectedSeason}
-                            seasonOptions={seasonOptions}
-                            leagueOptions={leagueOptions}
-                            calendarOpen={calendarOpen}
-                            selectedRange={selectedRange}
-                            setCalendarOpen={setCalendarOpen}
-                            handlePlayedFilterClick={handlePlayedFilterClick}
-                            handleLocationFilterClick={handleLocationFilterClick}
-                            handleLeagueChange={handleLeagueChange}
-                            handleSeasonChange={handleSeasonChange}
-                            handleDateChange={handleDateChange}
-                        />
+                        <MatchFilter {...sharedFilterProps} />
                     </div>
 
                     {/* Desktop: Popover with 2 months */}
@@ -339,23 +403,7 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [
                                 <DrawerTitle className="text-white">Fler filter</DrawerTitle>
                             </DrawerHeader>
 
-                            <MatchFilter
-                                isPlayedFilter={isPlayedFilter}
-                                locationFilter={locationFilter}
-                                leagueFilter={leagueFilter}
-                                selectedSeason={selectedSeason}
-                                seasonOptions={seasonOptions}
-                                leagueOptions={leagueOptions}
-                                calendarOpen={calendarOpen}
-                                selectedRange={selectedRange}
-                                setCalendarOpen={setCalendarOpen}
-                                handlePlayedFilterClick={handlePlayedFilterClick}
-                                handleLocationFilterClick={handleLocationFilterClick}
-                                handleLeagueChange={handleLeagueChange}
-                                handleSeasonChange={handleSeasonChange}
-                                handleDateChange={handleDateChange}
-
-                            />
+                            <MatchFilter {...sharedFilterProps} />
 
                             <DrawerFooter className='p-0'>
                                 <DrawerClose>
@@ -376,7 +424,6 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [
                     >
                         <span aria-hidden="true" className="font-bold">×</span> Rensa filter
                     </Button>
-
                 )}
 
                 {loading ? (
@@ -385,15 +432,14 @@ const MatchArchive: React.FC<MatchFiltersProps> = ({ seasons, initialMatches = [
                             <MatchCardSkeleton key={index} />
                         ))}
                     </ul>
-                ) : matches.length > 0 ? (
+                ) : displayedMatches.length > 0 ? (
                     <ul className="grid grid-cols-1 lg:grid-cols-2  xl:grid-cols-1  gap-6">
-                        {matches.map(match => {
-                            // Prefer leagueName from CMS, fallback to memoized lookup
+                        {displayedMatches.map(match => {
                             const leagueName = match.leagueName || leagueNameMap.get(String(match.leagueId));
-
+                            const genderLabel = leagueGenderMap.get(String(match.leagueId));
                             return (
                                 <li key={match.cmsId || match.matchId}>
-                                    <MatchCard match={match} colorTheme="red" leagueName={leagueName} />
+                                    <MatchCard match={match} colorTheme="red" leagueName={leagueName} genderLabel={genderLabel} />
                                 </li>
                             );
                         })}

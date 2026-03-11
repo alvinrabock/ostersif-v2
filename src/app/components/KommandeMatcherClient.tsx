@@ -8,13 +8,15 @@ import { Button } from "@/app/components/ui/Button";
 
 interface KommandeMatcherClientProps {
     initialMatches: MatchCardData[];
+    leagueNameMap?: Record<string, string>;
+    leagueGenderMap?: Record<string, 'Herrar' | 'Damer'>;
 }
 
 /**
  * Client component that handles live match updates
  * Only fetches fresh data for live/in-progress matches
  */
-export default function KommandeMatcherClient({ initialMatches }: KommandeMatcherClientProps) {
+export default function KommandeMatcherClient({ initialMatches, leagueNameMap = {}, leagueGenderMap = {} }: KommandeMatcherClientProps) {
     const [matches, setMatches] = useState<MatchCardData[]>(initialMatches);
     const matchesRef = useRef(matches);
     matchesRef.current = matches;
@@ -72,14 +74,20 @@ export default function KommandeMatcherClient({ initialMatches }: KommandeMatche
                 Kommande matcher
             </h2>
             <div className="flex flex-col gap-4">
-                {matches.map((match) => (
-                    <MatchCard
-                        key={match.cmsId || match.matchId}
-                        match={match}
-                        colorTheme="red"
-                        leagueName={match.leagueName}
-                    />
-                ))}
+                {matches.map((match) => {
+                    const lid = String(match.leagueId);
+                    const leagueName = match.leagueName || leagueNameMap[lid];
+                    const genderLabel = leagueGenderMap[lid];
+                    return (
+                        <MatchCard
+                            key={match.cmsId || match.matchId}
+                            match={match}
+                            colorTheme="red"
+                            leagueName={leagueName}
+                            genderLabel={genderLabel}
+                        />
+                    );
+                })}
             </div>
             <Link href="/matcher" className="block mt-2">
                 <Button variant="outline" className="w-full text-white">

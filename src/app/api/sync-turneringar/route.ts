@@ -11,7 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { syncTurneringarToCMS } from '@/lib/syncTurneringar';
+import { syncTurneringarToCMS, syncTurneringarFromSvFF } from '@/lib/syncTurneringar';
 
 export async function POST(request: NextRequest) {
   // Only allow on localhost for now
@@ -27,11 +27,16 @@ export async function POST(request: NextRequest) {
   const limitParam = request.nextUrl.searchParams.get('limit');
   const limit = limitParam ? parseInt(limitParam, 10) : undefined;
   const season = request.nextUrl.searchParams.get('season') || undefined;
+  const source = request.nextUrl.searchParams.get('source') || 'smc';
+  const from = request.nextUrl.searchParams.get('from') || undefined;
+  const to = request.nextUrl.searchParams.get('to') || undefined;
 
-  console.log('🕐 Turneringar sync triggered', { dryRun, limit, season });
+  console.log('🕐 Turneringar sync triggered', { dryRun, limit, season, source });
 
   try {
-    const result = await syncTurneringarToCMS({ dryRun, limit, season });
+    const result = source === 'svff'
+      ? await syncTurneringarFromSvFF({ dryRun, limit })
+      : await syncTurneringarToCMS({ dryRun, limit, season });
 
     const modeLabel = dryRun ? '(DRY RUN) ' : '';
     const errorCount = result.errors.length;

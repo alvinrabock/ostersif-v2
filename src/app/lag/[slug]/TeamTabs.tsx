@@ -14,11 +14,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/ta
 import type { FrontspaceSpelare } from "@/lib/frontspace/adapters/spelare";
 import type { FrontspaceStab } from "@/lib/frontspace/adapters/stab";
 import type { SvFFTeamStandingsResponse } from "@/lib/svff/fetchTeamStandings";
+import MatchCard from "@/app/components/Match/MatchCard";
+import Link from "next/link";
+import { Button } from "@/app/components/ui/Button";
 
 // Lazy load heavy components for better performance
 const StandingsTable = lazy(() => import('@/app/components/Lag/StandingsTable'));
 const SvFFStandingsTable = lazy(() => import('@/app/components/Lag/SvFFStandingsTable'));
-const KommandeMatcher = lazy(() => import('@/app/components/KommandeMatcher'));
 const LagSenastSpeladeMatcher = lazy(() => import('@/app/components/LagSenastSpeladeMatcher'));
 const FunStats = lazy(() => import('@/app/components/Player/FunStats'));
 const TeamStatsOverview = lazy(() => import('@/app/components/Lag/TeamStatsOverview'));
@@ -84,6 +86,7 @@ interface TeamTabsProps {
     slug: string;
     // New props for SMC/Fogis integration
     isSEFTeam?: boolean; // Team has fetchfromsefapi=true
+    hasSmcStats?: boolean; // Team has smc_teamid (herrar only — enables Statistik tab)
     players?: FrontspaceSpelare[];
     staff?: FrontspaceStab[];
     smcTeamId?: string;
@@ -95,6 +98,9 @@ interface TeamTabsProps {
     // Pre-fetched match data from server
     upcomingMatches?: MatchCardData[];
     playedMatches?: MatchCardData[];
+    // League name/gender maps for MatchCard rendering (same as /matcher)
+    leagueNameMap?: Record<string, string>;
+    leagueGenderMap?: Record<string, 'Herrar' | 'Damer'>;
     // Season selection
     selectedSeason?: string;
     // SvFF standings data
@@ -123,6 +129,7 @@ export default function TeamTabs({
     currentTab,
     slug,
     isSEFTeam = false,
+    hasSmcStats = false,
     players = [],
     staff = [],
     smcTeamId,
@@ -130,6 +137,8 @@ export default function TeamTabs({
     teamStats,
     upcomingMatches = [],
     playedMatches = [],
+    leagueNameMap = {},
+    leagueGenderMap = {},
     selectedSeason,
     svffStandings,
 }: TeamTabsProps) {
@@ -235,17 +244,17 @@ export default function TeamTabs({
                         )}
 
                         {isSEFTeam && (
-                            <>
-                                <TabsTrigger value="matcher" className={tabTriggerClass}>
-                                    <Calendar className="w-6 h-6 sm:w-8 sm:h-8" />
-                                    Matcher
-                                </TabsTrigger>
+                            <TabsTrigger value="matcher" className={tabTriggerClass}>
+                                <Calendar className="w-6 h-6 sm:w-8 sm:h-8" />
+                                Kommande matcher
+                            </TabsTrigger>
+                        )}
 
-                                <TabsTrigger value="statistik" className={tabTriggerClass}>
-                                    <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8" />
-                                    Statistik
-                                </TabsTrigger>
-                            </>
+                        {hasSmcStats && (
+                            <TabsTrigger value="statistik" className={tabTriggerClass}>
+                                <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8" />
+                                Statistik
+                            </TabsTrigger>
                         )}
 
                         {(isSEFTeam || svffStandings) && (
@@ -408,17 +417,33 @@ export default function TeamTabs({
                     <TabsContent value="matcher" className="mt-0">
                         <MaxWidthWrapper>
                             <div className="pt-10 pb-20">
-                                <h2 className="text-3xl font-bold mb-8 text-white">Kommande matcher</h2>
-                                <Suspense fallback={<TabContentSkeleton />}>
-                                    <KommandeMatcher maxMatches={5} initialMatches={upcomingMatches} />
-                                </Suspense>
+                                {upcomingMatches.length > 0 ? (
+                                    <ul className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-1 gap-6">
+                                        {upcomingMatches.map(match => {
+                                            const leagueName = match.leagueName || leagueNameMap[String(match.leagueId)];
+                                            const genderLabel = leagueGenderMap[String(match.leagueId)];
+                                            return (
+                                                <li key={match.cmsId || match.matchId}>
+                                                    <MatchCard match={match} colorTheme="red" leagueName={leagueName} genderLabel={genderLabel} />
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                ) : (
+                                    <p className="text-white">Inga kommande matcher.</p>
+                                )}
+                                <div className="mt-6">
+                                    <Link href="/matcher" className="block">
+                                        <Button variant="outline" className="text-white w-full">Visa alla matcher</Button>
+                                    </Link>
+                                </div>
                             </div>
                         </MaxWidthWrapper>
                     </TabsContent>
                 )}
 
-                {/* Statistik Tab (SEF Teams only) */}
-                {isSEFTeam && (
+                {/* Statistik Tab (SMC teams only — herrar) */}
+                {hasSmcStats && (
                     <TabsContent value="statistik" className="mt-0">
                         <MaxWidthWrapper>
                             <div className="flex justify-between items-center mt-10 mb-6">

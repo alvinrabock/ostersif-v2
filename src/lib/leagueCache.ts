@@ -1,5 +1,6 @@
 import fs from 'fs/promises'
 import path from 'path'
+import { fetchPosts } from './frontspace/client'
 
 const CACHE_FILE_PATH = path.join(process.cwd(), 'src/data/league-cache.json')
 
@@ -25,6 +26,11 @@ export interface SeasonGroup {
     leagueId: string
     id: string
     tournamentId: number
+    kon?: 'herr' | 'dam'
+    kalender_url?: string
+    visa_i_filter?: boolean
+    visningsnamn?: string
+    altLeagueIds?: string[] // All alternative IDs (SMC ULID, SvFF competition ID, smc_externalleagueid)
   }[]
 }
 
@@ -103,9 +109,110 @@ export async function getAllSeasons(): Promise<string[]> {
 }
 
 /**
- * Gets leagues grouped by season (formatted for MatchFilters compatibility)
+ * Gets leagues grouped by season — CMS-first, falls back to file cache
  */
 export async function getLeaguesGroupedBySeason(): Promise<SeasonGroup[]> {
+  // Try CMS (Turneringar post type) first
+  try {
+    const { posts } = await fetchPosts<any>('turneringar', { limit: 500 })
+
+    if (posts && posts.length > 0) {
+      // Load SMC file cache to cross-reference league IDs by tournamentId
+      // This ensures matches synced from SMC (with ULID leagueIds) can be
+      // resolved to CMS tournaments that were only synced from SvFF
+      const smcCache = await getLeagueCache()
+      const smcByTournamentId = new Map<number, string>()
+      if (smcCache) {
+        for (const league of smcCache.leagues) {
+          if (league.tournamentId && league.leagueId) {
+            smcByTournamentId.set(league.tournamentId, league.leagueId)
+          }
+        }
+      }
+
+      const seasonMap = new Map<string, SeasonGroup>()
+
+      for (const post of posts) {
+        const content = typeof post.content === 'string' ? JSON.parse(post.content) : post.content || {}
+
+        const seasonYear = content.sasong
+        const leagueId = content.externalleagueid || content.svff_competition_id
+        if (!seasonYear || !leagueId) continue
+
+        // Skip leagues explicitly hidden from filter
+        if (content.visa_i_filter === false || content.visa_i_filter === 'false') continue
+
+        // Collect all alternative league IDs (SMC ULID, SvFF competition ID, smc_externalleagueid)
+        // so matches from any sync system can be resolved to this tournament
+        const altIds = new Set<string>()
+        if (content.externalleagueid) altIds.add(String(content.externalleagueid))
+        if (content.svff_competition_id) altIds.add(String(content.svff_competition_id))
+        if (content.smc_externalleagueid) altIds.add(String(content.smc_externalleagueid))
+        // Cross-reference SMC file cache: if this tournament has a tournamentId that
+        // matches an SMC league, include the SMC ULID as an alt ID.
+        // SMC's tournamentId often equals the SvFF competition ID, so check both.
+        const cmsTournamentId = Number(content.tournamentid) || Number(content.smc_tournamentid) || 0
+        const svffCompId = Number(content.svff_competition_id) || 0
+        for (const tid of [cmsTournamentId, svffCompId]) {
+          if (tid && smcByTournamentId.has(tid)) {
+            altIds.add(smcByTournamentId.get(tid)!)
+          }
+        }
+        altIds.delete(leagueId) // Don't duplicate the primary ID
+        const altLeagueIds = Array.from(altIds)
+
+        const tournamentEntry = {
+          LeagueName: content.visningsnamn || post.title,
+          leagueId,
+          id: leagueId,
+          tournamentId: Number(content.tournamentid) || 0,
+          kon: (content.gendername || content.kon) as 'herr' | 'dam' | undefined,
+          kalender_url: content.kalender_url || undefined,
+          visa_i_filter: content.visa_i_filter === true || content.visa_i_filter === 'true' ? true : undefined,
+          visningsnamn: content.visningsnamn || undefined,
+          altLeagueIds: altLeagueIds.length > 0 ? altLeagueIds : undefined,
+        }
+
+        // Detect cross-season tournaments (e.g., "Svenska Cupen 2025/26")
+        // Add to both seasons so they appear in both filter dropdowns
+        // Uses sasong_till field first (set by sync), falls back to title parsing
+        const seasons = [seasonYear]
+        if (content.sasong_till && content.sasong_till !== seasonYear) {
+          seasons.push(content.sasong_till)
+        } else {
+          const crossSeasonMatch = post.title?.match(/(\d{4})\/(\d{2,4})/)
+          if (crossSeasonMatch) {
+            const startYear = crossSeasonMatch[1]
+            const endPart = crossSeasonMatch[2]
+            const endYear = endPart.length === 2 ? startYear.slice(0, 2) + endPart : endPart
+            if (endYear !== seasonYear && !seasons.includes(endYear)) {
+              seasons.push(endYear)
+            }
+            if (startYear !== seasonYear && !seasons.includes(startYear)) {
+              seasons.push(startYear)
+            }
+          }
+        }
+
+        for (const sy of seasons) {
+          if (!seasonMap.has(sy)) {
+            seasonMap.set(sy, { seasonYear: sy, tournaments: [] })
+          }
+          seasonMap.get(sy)!.tournaments.push(tournamentEntry)
+        }
+      }
+
+      if (seasonMap.size > 0) {
+        return Array.from(seasonMap.values()).sort(
+          (a, b) => Number(b.seasonYear) - Number(a.seasonYear)
+        )
+      }
+    }
+  } catch (error) {
+    console.warn('CMS turneringar fetch failed, falling back to file cache:', error)
+  }
+
+  // Fallback: read from league-cache.json
   const cache = await getLeagueCache()
   if (!cache) return []
 
@@ -113,12 +220,8 @@ export async function getLeaguesGroupedBySeason(): Promise<SeasonGroup[]> {
 
   cache.leagues.forEach(league => {
     if (!seasonMap.has(league.seasonYear)) {
-      seasonMap.set(league.seasonYear, {
-        seasonYear: league.seasonYear,
-        tournaments: [],
-      })
+      seasonMap.set(league.seasonYear, { seasonYear: league.seasonYear, tournaments: [] })
     }
-
     seasonMap.get(league.seasonYear)?.tournaments.push({
       LeagueName: league.leagueName,
       leagueId: league.leagueId,

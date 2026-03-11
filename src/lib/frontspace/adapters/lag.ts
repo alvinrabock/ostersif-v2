@@ -34,6 +34,7 @@ export interface FrontspaceLagContent {
   display_on_games?: string;
   gender?: string;
   agecategoryname?: string;
+  kalenderlank?: string; // webcal/ical subscription URL managed by client
 }
 
 export interface FrontspaceLag {

@@ -8,6 +8,7 @@ import MatcherArchiveClient from "./MatchArchiveClient";
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { MatchCardData } from "@/types";
+import { fetchAllLag } from "@/lib/frontspace/adapters/lag";
 
 // On-demand revalidation only via webhook - no time-based polling
 
@@ -28,11 +29,28 @@ export const metadata: Metadata = {
 };
 
 export default async function Page() {
-  // Get leagues grouped by season from automated discovery cache
-  const [seasons, leagueCache] = await Promise.all([
+  // Get leagues grouped by season + league cache + lag (teams) for calendar links
+  const [seasons, leagueCache, allLag] = await Promise.all([
     getLeaguesGroupedBySeason(),
-    getLeagueCache()
+    getLeagueCache(),
+    fetchAllLag(),
   ]);
+
+  // Build calendar links from lag posts (kalenderlank field)
+  const calendarLinks: { label: string; url: string }[] = [];
+  for (const lag of allLag) {
+    if (lag.content.kalenderlank) {
+      const isdam = lag.slug.includes('dam') || lag.title.toLowerCase().includes('dam');
+      calendarLinks.push({
+        label: isdam ? 'Damer' : 'Herrar',
+        url: lag.content.kalenderlank,
+      });
+    }
+  }
+  // Fallback if no lag has kalenderlank set
+  if (calendarLinks.length === 0) {
+    calendarLinks.push({ label: 'Herrar', url: 'webcal://calendar.sportomedia.se/team/OIF' });
+  }
 
   // If cache is empty, show setup instructions
   if (!seasons || seasons.length === 0) {
@@ -98,7 +116,7 @@ export default async function Page() {
     <div className="w-full pt-46 pb-36 bg-custom_dark_dark_red">
       <MaxWidthWrapper>
         <Suspense>
-          <MatcherArchiveClient seasons={seasons} initialMatches={initialMatches} />
+          <MatcherArchiveClient seasons={seasons} initialMatches={initialMatches} calendarLinks={calendarLinks} />
         </Suspense>
       </MaxWidthWrapper>
     </div>

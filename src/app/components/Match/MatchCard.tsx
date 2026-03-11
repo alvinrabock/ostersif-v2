@@ -15,12 +15,13 @@ interface MatchCardProps {
     match: MatchCardData;
     colorTheme?: 'red' | 'blue' | 'outline' | 'outline-blue';
     leagueName?: string;
+    genderLabel?: 'Herrar' | 'Damer';
 }
 
 // Fallback formats when logo not in manifest
 const FALLBACK_FORMATS = ['svg', 'png', 'webp'] as const;
 
-const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) => {
+const MatchCard = ({ match, colorTheme = 'blue', leagueName, genderLabel }: MatchCardProps) => {
     // State to track which logo format to try (index in LOGO_FORMATS array)
     const [homeLogoFormatIndex, setHomeLogoFormatIndex] = useState(0);
     const [awayLogoFormatIndex, setAwayLogoFormatIndex] = useState(0);
@@ -145,14 +146,15 @@ const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) =
 
         // Use CMS logo if provided and not failed, otherwise derive from team name
         const logoSrc = (customLogo && !cmsLogoFailed) ? customLogo : getTeamLogoPath(teamName, formatIndex);
+        const isExternalLogo = customLogo && !cmsLogoFailed;
 
         return (
-            <div className="w-12 h-12 relative">
+            <div className="w-12 h-12 relative overflow-hidden">
                 <Image
                     src={logoSrc}
                     alt={teamName}
                     fill
-                    className={`object-contain !m-0 transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                    className={`object-contain !m-0 transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'} ${isExternalLogo ? 'scale-150' : ''}`}
                     onError={handleLogoError}
                     onLoad={() => setIsLoaded(true)}
                 />
@@ -341,6 +343,11 @@ const MatchCard = ({ match, colorTheme = 'blue', leagueName }: MatchCardProps) =
                 </div>
 
                 <div className="py-4 flex flex-row flex-wrap justify-center items-center sm:items-start md:flex-row md:justify-center md:items-center mx-auto gap-x-8 gap-y-4">
+                    {genderLabel && (
+                        <span className={`text-sm ${textColor}`}>
+                            {genderLabel}
+                        </span>
+                    )}
                     {(match.arenaName || matchedLeagueName) && (
                         <>
                             {showScore && (

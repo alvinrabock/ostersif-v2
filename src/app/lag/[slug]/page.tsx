@@ -5,7 +5,8 @@ import { fetchSpelareByTeam } from "@/lib/frontspace/adapters/spelare";
 import { fetchStabByTeam } from "@/lib/frontspace/adapters/stab";
 import { fetchSquadData } from "@/lib/Superadmin/fetchSquad";
 import { fetchTeamStats } from "@/lib/Superadmin/fetchTeamStats";
-import { getUpcomingMatches, getRecentMatches } from "@/lib/getMatchesWithFallback";
+import { getFilteredMatches } from "@/lib/getMatchesWithFallback";
+import { getLeaguesGroupedBySeason, type SeasonGroup } from "@/lib/leagueCache";
 import { getCurrentSeason, isValidSeason } from "@/lib/season";
 import { fetchSvFFTeamStandings } from "@/lib/svff/fetchTeamStandings";
 import { notFound } from "next/navigation";
@@ -16,21 +17,83 @@ import TeamTabs from "./TeamTabs";
 import type { Metadata } from 'next';
 
 /**
- * Fetch team matches using same functions as /matcher page
- * Ensures consistent sorting and data transformation
+ * Fetch team matches filtered by gender (herr/dam).
+ * Uses the same league ID resolution as /matcher page:
+ * 1. Fetch all matches for the current season from CMS
+ * 2. Get league IDs for the team's gender from turneringar (incl. altLeagueIds)
+ * 3. Filter matches by matching leagueId against gender league IDs
+ *
+ * Also returns league name/gender maps for MatchCard rendering.
  */
-async function fetchTeamMatches(): Promise<{ upcoming: MatchCardData[]; played: MatchCardData[] }> {
+async function fetchTeamMatches(gender: 'herr' | 'dam'): Promise<{
+    upcoming: MatchCardData[];
+    played: MatchCardData[];
+    leagueNameMap: Record<string, string>;
+    leagueGenderMap: Record<string, 'Herrar' | 'Damer'>;
+}> {
+    const empty = { upcoming: [], played: [], leagueNameMap: {}, leagueGenderMap: {} };
     try {
-        // Use same functions as /matcher for consistent behavior
-        const [upcoming, played] = await Promise.all([
-            getUpcomingMatches(5),
-            getRecentMatches(4),
+        const currentSeason = new Date().getFullYear().toString();
+        const today = new Date().toISOString().split('T')[0];
+
+        // Fetch season matches and league data in parallel
+        const [allMatches, seasons] = await Promise.all([
+            getFilteredMatches({ season: currentSeason, limit: 200 }),
+            getLeaguesGroupedBySeason(),
         ]);
 
-        return { upcoming, played };
+        // Build gender league ID set + name/gender maps (same logic as MatchArchiveClient)
+        const genderLeagueIds = new Set<string>();
+        const leagueNameMap: Record<string, string> = {};
+        const leagueGenderMap: Record<string, 'Herrar' | 'Damer'> = {};
+
+        for (const s of seasons) {
+            for (const t of s.tournaments) {
+                const label = t.kon === 'dam' ? 'Damer' as const : 'Herrar' as const;
+                leagueNameMap[String(t.leagueId)] = t.LeagueName;
+                leagueGenderMap[String(t.leagueId)] = label;
+                t.altLeagueIds?.forEach(id => {
+                    leagueNameMap[id] = t.LeagueName;
+                    leagueGenderMap[id] = label;
+                });
+            }
+        }
+
+        const currentSeasonData = seasons.find(s => s.seasonYear === currentSeason);
+        if (currentSeasonData) {
+            for (const t of currentSeasonData.tournaments) {
+                const isMatch = gender === 'dam'
+                    ? t.kon === 'dam'
+                    : !t.kon || t.kon === 'herr';
+                if (isMatch) {
+                    genderLeagueIds.add(String(t.leagueId));
+                    t.altLeagueIds?.forEach(id => genderLeagueIds.add(id));
+                }
+            }
+        }
+
+        // Filter matches by gender league IDs
+        const genderMatches = allMatches.filter(m => genderLeagueIds.has(String(m.leagueId)));
+
+        // Split into upcoming and played
+        const upcoming = genderMatches
+            .filter(m => {
+                if (m.status === 'Over') return false;
+                const kickoffDate = m.kickoff?.split('T')[0] || '';
+                return kickoffDate >= today;
+            })
+            .sort((a, b) => new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime())
+            .slice(0, 5);
+
+        const played = genderMatches
+            .filter(m => m.status === 'Over')
+            .sort((a, b) => new Date(b.kickoff).getTime() - new Date(a.kickoff).getTime())
+            .slice(0, 4);
+
+        return { upcoming, played, leagueNameMap, leagueGenderMap };
     } catch (error) {
         console.error("Error fetching team matches:", error);
-        return { upcoming: [], played: [] };
+        return empty;
     }
 }
 
@@ -136,17 +199,21 @@ export default async function Page({ params, searchParams }: PageProps) {
     const smcTeamId = teamData.content.smc_teamid;
     const fogisTeamId = teamData.content.fogis_teamid;
     const fogisTeamSlug = teamData.content.fogis_teamslug;
+    // SMC stats (squad, team stats) only available for teams with smc_teamid (herrar)
+    const hasSmcStats = !!smcTeamId;
+    // Determine team gender from slug/title for match filtering
+    const teamGender: 'herr' | 'dam' = (slug.includes('dam') || teamData.title.toLowerCase().includes('dam')) ? 'dam' : 'herr';
 
     // Fetch data in parallel
     const [teamNews, players, staff, squad, teamStats, teamMatches, svffStandings] = await Promise.all([
         fetchNyheterByTeam(teamData.id, 6),
         fetchSpelareByTeam(teamData.id),
         fetchStabByTeam(teamData.id),
-        // Only fetch SMC data for SEF teams (with selected season)
-        isSEFTeam ? fetchSquadData(selectedSeason).catch(() => []) : Promise.resolve([]),
-        isSEFTeam ? fetchTeamStats(selectedSeason).catch(() => null) : Promise.resolve(null),
-        // Pre-fetch matches for SEF teams (server-side, non-blocking)
-        isSEFTeam ? fetchTeamMatches() : Promise.resolve({ upcoming: [], played: [] }),
+        // Only fetch SMC stats for teams with smc_teamid (herrar)
+        hasSmcStats ? fetchSquadData(selectedSeason).catch(() => []) : Promise.resolve([]),
+        hasSmcStats ? fetchTeamStats(selectedSeason).catch(() => null) : Promise.resolve(null),
+        // Pre-fetch matches for SEF teams, filtered by gender
+        isSEFTeam ? fetchTeamMatches(teamGender) : Promise.resolve({ upcoming: [], played: [], leagueNameMap: {}, leagueGenderMap: {} }),
         // Fetch SvFF standings if team has fogis_teamid
         fogisTeamId ? fetchSvFFTeamStandings(fogisTeamId).catch(() => null) : Promise.resolve(null),
     ]);
@@ -198,6 +265,7 @@ export default async function Page({ params, searchParams }: PageProps) {
                 currentTab={currentTab}
                 slug={slug}
                 isSEFTeam={isSEFTeam}
+                hasSmcStats={hasSmcStats}
                 players={players}
                 staff={staff}
                 smcTeamId={smcTeamId}
@@ -207,6 +275,8 @@ export default async function Page({ params, searchParams }: PageProps) {
                 teamStats={teamStats}
                 upcomingMatches={teamMatches.upcoming}
                 playedMatches={teamMatches.played}
+                leagueNameMap={teamMatches.leagueNameMap}
+                leagueGenderMap={teamMatches.leagueGenderMap}
                 selectedSeason={selectedSeason}
                 svffStandings={svffStandings}
             />

@@ -84,6 +84,12 @@ const nextConfig = {
         hostname: "api.coolify.frontspace.se",
         pathname: "/v1/image",
       },
+      // SvFF team logos
+      {
+        protocol: "https",
+        hostname: "staticcdn.svenskfotboll.se",
+        pathname: "/img/**",
+      },
     ],
   },
 };

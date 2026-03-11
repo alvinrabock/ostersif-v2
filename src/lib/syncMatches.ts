@@ -30,6 +30,13 @@ function getMatcherPostTypeId(): string {
   return MATCHER_POST_TYPE_ID;
 }
 
+interface SyncPayload {
+  slug: string;
+  title: string;
+  action: 'create' | 'update' | 'skip';
+  content: Record<string, unknown>;
+}
+
 interface SyncResult {
   success: boolean;
   created: number;
@@ -37,6 +44,7 @@ interface SyncResult {
   skipped: number;
   errors: string[];
   timestamp: string;
+  payloads?: SyncPayload[];
 }
 
 /**
@@ -89,6 +97,15 @@ function transformMatchToCMSContent(match: MatchCardData, leagueName?: string): 
   // Derive season from kickoff date (Swedish football uses single-year seasons)
   const sasong = match.kickoff ? new Date(match.kickoff).getFullYear().toString() : '';
 
+  const arena = match.arenaName || '';
+  const slugTime = tid_for_avspark.replace(':', '-');
+  const slugArena = arena.toLowerCase().trim()
+    .replace(/[^a-z0-9åäö\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  const matchUniqueKey = `${datum}_${slugTime}_${slugArena}`;
+
   return {
     // External IDs for sync tracking
     externalmatchid: String(match.matchId),
@@ -101,7 +118,7 @@ function transformMatchToCMSContent(match: MatchCardData, leagueName?: string): 
     // Schedule (split into date and time)
     datum,
     tid_for_avspark,
-    arena: match.arenaName || '',
+    arena,
 
     // Result
     match_status: mapMatchStatus(match.status),  // Select field: scheduled, in-progress, over
@@ -111,6 +128,9 @@ function transformMatchToCMSContent(match: MatchCardData, leagueName?: string): 
     // League & Season
     leaguename: leagueName || '',
     sasong,
+
+    // Dedup key (shared between SMC and SvFF sync)
+    match_unique_key: matchUniqueKey,
 
     // Meta
     iscustomgame: "false",  // Select field, not boolean
@@ -388,11 +408,28 @@ export async function syncMatchesToCMS(
       console.log(`   ${i + 1}. ${m.homeTeam} vs ${m.awayTeam} (${m.kickoff}) - ID: ${m.matchId}`);
     });
 
-    // DRY RUN: Just preview, don't actually sync
+    // DRY RUN: Preview with full payloads for inspection
     if (dryRun) {
       console.log('\n🔍 DRY RUN MODE - No changes will be made');
+
+      // Build leagueId → leagueName map from cache
+      const leagueNameMap = new Map<string, string>();
+      if (cache) {
+        for (const league of cache.leagues) {
+          leagueNameMap.set(league.leagueId, league.leagueName);
+        }
+      }
+
+      result.payloads = smcMatches.map(match => {
+        const slug = generateMatchSlug(match);
+        const title = `${match.homeTeam} vs ${match.awayTeam}`;
+        const leagueName = leagueNameMap.get(String(match.leagueId));
+        const content = transformMatchToCMSContent(match, leagueName);
+        return { slug, title, action: 'create' as const, content };
+      });
+
       result.success = true;
-      result.created = smcMatches.length; // Show how many would be created
+      result.created = smcMatches.length;
       console.log(`✅ Dry run complete: Would sync ${smcMatches.length} matches`);
       return result;
     }

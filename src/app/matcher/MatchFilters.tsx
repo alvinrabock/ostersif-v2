@@ -31,9 +31,12 @@ interface MatchFilterProps {
   isPlayedFilter: boolean;
   locationFilter: string | null;
   leagueFilter: string | null;
+  genderFilter: string | null;
   selectedSeason: string | undefined;
   seasonOptions: Season[];
   leagueOptions: LeagueOption[];
+  hasHerrar: boolean;
+  hasDamer: boolean;
   calendarOpen: boolean;
   selectedRange: DateRange | undefined;
   setCalendarOpen: (open: boolean) => void;
@@ -42,26 +45,54 @@ interface MatchFilterProps {
   handleLeagueChange: (value: string) => void;
   handleSeasonChange: (value: string) => void;
   handleDateChange: (range: DateRange | undefined) => void;
+  handleGenderFilterClick: (value: 'herrar' | 'damer') => void;
 }
 
 const MatchFilter: React.FC<MatchFilterProps> = ({
   locationFilter,
   leagueFilter,
+  genderFilter,
   selectedSeason,
   seasonOptions,
   leagueOptions,
+  hasHerrar,
+  hasDamer,
   handleLocationFilterClick,
   handleLeagueChange,
   handleSeasonChange,
+  handleGenderFilterClick,
 }) => {
 
   const sortedSeasons = [...seasonOptions].sort((a, b) => Number(b.seasonYear) - Number(a.seasonYear));
 
   return (
-    <div className="flex flex-col xl:flex-row gap-4 w-full">
+    <div className="flex flex-col xl:flex-row gap-6 w-full">
       {/* Group for buttons and selects */}
-      <div className="flex flex-col xl:flex-row gap-4 w-full xl:w-auto">
-        {/* Home / Away Buttons */}
+      <div className="flex flex-col xl:flex-row gap-6 w-full xl:w-auto">
+        {/* Lag — only show if both genders exist */}
+        {hasHerrar && hasDamer && (
+          <>
+            <div className="grid grid-cols-2 xl:flex gap-2">
+              <Button
+                variant={genderFilter === 'herrar' ? 'white' : 'outline'}
+                className={`text-sm whitespace-nowrap ${genderFilter === 'herrar' ? '' : 'text-white'}`}
+                onClick={() => handleGenderFilterClick('herrar')}
+              >
+                Herrar
+              </Button>
+              <Button
+                variant={genderFilter === 'damer' ? 'white' : 'outline'}
+                className={`text-sm whitespace-nowrap ${genderFilter === 'damer' ? '' : 'text-white'}`}
+                onClick={() => handleGenderFilterClick('damer')}
+              >
+                Damer
+              </Button>
+            </div>
+            <div className="hidden xl:block w-px bg-white/20 self-stretch" />
+          </>
+        )}
+
+        {/* Hemma / Borta */}
         <div className="grid grid-cols-2 xl:flex gap-2">
           <Button
             variant={locationFilter === 'home' ? 'white' : 'outline'}
