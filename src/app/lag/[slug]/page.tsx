@@ -6,7 +6,7 @@ import { fetchStabByTeam } from "@/lib/frontspace/adapters/stab";
 import { fetchSquadData } from "@/lib/Superadmin/fetchSquad";
 import { fetchTeamStats } from "@/lib/Superadmin/fetchTeamStats";
 import { getFilteredMatches } from "@/lib/getMatchesWithFallback";
-import { getLeaguesGroupedBySeason, type SeasonGroup } from "@/lib/leagueCache";
+import { getLeaguesGroupedBySeason } from "@/lib/leagueCache";
 import { getCurrentSeason, isValidSeason } from "@/lib/season";
 import { fetchSvFFTeamStandings } from "@/lib/svff/fetchTeamStandings";
 import { notFound } from "next/navigation";

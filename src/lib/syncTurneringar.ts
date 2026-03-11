@@ -25,7 +25,7 @@ const TURNERINGAR_POST_TYPE_ID = 'f73c99ff-7812-4310-9b1a-d43ba019e54e';
 // ─── Lag (Teams) lookup ──────────────────────────────────────────────────────
 
 /** Fetch all "lag" posts from CMS and build a FOGIS team ID → post map */
-async function fetchLagByFogisTeamId(): Promise<Map<string, { id: string; title: string; slug: string }>> {
+async function _fetchLagByFogisTeamId(): Promise<Map<string, { id: string; title: string; slug: string }>> {
   const query = `
     query GetLag($storeId: String!, $limit: Int) {
       posts(storeId: $storeId, postTypeSlug: "lag", limit: $limit) {

@@ -28,8 +28,8 @@ export async function POST(request: NextRequest) {
   const limit = limitParam ? parseInt(limitParam, 10) : undefined;
   const season = request.nextUrl.searchParams.get('season') || undefined;
   const source = request.nextUrl.searchParams.get('source') || 'smc';
-  const from = request.nextUrl.searchParams.get('from') || undefined;
-  const to = request.nextUrl.searchParams.get('to') || undefined;
+  const _from = request.nextUrl.searchParams.get('from') || undefined;
+  const _to = request.nextUrl.searchParams.get('to') || undefined;
 
   console.log('🕐 Turneringar sync triggered', { dryRun, limit, season, source });
 
