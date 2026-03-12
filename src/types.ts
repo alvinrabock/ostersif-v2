@@ -1987,7 +1987,7 @@ export type Product = {
 };
 
 export interface MatchCardData {
-    matchId: number;
+    matchId: string | number; // Support both ULID strings (SMC API 2.0) and numeric IDs
     kickoff: string;
     modifiedDate: string;
     status: string;

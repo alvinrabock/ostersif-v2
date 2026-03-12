@@ -7,6 +7,40 @@ import { frontspace } from '../client';
 import type { Post } from '@/types';
 
 /**
+ * Extract real content from Frontspace's image proxy URL wrapper.
+ * The new image delivery system wraps content through:
+ *   https://api.coolify.frontspace.se/v1/image?url={URL-encoded content}&w=800&q=80&f=auto
+ * This function detects that pattern and extracts the original value.
+ */
+function unwrapImageProxyUrl(value: any): any {
+  if (typeof value !== 'string') return value;
+
+  // Detect Frontspace image proxy wrapper pattern
+  // The URL contains the original content URL-encoded in the `url` query param
+  const proxyPattern = /^https?:\/\/[^/]*frontspace[^/]*\/v1\/image\?url=/;
+  if (!proxyPattern.test(value)) return value;
+
+  try {
+    const url = new URL(value);
+    const encoded = url.searchParams.get('url');
+    if (!encoded) return value;
+
+    // The decoded value might be Tiptap JSON
+    const decoded = decodeURIComponent(encoded);
+    try {
+      const parsed = JSON.parse(decoded);
+      if (parsed && parsed.type === 'doc') return parsed;
+    } catch {
+      // Not JSON — return the decoded string
+      return decoded;
+    }
+    return decoded;
+  } catch {
+    return value;
+  }
+}
+
+/**
  * Transform Frontspace Nyhet to legacy Post format
  */
 function transformNyhetToPost(nyhet: any): Post {
@@ -102,13 +136,13 @@ function transformNyhetToPost(nyhet: any): Post {
     youtubeLink: content.youtubelink || content.youtube_link || null,
     // Map categories
     categories,
-    // Map content - the RichText component expects HTML content directly
-    content: content.content || '',
+    // Map content - unwrap image proxy URL if needed, prefer Tiptap JSON
+    content: unwrapImageProxyUrl(content.tiptapContent || content.contentJson || content.content) || '',
     // Also provide layout format for compatibility
-    layout: content.content ? [{
+    layout: (content.tiptapContent || content.contentJson || content.content) ? [{
       blockType: 'content',
       columns: [{
-        richText: content.content,
+        richText: unwrapImageProxyUrl(content.tiptapContent || content.contentJson || content.content),
       }],
     }] : [],
     // Additional fields

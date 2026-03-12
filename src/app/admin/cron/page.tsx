@@ -57,6 +57,18 @@ const CRON_ENDPOINTS: CronEndpoint[] = [
       { key: 'source', label: 'Source (smc or svff)', type: 'text', default: 'smc' },
     ],
   },
+  {
+    name: 'Test Live Event (Revalidate Match)',
+    description: 'Simulate an SQS push event. Syncs match data to CMS + revalidates cache. Use a real matchId/leagueId.',
+    path: '/api/revalidate-match',
+    method: 'POST',
+    params: [
+      { key: 'matchId', label: 'Match ID (SMC)', type: 'text' },
+      { key: 'leagueId', label: 'League ID (SMC)', type: 'text' },
+      { key: 'eventType', label: 'Event type', type: 'text', default: 'MATCH_UPDATE' },
+      { key: 'secret', label: 'Revalidate secret', type: 'text' },
+    ],
+  },
 ]
 
 interface EndpointResult {
@@ -66,7 +78,7 @@ interface EndpointResult {
   duration: number | null
 }
 
-function CronCard({ endpoint }: { endpoint: CronEndpoint }) {
+function CronCard({ endpoint, cronSecret }: { endpoint: CronEndpoint; cronSecret: string }) {
   const [result, setResult] = useState<EndpointResult>({ loading: false, data: null, error: null, duration: null })
   const [params, setParams] = useState<Record<string, string>>(() => {
     const defaults: Record<string, string> = {}
@@ -90,7 +102,12 @@ function CronCard({ endpoint }: { endpoint: CronEndpoint }) {
       const queryString = queryParts.length > 0 ? `?${queryParts.join('&')}` : ''
       const url = `${endpoint.path}${queryString}`
 
-      const res = await fetch(url, { method: endpoint.method })
+      const headers: Record<string, string> = {}
+      if (cronSecret) {
+        headers['x-cron-secret'] = cronSecret
+      }
+
+      const res = await fetch(url, { method: endpoint.method, headers })
       const data = await res.json()
       const duration = Date.now() - start
 
@@ -211,10 +228,14 @@ function CronCard({ endpoint }: { endpoint: CronEndpoint }) {
 
 export default function CronAdminPage() {
   const [isLocalhost, setIsLocalhost] = useState<boolean | null>(null)
+  const [cronSecret, setCronSecret] = useState('')
 
   useEffect(() => {
     const hostname = window.location.hostname
     setIsLocalhost(hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.'))
+    // Try to load saved secret from sessionStorage
+    const saved = sessionStorage.getItem('cron-secret')
+    if (saved) setCronSecret(saved)
   }, [])
 
   if (isLocalhost === null) {
@@ -251,9 +272,24 @@ export default function CronAdminPage() {
           </div>
         </div>
 
+        <div className="mb-6 bg-gray-800 rounded-lg p-4">
+          <label className="text-sm text-gray-400 block mb-2">CRON_SECRET (required for auth)</label>
+          <input
+            type="password"
+            value={cronSecret}
+            onChange={e => {
+              setCronSecret(e.target.value)
+              sessionStorage.setItem('cron-secret', e.target.value)
+            }}
+            placeholder="Paste your CRON_SECRET here"
+            className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 font-mono"
+          />
+          <p className="text-xs text-gray-500 mt-1">Saved in session only — cleared when you close the tab.</p>
+        </div>
+
         <div className="space-y-6">
           {CRON_ENDPOINTS.map(endpoint => (
-            <CronCard key={endpoint.path} endpoint={endpoint} />
+            <CronCard key={endpoint.path} endpoint={endpoint} cronSecret={cronSecret} />
           ))}
         </div>
 

@@ -1,0 +1,6 @@
+node_modules
+.env
+.env.*
+docker-compose.yml
+.dockerignore
+README.md

@@ -28,17 +28,41 @@ interface RichTextContentProps {
 }
 
 /**
+ * Try to extract Tiptap JSON from a Frontspace image proxy URL.
+ * The new image delivery wraps content as:
+ *   https://...frontspace.../v1/image?url={URL-encoded Tiptap JSON}&w=800&q=80&f=auto
+ */
+function extractFromImageProxy(value: string): TiptapDoc | null {
+  if (!value.includes('frontspace') || !value.includes('/v1/image')) return null
+  try {
+    const url = new URL(value)
+    const encoded = url.searchParams.get('url')
+    if (!encoded) return null
+    const decoded = decodeURIComponent(encoded)
+    const parsed = JSON.parse(decoded)
+    if (parsed && parsed.type === 'doc') return parsed as TiptapDoc
+  } catch { /* not a proxy URL or not valid JSON */ }
+  return null
+}
+
+/**
  * Check if content is Tiptap JSON format
  */
 function isTiptapJson(content: string | TiptapDoc | Record<string, unknown>): boolean {
-  if (typeof content === 'object' && content !== null && 'type' in content && content.type === 'doc') {
-    return true
+  if (typeof content === 'object' && content !== null) {
+    // Direct Tiptap doc
+    if ('type' in content && content.type === 'doc') return true
+    // Wrapped format: { json: { type: "doc", ... } } or { tiptap: { type: "doc", ... } }
+    const wrapped = (content as any).json || (content as any).tiptap
+    if (wrapped && typeof wrapped === 'object' && wrapped.type === 'doc') return true
   }
   if (typeof content === 'string') {
     try {
       const parsed = JSON.parse(content)
       return parsed && parsed.type === 'doc'
     } catch {
+      // Check if it's a Frontspace image proxy URL wrapping Tiptap JSON
+      if (extractFromImageProxy(content)) return true
       return false
     }
   }
@@ -53,11 +77,22 @@ function parseTiptapContent(content: string | TiptapDoc | Record<string, unknown
     if ('type' in content && content.type === 'doc') {
       return content as TiptapDoc
     }
+    // Handle wrapped format: { json: { type: "doc", ... } }
+    const wrapped = (content as any).json || (content as any).tiptap
+    if (wrapped && typeof wrapped === 'object' && wrapped.type === 'doc') {
+      return wrapped as TiptapDoc
+    }
     return null
   }
+  // Try direct JSON parse
   try {
-    return JSON.parse(content)
+    return JSON.parse(content as string)
   } catch {
+    // Try extracting from Frontspace image proxy URL
+    if (typeof content === 'string') {
+      const extracted = extractFromImageProxy(content)
+      if (extracted) return extracted
+    }
     return null
   }
 }
@@ -257,6 +292,28 @@ function renderNode(node: TiptapNode, index: number): React.ReactNode {
   }
 }
 
+/** Image file extensions to detect bare image URLs in HTML */
+const IMAGE_EXTENSIONS = /\.(jpg|jpeg|png|gif|webp|svg|avif)(\?.*)?$/i
+
+/**
+ * Process HTML content to convert bare image URLs into proper <img> tags.
+ * Frontspace's Tiptap-to-HTML renderer may output custom block content
+ * (gallery images, embedded images) as plain URL text instead of <img> elements.
+ */
+function processHtmlWithImageUrls(html: string): string {
+  // Match bare URLs on their own line (not already inside a tag attribute)
+  // Handles URLs wrapped in <p> tags or standing alone
+  return html.replace(
+    /(<p>)?\s*(https?:\/\/[^\s<>"]+(?:\.(?:jpg|jpeg|png|gif|webp|svg|avif))(?:\?[^\s<>"]*)?)\s*(<\/p>)?/gi,
+    (_match, openTag, url, closeTag) => {
+      const img = `<img src="${url}" alt="" class="max-w-full h-auto rounded-lg my-4" loading="lazy" />`
+      // If it was wrapped in a <p> tag, replace the whole thing
+      if (openTag || closeTag) return img
+      return img
+    }
+  )
+}
+
 /**
  * RichTextContent component that renders Tiptap JSON content
  * with support for custom blocks like gallery and video
@@ -281,12 +338,16 @@ export function RichTextContent({ content, className }: RichTextContentProps) {
     )
   }
 
-  // If content is a string (HTML), render it directly
+  // If content is a string (HTML), process it and render
   if (typeof content === 'string') {
+    // Convert bare image URLs in HTML to proper <img> tags
+    // This handles cases where Frontspace's HTML renderer doesn't know about custom blocks
+    const processedHtml = processHtmlWithImageUrls(content)
+
     return (
       <div
         className={className}
-        dangerouslySetInnerHTML={{ __html: content }}
+        dangerouslySetInnerHTML={{ __html: processedHtml }}
       />
     )
   }

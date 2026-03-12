@@ -189,13 +189,10 @@ function transformCMSMatchToCardData(cmsMatch: any): MatchCardData {
   const ticketLink = extractTicketLink(content.lankar);
   const customButton = extractCustomButton(content.lankar);
 
-  // Get matchId - prefer external ID (numeric), fallback to generated ID from CMS post ID
-  // Also store raw externalMatchId string for URL construction (supports ULIDs)
+  // Get matchId - use raw external ID string (supports both numeric and ULID formats from SMC API 2.0)
+  // Fallback to generated ID from CMS post ID if no external ID exists
   const rawExternalMatchId = content.externalmatchid || '';
-  const numericExternalMatchId = parseInt(rawExternalMatchId);
-  const matchId = !isNaN(numericExternalMatchId) && numericExternalMatchId > 0
-    ? numericExternalMatchId
-    : generateIdFromString(cmsMatch.id);
+  const matchId = rawExternalMatchId || generateIdFromString(cmsMatch.id);
 
   return {
     matchId,

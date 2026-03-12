@@ -30,6 +30,105 @@ function getMatcherPostTypeId(): string {
   return MATCHER_POST_TYPE_ID;
 }
 
+// ─── Relation Lookups ────────────────────────────────────────────────────────
+
+interface SMCRelationLookups {
+  /** Map of SMC league ID → CMS turneringar post ID */
+  turneringByLeagueId: Map<string, string>;
+  /** Map of SMC league ID → CMS lag post ID (via turneringar.lag) */
+  lagByLeagueId: Map<string, string>;
+}
+
+/**
+ * Parse post content from string or object
+ */
+function parseContent(post: any): Record<string, any> {
+  if (typeof post.content === 'string') {
+    try { return JSON.parse(post.content); } catch { return {}; }
+  }
+  return post.content || {};
+}
+
+/**
+ * Direct GraphQL fetch helper to fetch ALL posts of a type
+ */
+async function fetchPostsDirect(postTypeSlug: string): Promise<any[]> {
+  const PAGE_SIZE = 500;
+  const allPosts: any[] = [];
+  let offset = 0;
+
+  const query = `
+    query GetPosts($storeId: String!, $limit: Int, $offset: Int) {
+      posts(storeId: $storeId, postTypeSlug: "${postTypeSlug}", limit: $limit, offset: $offset) {
+        posts { id title slug content }
+        totalCount
+      }
+    }
+  `;
+
+  try {
+    while (true) {
+      const response = await fetch(FRONTSPACE_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-store-id': FRONTSPACE_STORE_ID,
+          ...(FRONTSPACE_API_KEY && { 'Authorization': `Bearer ${FRONTSPACE_API_KEY}` }),
+        },
+        body: JSON.stringify({ query, variables: { storeId: FRONTSPACE_STORE_ID, limit: PAGE_SIZE, offset } }),
+      });
+
+      const text = await response.text();
+      if (!text || !text.trim()) break;
+      const result = JSON.parse(text);
+      const posts = result.data?.posts?.posts || [];
+      allPosts.push(...posts);
+
+      const totalCount = result.data?.posts?.totalCount ?? 0;
+      offset += PAGE_SIZE;
+      if (posts.length < PAGE_SIZE || offset >= totalCount) break;
+    }
+    return allPosts;
+  } catch (error) {
+    console.error(`Failed to fetch ${postTypeSlug}:`, error);
+    return allPosts;
+  }
+}
+
+/**
+ * Build relation lookups for SMC sync.
+ * Maps SMC league IDs to turneringar and lag post UUIDs.
+ */
+async function fetchSMCRelationLookups(): Promise<SMCRelationLookups> {
+  const turneringByLeagueId = new Map<string, string>();
+  const lagByLeagueId = new Map<string, string>();
+
+  const turneringarPosts = await fetchPostsDirect('turneringar');
+
+  for (const post of turneringarPosts) {
+    const content = parseContent(post);
+
+    // Collect all IDs that could match an SMC league ID
+    const ids: string[] = [];
+    if (content.smc_leagueid) ids.push(String(content.smc_leagueid));
+    if (content.smc_externalleagueid) ids.push(String(content.smc_externalleagueid));
+    if (content.externalleagueid) ids.push(String(content.externalleagueid));
+
+    for (const id of ids) {
+      if (!turneringByLeagueId.has(id)) {
+        turneringByLeagueId.set(id, post.id);
+      }
+      // Chain: league ID → turneringar.lag → lag post ID
+      if (content.lag && !lagByLeagueId.has(id)) {
+        lagByLeagueId.set(id, content.lag);
+      }
+    }
+  }
+
+  console.log(`🏆 SMC Relation lookups: ${turneringByLeagueId.size} turneringar, ${lagByLeagueId.size} with lag link`);
+  return { turneringByLeagueId, lagByLeagueId };
+}
+
 interface SyncPayload {
   slug: string;
   title: string;
@@ -91,7 +190,7 @@ function mapMatchStatus(smcStatus: string): string {
  * @param match - Match data from SMC API
  * @param leagueName - League name from cache (optional)
  */
-function transformMatchToCMSContent(match: MatchCardData, leagueName?: string): Record<string, any> {
+function transformMatchToCMSContent(match: MatchCardData, leagueName?: string, lookups?: SMCRelationLookups): Record<string, any> {
   const { datum, tid_for_avspark } = splitDateTime(match.kickoff);
 
   // Derive season from kickoff date (Swedish football uses single-year seasons)
@@ -106,7 +205,7 @@ function transformMatchToCMSContent(match: MatchCardData, leagueName?: string): 
     .replace(/^-|-$/g, '');
   const matchUniqueKey = `${datum}_${slugTime}_${slugArena}`;
 
-  return {
+  const content: Record<string, any> = {
     // External IDs for sync tracking
     externalmatchid: String(match.matchId),
     externalleagueid: String(match.leagueId),
@@ -136,6 +235,21 @@ function transformMatchToCMSContent(match: MatchCardData, leagueName?: string): 
     iscustomgame: "false",  // Select field, not boolean
     lastsyncedat: new Date().toISOString(),
   };
+
+  // Set relation fields from lookups
+  if (lookups && match.leagueId) {
+    const leagueIdStr = String(match.leagueId);
+
+    // Set turnering relation (tournament/league post)
+    const turneringId = lookups.turneringByLeagueId.get(leagueIdStr);
+    if (turneringId) content.turnering = turneringId;
+
+    // Set lag relation (team post, via turneringar → lag chain)
+    const lagId = lookups.lagByLeagueId.get(leagueIdStr);
+    if (lagId) content.lag = lagId;
+  }
+
+  return content;
 }
 
 /**
@@ -157,7 +271,8 @@ async function upsertMatchToCMS(
   match: MatchCardData,
   existingCMSMatch: any | null,
   postTypeId: string,
-  leagueName?: string
+  leagueName?: string,
+  lookups?: SMCRelationLookups
 ): Promise<{ action: 'created' | 'updated' | 'skipped'; error?: string }> {
   const slug = generateMatchSlug(match);
   const title = `${match.homeTeam} vs ${match.awayTeam}`;
@@ -183,6 +298,9 @@ async function upsertMatchToCMS(
     // Lineup overrides (if manually set)
     if (existingContent.laguppstallning_hemmalag) preservedFields.laguppstallning_hemmalag = existingContent.laguppstallning_hemmalag;
     if (existingContent.laguppstallning_bortalag) preservedFields.laguppstallning_bortalag = existingContent.laguppstallning_bortalag;
+    // Preserve existing relation fields if already set (e.g., by SvFF sync)
+    if (existingContent.lag) preservedFields.lag = existingContent.lag;
+    if (existingContent.turnering) preservedFields.turnering = existingContent.turnering;
 
     // Skip if it's a custom game (don't overwrite with SMC data)
     if (existingContent.iscustomgame === "true") {
@@ -191,7 +309,7 @@ async function upsertMatchToCMS(
   }
 
   const content = {
-    ...transformMatchToCMSContent(match, leagueName),
+    ...transformMatchToCMSContent(match, leagueName, lookups),
     ...preservedFields, // Merge preserved custom fields
   };
 
@@ -382,7 +500,7 @@ export async function syncMatchesToCMS(
     }
 
     // Deduplicate matches by matchId (in case of overlaps)
-    const uniqueMatches = new Map<number, MatchCardData>();
+    const uniqueMatches = new Map<string | number, MatchCardData>();
     for (const match of smcMatches) {
       uniqueMatches.set(match.matchId, match);
     }
@@ -420,11 +538,13 @@ export async function syncMatchesToCMS(
         }
       }
 
+      const dryRunLookups = await fetchSMCRelationLookups();
+
       result.payloads = smcMatches.map(match => {
         const slug = generateMatchSlug(match);
         const title = `${match.homeTeam} vs ${match.awayTeam}`;
         const leagueName = leagueNameMap.get(String(match.leagueId));
-        const content = transformMatchToCMSContent(match, leagueName);
+        const content = transformMatchToCMSContent(match, leagueName, dryRunLookups);
         return { slug, title, action: 'create' as const, content };
       });
 
@@ -434,8 +554,11 @@ export async function syncMatchesToCMS(
       return result;
     }
 
-    // 2. Fetch existing matches from CMS for comparison
-    const { posts: existingCMSMatches } = await frontspace.matcher.getAll({ limit: 500 }) as { posts: any[]; total: number };
+    // 2. Fetch relation lookups (turneringar → lag) + existing matches from CMS
+    const [relationLookups, { posts: existingCMSMatches }] = await Promise.all([
+      fetchSMCRelationLookups(),
+      frontspace.matcher.getAll({ limit: 500 }) as Promise<{ posts: any[]; total: number }>,
+    ]);
     console.log(`📦 Found ${existingCMSMatches.length} existing matches in CMS`);
 
     // Build lookup map by externalmatchid (Swedish field name)
@@ -463,7 +586,7 @@ export async function syncMatchesToCMS(
       const existingCMSMatch = cmsMatchMap.get(externalMatchId);
       const leagueName = leagueNameMap.get(String(match.leagueId));
 
-      const { action, error } = await upsertMatchToCMS(match, existingCMSMatch, postTypeId, leagueName);
+      const { action, error } = await upsertMatchToCMS(match, existingCMSMatch, postTypeId, leagueName, relationLookups);
 
       if (error) {
         const errorMsg = `Match ${externalMatchId} (${match.homeTeam} vs ${match.awayTeam}): ${error}`;
@@ -515,48 +638,129 @@ export async function syncMatchesToCMS(
 }
 
 /**
- * Sync a single match by external ID (for webhook triggers)
+ * Fetch a single match directly from SMC API by leagueId + matchId.
+ * Uses 1 API call instead of bulk-fetching all matches.
+ * Returns MatchCardData or null if not found.
  */
-export async function syncSingleMatch(externalMatchId: string): Promise<{ success: boolean; error?: string }> {
+async function fetchSingleMatchFromSMC(leagueId: string, matchId: string): Promise<MatchCardData | null> {
+  const SMC_SECRET = process.env.SMC_SECRET;
+  if (!SMC_SECRET) {
+    console.error('SMC_SECRET not configured');
+    return null;
+  }
+
+  const url = `https://smc-api.telenor.no/leagues/${leagueId}/matches/${matchId}`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+
   try {
-    // Get the matcher post type ID
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': SMC_SECRET,
+        'Accept': 'application/json',
+      },
+      signal: controller.signal,
+      cache: 'no-store', // Always fresh for live updates
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      console.error(`SMC API error ${response.status} for match ${matchId}`);
+      return null;
+    }
+
+    const data = await response.json();
+    // SMC API wraps single match in "match-details"
+    const raw = data['match-details'] || data;
+
+    if (!raw) return null;
+
+    const kickoff = raw.kickoff ? new Date(raw.kickoff).toISOString() : '';
+
+    return {
+      matchId: raw['match-id'],
+      kickoff,
+      modifiedDate: raw['modified-date'] ? new Date(raw['modified-date']).toLocaleString() : '',
+      status: raw['status'] || 'Scheduled',
+      arenaName: raw['arena-name'] || '',
+      leagueId: raw['league-id'],
+      homeTeam: raw['home-team'] || raw['home-engaging-team'] || '',
+      awayTeam: raw['away-team'] || raw['away-engaging-team'] || '',
+      roundNumber: raw['round-number'] || 0,
+      goalsHome: raw['goals-home'] >= 0 ? raw['goals-home'] : 0,
+      goalsAway: raw['goals-away'] >= 0 ? raw['goals-away'] : 0,
+    };
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.error(`Timeout fetching match ${matchId} from SMC API`);
+    } else {
+      console.error(`Error fetching match ${matchId} from SMC API:`, error);
+    }
+    return null;
+  }
+}
+
+/**
+ * Sync a single match by external ID (for webhook triggers).
+ * If leagueId is provided, uses fast single-match fetch (1 API call).
+ * Otherwise falls back to bulk fetch from all current-season leagues.
+ */
+export async function syncSingleMatch(externalMatchId: string, leagueId?: string): Promise<{ success: boolean; error?: string }> {
+  try {
     const postTypeId = getMatcherPostTypeId();
 
-    // Get league IDs and teamId from cache
+    // Get league cache for league name lookup
     const cache = await getLeagueCache();
     if (!cache || cache.leagues.length === 0) {
       return { success: false, error: 'League cache is empty. Please refresh the cache first.' };
     }
 
-    const currentSeason = new Date().getFullYear().toString();
-    const leagueIds = cache.leagues
-      .filter(l => l.seasonYear === currentSeason)
-      .map(l => l.leagueId);
+    let match: MatchCardData | null = null;
 
-    // Use teamId to filter to only Östers IF matches
-    const teamId = cache.teamId;
+    if (leagueId) {
+      // Fast path: single API call when leagueId is known (from SQS events)
+      match = await fetchSingleMatchFromSMC(leagueId, externalMatchId);
 
-    // Fetch only Östers IF matches from SMC
-    const allMatches = await fetchMatchesFromSMC(leagueIds, teamId);
-    const match = allMatches.find(m => String(m.matchId) === externalMatchId);
+      // Filter: only sync Östers IF matches
+      if (match && !isOstersIF(match.homeTeam) && !isOstersIF(match.awayTeam)) {
+        console.log(`⏭️ Skipping non-Östers IF match: ${match.homeTeam} vs ${match.awayTeam}`);
+        return { success: true }; // Not an error, just not our match
+      }
+    } else {
+      // Fallback: bulk fetch when leagueId is unknown (admin/manual triggers)
+      const currentSeason = new Date().getFullYear().toString();
+      const leagueIds = cache.leagues
+        .filter(l => l.seasonYear === currentSeason)
+        .map(l => l.leagueId);
+      const teamId = cache.teamId;
+
+      const allMatches = await fetchMatchesFromSMC(leagueIds, teamId);
+      match = allMatches.find(m => String(m.matchId) === externalMatchId) || null;
+    }
 
     if (!match) {
       return { success: false, error: 'Match not found in SMC API' };
     }
 
-    // Check if it exists in CMS
-    const existingCMSMatch = await frontspace.matcher.getByExternalId(externalMatchId);
+    // Check if it exists in CMS + fetch relation lookups in parallel
+    const [existingCMSMatch, relationLookups] = await Promise.all([
+      frontspace.matcher.getByExternalId(externalMatchId),
+      fetchSMCRelationLookups(),
+    ]);
 
     // Look up league name from cache
-    const leagueName = cache.leagues.find(l => l.leagueId === String(match.leagueId))?.leagueName;
+    const leagueName = cache.leagues.find(l => l.leagueId === String(match!.leagueId))?.leagueName;
 
-    const { action, error } = await upsertMatchToCMS(match, existingCMSMatch, postTypeId, leagueName);
+    const { action, error } = await upsertMatchToCMS(match, existingCMSMatch, postTypeId, leagueName, relationLookups);
 
     if (error) {
       return { success: false, error };
     }
 
-    console.log(`✅ Single match sync complete: ${action}`);
+    console.log(`✅ Single match sync complete: ${action} — ${match.homeTeam} vs ${match.awayTeam}`);
     return { success: true };
   } catch (error) {
     return {

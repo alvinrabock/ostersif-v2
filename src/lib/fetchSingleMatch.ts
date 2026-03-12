@@ -218,9 +218,10 @@ export async function getMatchTicketData(matchId: number | string): Promise<{
             }
         }
 
-        // Convert matchId to number for lookup if it's a string
+        // Ticket data map is keyed by numeric IDs from eBiljett.
+        // For ULID string IDs (SMC API 2.0), parseInt returns NaN and lookup returns undefined — which is safe.
         const numericMatchId = typeof matchId === 'string' ? parseInt(matchId, 10) : matchId;
-        const ticketData = ticketDataMap.get(numericMatchId) ?? {
+        const ticketData = (!isNaN(numericMatchId) ? ticketDataMap.get(numericMatchId) : undefined) ?? {
             ticketURL: '',
             soldTickets: undefined,
             customButtonText: undefined,

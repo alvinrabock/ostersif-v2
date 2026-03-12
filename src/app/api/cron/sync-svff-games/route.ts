@@ -36,9 +36,9 @@ export async function POST(request: NextRequest) {
   const isAuthorized =
     authHeader === `Bearer ${CRON_SECRET}` ||
     cronSecret === CRON_SECRET ||
-    (process.env.NODE_ENV === 'development' && !CRON_SECRET);
+    process.env.NODE_ENV === 'development';
 
-  if (!isAuthorized && CRON_SECRET) {
+  if (!isAuthorized) {
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
   const from = request.nextUrl.searchParams.get('from') || undefined;
   const to = request.nextUrl.searchParams.get('to') || undefined;
 
-  if (CRON_SECRET && secret !== CRON_SECRET) {
+  if (CRON_SECRET && secret !== CRON_SECRET && process.env.NODE_ENV !== 'development') {
     return NextResponse.json(
       { error: 'Unauthorized. Provide ?secret=xxx' },
       { status: 401 }

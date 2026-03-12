@@ -1,5 +1,11 @@
 import { revalidateTag, revalidatePath } from 'next/cache'
 import { NextRequest, NextResponse } from 'next/server'
+import { syncSingleMatch } from '@/lib/syncMatches'
+
+// Events that change CMS-stored data (scores, status).
+// Other events (cards, subs, lineups) only need cache revalidation
+// since live data is fetched from SMC API at render time.
+const CMS_SYNC_EVENTS = new Set(['GOAL', 'MATCH_STARTED', 'MATCH_FINISHED', 'MATCH_UPDATE'])
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,7 +17,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Revalidate based on event type for surgical cache invalidation
+    // Phase 1: CMS Sync (for score/status-changing events only)
+    // Fetches latest match data from SMC API and updates Frontspace CMS.
+    // Skips non-Östers IF matches automatically.
+    let syncResult: { success: boolean; error?: string } | null = null
+    if (matchId && CMS_SYNC_EVENTS.has(eventType)) {
+      try {
+        syncResult = await syncSingleMatch(
+          String(matchId),
+          leagueId ? String(leagueId) : undefined
+        )
+        if (syncResult.success) {
+          console.log(`CMS sync OK for match ${matchId} (${eventType})`)
+        } else {
+          console.warn(`CMS sync failed for match ${matchId}: ${syncResult.error}`)
+        }
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : 'Unknown error'
+        syncResult = { success: false, error: errMsg }
+        console.error(`CMS sync error for match ${matchId}:`, errMsg)
+        // Continue to cache revalidation — never skip it
+      }
+    }
+
+    // Phase 2: Cache Revalidation (for ALL events)
     switch (eventType) {
       case 'GOAL':
       case 'YELLOW_CARD':
@@ -48,6 +77,12 @@ export async function POST(request: NextRequest) {
         revalidateTag('matches-list')
     }
 
+    // If CMS was updated, also revalidate the CMS-first data fetching cache
+    if (syncResult?.success) {
+      revalidateTag('matcher')
+      revalidateTag('frontspace')
+    }
+
     // Revalidate specific paths
     if (leagueId && matchId) {
       revalidatePath(`/matcher/${leagueId}/${matchId}`)
@@ -57,6 +92,8 @@ export async function POST(request: NextRequest) {
     console.log(`Revalidated cache for match ${matchId} (${eventType})`)
     return NextResponse.json({
       revalidated: true,
+      synced: syncResult?.success ?? null,
+      syncError: syncResult?.error || undefined,
       matchId,
       leagueId,
       eventType,
@@ -75,7 +112,7 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   return NextResponse.json({
     status: 'ok',
-    message: 'Revalidation endpoint is ready',
+    message: 'Revalidation endpoint is ready (with CMS sync)',
     timestamp: new Date().toISOString()
   })
 }
