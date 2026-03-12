@@ -292,9 +292,6 @@ function renderNode(node: TiptapNode, index: number): React.ReactNode {
   }
 }
 
-/** Image file extensions to detect bare image URLs in HTML */
-const IMAGE_EXTENSIONS = /\.(jpg|jpeg|png|gif|webp|svg|avif)(\?.*)?$/i
-
 /**
  * Process HTML content to convert bare image URLs into proper <img> tags.
  * Frontspace's Tiptap-to-HTML renderer may output custom block content
